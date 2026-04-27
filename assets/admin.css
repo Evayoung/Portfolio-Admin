@@ -426,20 +426,25 @@ a {
   right: 0;
   bottom: 0;
   z-index: 1040;
-  padding: 0 0 0.9rem;
+  padding: 0.55rem 0 0.9rem;
+  pointer-events: none;
+  background: transparent !important;
+  border-top: 0 !important;
+}
+
+.admin-bottom-nav .container,
+.admin-bottom-nav .container-fluid {
   pointer-events: none;
 }
 
-.admin-bottom-nav .container {
-  pointer-events: none;
-}
-
-.admin-bottom-nav-inner {
+.admin-bottom-nav .container-fluid {
   pointer-events: auto;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.35rem;
   padding: 0.55rem;
+  width: min(100% - 1rem, 44rem);
+  margin: 0 auto;
   border-radius: 1.45rem;
   background: rgba(8, 16, 29, 0.95);
   border: 1px solid rgba(130, 183, 214, 0.14);
@@ -469,9 +474,24 @@ a {
   font-weight: 600;
 }
 
-.admin-bottom-link.active {
+.admin-bottom-link.active,
+.admin-bottom-nav .nav-link.active {
   background: rgba(45, 184, 232, 0.14);
   color: #fff;
+}
+
+.admin-bottom-nav .nav-link {
+  color: rgba(238, 246, 255, 0.72);
+  border-radius: 1rem;
+}
+
+.admin-bottom-nav .nav-link:hover {
+  color: #fff;
+}
+
+.admin-bottom-nav .nav-link small {
+  font-size: 0.68rem !important;
+  font-weight: 600;
 }
 
 .admin-footer {
@@ -481,6 +501,25 @@ a {
 
 .admin-footer-copy {
   margin-bottom: 0;
+}
+
+.admin-login-shell {
+  min-height: 100vh;
+}
+
+.admin-login-logo {
+  display: inline-flex;
+  margin-bottom: 1rem;
+}
+
+.admin-login-title {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  margin-bottom: 0.8rem;
+}
+
+.admin-login-form .alert {
+  margin-top: 1rem;
 }
 
 .admin-filter-row {
@@ -763,6 +802,11 @@ a {
 }
 
 .admin-cv-side-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-settings-stack {
   display: grid;
   gap: 1rem;
 }

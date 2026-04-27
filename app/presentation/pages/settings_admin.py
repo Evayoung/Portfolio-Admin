@@ -6,6 +6,7 @@ from fasthtml.common import Div, Form, H2, H3, Input, Label, P, Span, Strong, Te
 from faststrap import Badge, Card, Col, Row, SEO
 
 from app.config import settings
+from app.infrastructure.auth_repository import get_admin_access_profile
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
@@ -72,6 +73,7 @@ def _textarea_field(label: str, name: str, value: str = "", *, rows: int = 5, pl
 
 def settings_workspace_page() -> tuple:
     profile = get_site_profile()
+    access = get_admin_access_profile()
     identity_panel = Card(
         Div(
             Div(
@@ -182,6 +184,42 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
+    access_form = Form(
+        _field("Login Email", "login_email", access.login_email, input_type="email", placeholder="admin@neoportfolio.dev", required=True),
+        _field("New Password", "password", "", input_type="password", placeholder="Leave blank to keep the current password"),
+        _field("Confirm Password", "confirm_password", "", input_type="password", placeholder="Repeat the new password"),
+        Div(
+            Input(type="submit", value="Save Admin Access", cls="btn admin-module-btn"),
+            Span(
+                "Credentials are hashed before storage" if service_role_is_configured() else "Add the service-role key to enable saving",
+                cls="admin-save-note",
+            ),
+            cls="admin-form-actions mt-4",
+        ),
+        Div(id="access-save-result", cls="mt-3"),
+        action="/settings/access",
+        method="post",
+        hx_post="/settings/access",
+        hx_target="#access-save-result",
+        hx_swap="innerHTML",
+        cls="admin-settings-form",
+    )
+
+    access_panel = Card(
+        Div(
+            H3("Admin Access", cls="admin-subsection-title"),
+            P("Seeded credentials get you in the first time. After that, you can rotate the login email and password here without touching code.", cls="admin-module-copy"),
+            Div(
+                Div(Span("Current Login", cls="admin-field-label"), Strong(access.login_email)),
+                Div(Span("Credential Source", cls="admin-field-label"), Strong(access.source.title())),
+                cls="admin-field-grid admin-detail-block mb-4",
+            ),
+            access_form,
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
+
     return (
         *SEO(
             title=f"{settings.app_name} | Settings",
@@ -199,7 +237,12 @@ def settings_workspace_page() -> tuple:
                 "Settings Workspace",
                 Row(
                     Col(identity_panel, span=12, lg=5),
-                    Col(editor_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                    Col(
+                        Div(editor_panel, access_panel, cls="admin-settings-stack"),
+                        span=12,
+                        lg=7,
+                        cls="mt-4 mt-lg-0",
+                    ),
                     cls="g-4",
                 ),
             ),

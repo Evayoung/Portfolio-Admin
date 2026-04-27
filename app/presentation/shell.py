@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Span
-from faststrap import Container, Icon
+from faststrap import BottomNav, BottomNavItem, Container, Icon
 
 from app.config import settings
 
@@ -84,6 +84,12 @@ def admin_sidebar(current: str = "/") -> Aside:
                         id="install-app-trigger",
                         cls="btn admin-install-btn w-100 d-none",
                     ),
+                    A(
+                        Icon("box-arrow-right", cls="me-2"),
+                        "Sign Out",
+                        href="/logout",
+                        cls="btn admin-install-btn w-100",
+                    ),
                     cls="admin-sidebar-actions",
                 ),
                 cls="admin-sidebar-panel",
@@ -129,13 +135,18 @@ def admin_mobile_header(current: str = "/", title: str = "Overview") -> Div:
 
 
 def admin_bottom_nav(current: str = "/") -> Div:
-    return Div(
-        Container(
-            Div(
-                *[_nav_link(label, href, icon, current, compact=True) for label, href, icon in BOTTOM_NAV_ITEMS],
-                cls="admin-bottom-nav-inner",
+    return BottomNav(
+        *[
+            BottomNavItem(
+                label,
+                href=href,
+                icon=icon,
+                active=href == current,
+                cls="admin-bottom-link",
             )
-        ),
+            for label, href, icon in BOTTOM_NAV_ITEMS
+        ],
+        variant="dark",
         cls="admin-bottom-nav d-lg-none",
         id="admin-bottom-nav",
     )

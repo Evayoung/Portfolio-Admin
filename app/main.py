@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import quote
 
-from fasthtml.common import FastHTML, Link, Meta, Script, serve
+from fasthtml.common import Beforeware, FastHTML, Link, Meta, Redirect, Script, serve
 from faststrap import add_bootstrap, mount_assets
 
 try:
@@ -18,7 +19,23 @@ except ImportError:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _require_admin_login(req, session):
+    if session.get("admin_authenticated"):
+        return None
+    next_path = req.url.path
+    if req.url.query:
+        next_path = f"{next_path}?{req.url.query}"
+    return Redirect(f"/login?next_path={quote(next_path, safe='/?=&')}")
+
+
 app = FastHTML(secret_key=settings.secret_key, session_cookie=settings.session_cookie)
+app.before.append(
+    Beforeware(
+        _require_admin_login,
+        skip=[r"/login", r"/logout", r"/assets/.*", r"/favicon.ico"],
+    )
+)
 
 add_bootstrap(app, theme=NEO_ADMIN_THEME, mode="dark", use_cdn=settings.use_cdn)
 setup_theme_defaults()
@@ -40,7 +57,7 @@ app.hdrs = app.hdrs + [
     Meta(name="apple-mobile-web-app-title", content="Neo Admin"),
     Link(rel="manifest", href="/assets/manifest.webmanifest"),
     Link(rel="apple-touch-icon", href="/assets/icon-192.png"),
-    Link(rel="stylesheet", href="/assets/admin.css?v=20260426b"),
+    Link(rel="stylesheet", href="/assets/admin.css?v=20260427d"),
     Script(src="/assets/admin.js?v=20260426a", defer=True),
 ]
 

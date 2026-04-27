@@ -182,3 +182,26 @@ class SiteSettingsSaveResult:
     tone: str
     message: str
     source: str
+
+
+@dataclass(frozen=True)
+class AdminAccessProfile:
+    login_email: str
+    source: str
+
+
+@dataclass(frozen=True)
+class AdminAccessSaveResult:
+    success: bool
+    tone: str
+    message: str
+    source: str
+
+
+@dataclass(frozen=True)
+class AdminLoginResult:
+    success: bool
+    tone: str
+    message: str
+    login_email: str
+    source: str

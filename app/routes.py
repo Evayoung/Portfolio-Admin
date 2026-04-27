@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from typing import Any
+from fasthtml.common import Redirect
 
 try:
+    from .infrastructure.auth_repository import authenticate_admin, save_admin_access
     from .infrastructure.blog_repository import save_blog_post
     from .infrastructure.cv_repository import save_cv_profile
     from .infrastructure.project_repository import save_project
     from .infrastructure.settings_repository import save_site_profile
     from .infrastructure.submission_repository import update_submission
+    from .presentation.pages.auth import login_page
     from .presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
     from .presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
     from .presentation.pages.dashboard import overview_page
@@ -17,11 +20,13 @@ try:
     from .presentation.pages.settings_admin import settings_save_status_fragment, settings_workspace_page
     from .presentation.pages.submissions import submission_save_status_fragment, submissions_workspace_page
 except ImportError:
+    from infrastructure.auth_repository import authenticate_admin, save_admin_access
     from infrastructure.blog_repository import save_blog_post
     from infrastructure.cv_repository import save_cv_profile
     from infrastructure.project_repository import save_project
     from infrastructure.settings_repository import save_site_profile
     from infrastructure.submission_repository import update_submission
+    from presentation.pages.auth import login_page
     from presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
     from presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
     from presentation.pages.dashboard import overview_page
@@ -31,6 +36,26 @@ except ImportError:
 
 
 def setup_routes(app: Any) -> None:
+    @app.get("/login")
+    def login(session, next_path: str = "/") -> Any:
+        if session.get("admin_authenticated"):
+            return Redirect(_safe_next_path(next_path))
+        return login_page(next_path=_safe_next_path(next_path))
+
+    @app.post("/login")
+    def login_submit(session, login_email: str = "", password: str = "", next_path: str = "/") -> Any:
+        result = authenticate_admin(login_email, password)
+        if not result.success:
+            return login_page(next_path=_safe_next_path(next_path), message=result.message, tone=result.tone, login_email=login_email)
+        session["admin_authenticated"] = True
+        session["admin_login_email"] = result.login_email
+        return Redirect(_safe_next_path(next_path))
+
+    @app.get("/logout")
+    def logout(session) -> Any:
+        session.clear()
+        return Redirect("/login")
+
     @app.get("/")
     def overview() -> Any:
         return overview_page()
@@ -187,3 +212,20 @@ def setup_routes(app: Any) -> None:
         )
         title_text = "Settings saved" if result.success else "Save not completed"
         return settings_save_status_fragment(title_text, result.message, tone=result.tone)
+
+    @app.post("/settings/access")
+    def settings_access_save(
+        login_email: str = "",
+        password: str = "",
+        confirm_password: str = "",
+    ) -> Any:
+        result = save_admin_access(login_email=login_email, password=password, confirm_password=confirm_password)
+        title_text = "Admin access saved" if result.success else "Save not completed"
+        return settings_save_status_fragment(title_text, result.message, tone=result.tone)
+
+
+def _safe_next_path(next_path: str) -> str:
+    candidate = (next_path or "/").strip()
+    if not candidate.startswith("/") or candidate.startswith("//"):
+        return "/"
+    return candidate

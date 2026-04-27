@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 import sys
 
 from starlette.testclient import TestClient
 
+os.environ["SUPABASE_URL"] = ""
+os.environ["SUPABASE_ANON_KEY"] = ""
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = ""
+os.environ["NEO_ADMIN_LOGIN_EMAIL"] = "admin@neoportfolio.dev"
+os.environ["NEO_ADMIN_LOGIN_PASSWORD"] = "ChangeMe123!"
+
 APP_PATH = Path(__file__).with_name("main.py")
 ROOT = APP_PATH.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from app.config import settings
+
 SPEC = importlib.util.spec_from_file_location("neo_admin_main", APP_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
@@ -21,13 +30,37 @@ app = MODULE.app
 client = TestClient(app)
 
 
+def sign_in() -> None:
+    response = client.post(
+        "/login",
+        data={
+            "login_email": settings.admin_login_email,
+            "password": settings.admin_login_password,
+            "next_path": "/",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
+def test_login_page_renders() -> None:
+    response = client.get("/login")
+    html = response.text
+    assert response.status_code == 200
+    assert "Sign In" in html
+    assert "Login Email" in html
+    assert "Password" in html
+
+
 def test_core_routes_render() -> None:
+    sign_in()
     for route in ["/", "/projects", "/blog", "/cv", "/submissions", "/settings"]:
         response = client.get(route)
         assert response.status_code == 200
 
 
 def test_overview_contains_admin_shell_markers() -> None:
+    sign_in()
     response = client.get("/")
     html = response.text
     assert "Neo Admin" in html
@@ -39,6 +72,7 @@ def test_overview_contains_admin_shell_markers() -> None:
 
 
 def test_settings_workspace_renders_live_profile_shell() -> None:
+    sign_in()
     response = client.get("/settings")
     html = response.text
     assert response.status_code == 200
@@ -48,6 +82,7 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
 
 
 def test_projects_workspace_renders_real_project_data() -> None:
+    sign_in()
     response = client.get("/projects")
     html = response.text
     assert response.status_code == 200
@@ -59,6 +94,7 @@ def test_projects_workspace_renders_real_project_data() -> None:
 
 
 def test_blog_workspace_renders_real_blog_data() -> None:
+    sign_in()
     response = client.get("/blog")
     html = response.text
     assert response.status_code == 200
@@ -69,6 +105,7 @@ def test_blog_workspace_renders_real_blog_data() -> None:
 
 
 def test_cv_workspace_renders_real_cv_data() -> None:
+    sign_in()
     response = client.get("/cv")
     html = response.text
     assert response.status_code == 200
@@ -79,6 +116,7 @@ def test_cv_workspace_renders_real_cv_data() -> None:
 
 
 def test_submissions_workspace_renders_real_inbox_shell() -> None:
+    sign_in()
     response = client.get("/submissions")
     html = response.text
     assert response.status_code == 200
@@ -88,6 +126,7 @@ def test_submissions_workspace_renders_real_inbox_shell() -> None:
 
 
 def test_project_save_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
     response = client.post(
         "/projects/save",
         data={
@@ -112,6 +151,7 @@ def test_project_save_route_reports_read_only_without_supabase_service_role() ->
 
 
 def test_blog_save_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
     response = client.post(
         "/blog/save",
         data={
@@ -134,6 +174,7 @@ def test_blog_save_route_reports_read_only_without_supabase_service_role() -> No
 
 
 def test_cv_save_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
     response = client.post(
         "/cv/save",
         data={
@@ -157,6 +198,7 @@ def test_cv_save_route_reports_read_only_without_supabase_service_role() -> None
 
 
 def test_submissions_update_route_handles_missing_or_read_only_state() -> None:
+    sign_in()
     response = client.post(
         "/submissions/save",
         data={
@@ -173,13 +215,17 @@ def test_submissions_update_route_handles_missing_or_read_only_state() -> None:
 
 def test_supabase_schema_file_exists() -> None:
     schema_path = Path(__file__).parent / "app" / "infrastructure" / "sql" / "001_initial_schema.sql"
+    access_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "002_admin_access.sql"
     assert schema_path.exists()
+    assert access_schema.exists()
     schema = schema_path.read_text(encoding="utf-8")
+    access = access_schema.read_text(encoding="utf-8")
     assert "create table if not exists public.projects" in schema
     assert "create table if not exists public.blog_posts" in schema
     assert "create table if not exists public.cv_meta" in schema
     assert "create table if not exists public.contact_submissions" in schema
     assert "create table if not exists public.booking_requests" in schema
+    assert "create table if not exists public.admin_access" in access
 
 
 def test_admin_deploy_files_exist() -> None:
@@ -191,6 +237,7 @@ def test_admin_deploy_files_exist() -> None:
 
 
 def test_pwa_assets_are_exposed() -> None:
+    sign_in()
     home = client.get("/")
     manifest = client.get("/assets/manifest.webmanifest")
     script = client.get("/assets/admin.js")
