@@ -1,0 +1,1 @@
+"""Neo Admin application package."""

@@ -1,0 +1,7 @@
+.env
+__pycache__/
+.pytest_cache/
+.vercel/
+*.pyc
+admin-run.log
+admin-run.err
