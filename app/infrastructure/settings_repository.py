@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
-from functools import lru_cache
-from pathlib import Path
-import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -44,44 +40,23 @@ def _rest_request(
         return json.loads(raw.decode("utf-8"))
 
 
-@lru_cache(maxsize=1)
-def _content_module():
-    content_path = Path(__file__).resolve().parents[3] / "neoportfolio" / "content.py"
-    spec = importlib.util.spec_from_file_location("neoportfolio_settings_seed", content_path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-@lru_cache(maxsize=1)
-def _cv_module():
-    content_path = Path(__file__).resolve().parents[3] / "neoportfolio" / "cv_content.py"
-    spec = importlib.util.spec_from_file_location("neoportfolio_settings_cv_seed", content_path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def _local_settings() -> AdminSiteProfile:
-    content = _content_module()
-    cv_meta = _cv_module().CV_META
     return AdminSiteProfile(
-        site_name=f"{content.DEVELOPER_NAME_SHORT} Portfolio",
-        site_url=content.SITE_URL,
-        full_name=cv_meta["name"],
-        role=cv_meta["role"],
-        email=cv_meta["email"],
-        phone=cv_meta["phone"],
-        whatsapp=cv_meta["whatsapp"],
-        location=cv_meta["location"],
-        github=cv_meta["github"],
-        linkedin=cv_meta["linkedin"],
-        seo_title=f"{content.DEVELOPER_NAME_SHORT} | {cv_meta['role']}",
-        seo_description=content.HERO_SUMMARY,
+        site_name=f"{settings.owner_name} Portfolio",
+        site_url="https://olorundaremicheal.vercel.app",
+        full_name="Olorundare Micheal Babawale",
+        role="Full-Stack & AI Systems Architect",
+        email="meshelleva@gmail.com",
+        phone="+2348064676590",
+        whatsapp="+2348064676590",
+        location="Ilorin, Kwara State, Nigeria",
+        github="https://github.com/Evayoung",
+        linkedin="https://www.linkedin.com/in/olorundare-micheal-babawale-12b40314b/",
+        seo_title="Micheal Olorundare | Full-Stack & AI Systems Architect",
+        seo_description=(
+            "Portfolio settings and profile metadata for Micheal Olorundare's "
+            "public website, CV, and client inquiry surfaces."
+        ),
         source="local",
     )
 
@@ -167,10 +142,10 @@ def save_site_profile(
         cv_rows = _rest_request("GET", "cv_meta", query="?select=id,summary&limit=1")
         if isinstance(cv_rows, list) and cv_rows:
             current = cv_rows[0]
-            cv_payload["summary"] = current.get("summary") or _cv_module().CV_META["summary"]
+            cv_payload["summary"] = current.get("summary") or _local_settings().seo_description
             _rest_request("PATCH", "cv_meta", payload=cv_payload, prefer="return=representation", query=f"?id=eq.{current['id']}")
         else:
-            cv_payload["summary"] = _cv_module().CV_META["summary"]
+            cv_payload["summary"] = _local_settings().seo_description
             _rest_request("POST", "cv_meta", payload=cv_payload, prefer="return=representation")
 
         return SiteSettingsSaveResult(True, "success", "Site settings saved to Supabase.", "Supabase")
