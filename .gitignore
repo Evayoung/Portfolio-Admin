@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 admin-run.log
 admin-run.err
+
+.vercel
