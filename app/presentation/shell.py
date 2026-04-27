@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Small, Span
-from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon
+from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavItem, SidebarNavbar
 
 from app.config import settings
+from app.infrastructure.settings_repository import get_site_profile
 
 NAV_ITEMS = (
     ("Overview", "/", "grid"),
@@ -19,10 +20,43 @@ NAV_ITEMS = (
 BOTTOM_NAV_ITEMS = NAV_ITEMS[:5]
 
 
-def admin_logo() -> Span:
+def _brand_profile():
+    return get_site_profile()
+
+
+def brand_name(profile) -> str:
+    site_name = (getattr(profile, "site_name", "") or "").strip()
+    if site_name.endswith(" Portfolio"):
+        site_name = site_name[:-10].strip()
+    return site_name or settings.owner_name
+
+
+def profile_name(profile) -> str:
+    full_name = (getattr(profile, "full_name", "") or "").strip()
+    return full_name or settings.owner_name
+
+
+def public_site_url(profile) -> str:
+    site_url = (getattr(profile, "site_url", "") or "").strip()
+    return site_url or "https://olorundaremicheal.vercel.app"
+
+
+def _brand_initials(profile) -> tuple[str, str]:
+    words = [part for part in brand_name(profile).replace("-", " ").split() if part]
+    if not words:
+        return ("N", "A")
+    if len(words) == 1:
+        token = words[0][:2].upper()
+        return (token[:1], token[1:2] or token[:1])
+    return (words[0][:1].upper(), words[1][:1].upper())
+
+
+def admin_logo(profile=None) -> Span:
+    profile = profile or _brand_profile()
+    first_letter, second_letter = _brand_initials(profile)
     return Span(
-        Span("N", cls="admin-logo-letter"),
-        Span("A", cls="admin-logo-letter admin-logo-letter-alt"),
+        Span(first_letter, cls="admin-logo-letter"),
+        Span(second_letter, cls="admin-logo-letter admin-logo-letter-alt"),
         cls="admin-logo",
     )
 
@@ -42,14 +76,34 @@ def _nav_link(label: str, href: str, icon: str, current: str, *, compact: bool =
     )
 
 
-def admin_sidebar(current: str = "/") -> Aside:
+def admin_sidebar(current: str = "/", profile=None) -> Aside:
+    profile = profile or _brand_profile()
+    display_name = brand_name(profile)
+    sidebar_nav = SidebarNavbar(
+        *[
+            SidebarNavItem(
+                label,
+                href=href,
+                icon=icon,
+                active=href == current,
+                theme="dark",
+                cls="admin-nav-link",
+            )
+            for label, href, icon in NAV_ITEMS
+        ],
+        theme="dark",
+        sticky=False,
+        collapsible=False,
+        width="100%",
+        cls="admin-sidebar-nav",
+    )
     return Aside(
         Div(
             A(
-                admin_logo(),
+                admin_logo(profile),
                 Div(
-                    Span("Neo Admin", cls="admin-brand-title"),
-                    Span("Mobile-first control room", cls="admin-brand-subtitle"),
+                    Span(display_name, cls="admin-brand-title"),
+                    Span("Portfolio Admin", cls="admin-brand-subtitle"),
                     cls="admin-brand-text",
                 ),
                 href="/",
@@ -57,22 +111,16 @@ def admin_sidebar(current: str = "/") -> Aside:
             ),
             Div(
                 Span("Workspace", cls="admin-sidebar-kicker"),
-                Div(
-                    *[_nav_link(label, href, icon, current) for label, href, icon in NAV_ITEMS],
-                    cls="admin-sidebar-links",
-                ),
+                sidebar_nav,
                 cls="admin-sidebar-group",
             ),
             Div(
-                P(
-                    "Install the dashboard on your phone for quick publishing, inbox review, and CV updates.",
-                    cls="admin-sidebar-note",
-                ),
+                
                 Div(
                     A(
                         Icon("box-arrow-up-right", cls="me-2"),
                         "Public Site",
-                        href="https://olorundaremicheal.vercel.app",
+                        href=public_site_url(profile),
                         target="_blank",
                         rel="noreferrer",
                         cls="btn admin-nav-btn w-100",
@@ -94,14 +142,15 @@ def admin_sidebar(current: str = "/") -> Aside:
     )
 
 
-def admin_mobile_header(current: str = "/", title: str = "Overview") -> Div:
+def admin_mobile_header(current: str = "/", title: str = "Overview", profile=None) -> Div:
+    profile = profile or _brand_profile()
     active_item = next((label for label, href, _ in NAV_ITEMS if href == current), title)
     return Div(
         Container(
             Div(
-                A(admin_logo(), href="/", cls="admin-mobile-brand"),
+                A(admin_logo(profile), href="/", cls="admin-mobile-brand"),
                 Div(
-                    Span("Neo Admin", cls="admin-mobile-kicker"),
+                    Span(brand_name(profile), cls="admin-mobile-kicker"),
                     Span(active_item, cls="admin-mobile-title"),
                     cls="admin-mobile-text",
                 ),
@@ -159,6 +208,7 @@ def admin_bottom_nav(current: str = "/") -> Div:
 
 
 def admin_mobile_drawer(current: str = "/") -> Div:
+    profile = _brand_profile()
     nav_links = Div(
         *[_nav_link(label, href, icon, current) for label, href, icon in NAV_ITEMS],
         cls="admin-sidebar-links mt-0",
@@ -167,7 +217,7 @@ def admin_mobile_drawer(current: str = "/") -> Div:
         A(
             Icon("box-arrow-up-right", cls="me-2"),
             "Public Site",
-            href="https://olorundaremicheal.vercel.app",
+            href=public_site_url(profile),
             target="_blank",
             rel="noreferrer",
             cls="btn admin-nav-btn w-100",
@@ -203,7 +253,8 @@ def admin_mobile_drawer(current: str = "/") -> Div:
     )
 
 
-def admin_install_drawer() -> Div:
+def admin_install_drawer(profile=None) -> Div:
+    profile = profile or _brand_profile()
     return Drawer(
         Div(
             P("On iPhone or iPad, open the browser share menu and choose Add to Home Screen.", cls="admin-module-copy"),
@@ -211,7 +262,7 @@ def admin_install_drawer() -> Div:
             cls="admin-mobile-drawer-stack",
         ),
         drawer_id="adminInstallDrawer",
-        title="Install Neo Admin",
+        title=f"Install {brand_name(profile)} Admin",
         placement="bottom",
         cls="admin-install-drawer",
         body_cls="admin-mobile-drawer-body",
@@ -220,18 +271,19 @@ def admin_install_drawer() -> Div:
 
 
 def page_frame(*children, current: str = "/", title: str = "Overview"):
+    profile = _brand_profile()
     return (
-        admin_mobile_header(current, title),
+        admin_mobile_header(current, title, profile),
         Div(
-            admin_sidebar(current),
+            admin_sidebar(current, profile),
             Main(
                 Div(
                     Container(
                         Div(
-                            P("Neo Admin", cls="admin-kicker"),
+                            P(brand_name(profile), cls="admin-kicker"),
                             H1(title, cls="admin-page-title"),
                             P(
-                                f"Control panel for {settings.owner_name}'s portfolio content, submissions, and publishing workflow.",
+                                f"Control panel for {brand_name(profile)}'s portfolio content, submissions, and publishing workflow.",
                                 cls="admin-page-copy",
                             ),
                             cls="admin-page-header",
@@ -243,7 +295,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                         Container(
                             Div(
                                 P(
-                                    f"{chr(169)} 2026 {settings.owner_name}.",
+                                    f"{chr(169)} 2026 {profile_name(profile)}.",
                                     cls="admin-footer-copy",
                                 ),
                                 cls="d-flex justify-content-center text-center",
@@ -259,5 +311,5 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         ),
         admin_bottom_nav(current),
         admin_mobile_drawer(current),
-        admin_install_drawer(),
+        admin_install_drawer(profile),
     )

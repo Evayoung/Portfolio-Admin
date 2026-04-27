@@ -241,23 +241,33 @@ def test_admin_deploy_files_exist() -> None:
 def test_pwa_assets_are_exposed() -> None:
     sign_in()
     home = client.get("/")
-    manifest = client.get("/assets/manifest.webmanifest")
+    manifest = client.get("/manifest.json")
     script = client.get("/assets/admin.js")
-    worker = client.get("/assets/sw.js")
+    worker = client.get("/sw.js")
 
     assert home.status_code == 200
     assert 'rel="manifest"' in home.text
     assert "Install App" in home.text
 
     assert manifest.status_code == 200
-    assert '"display": "standalone"' in manifest.text
-    assert '"start_url": "/"' in manifest.text
-    assert '"id": "/"' in manifest.text
+    manifest_json = manifest.json()
+    assert manifest_json["display"] == "standalone"
+    assert manifest_json["start_url"] == "/"
+    assert manifest_json["short_name"] == "NeoAdmin"
 
     assert script.status_code == 200
-    assert "serviceWorker.register" in script.text
     assert "adminInstallDrawer" in script.text
 
     assert worker.status_code == 200
     assert "CACHE_NAME" in worker.text
-    assert "neo-admin-shell-v2" in worker.text
+    assert "neo-admin-shell-v3" in worker.text
+
+
+def test_pwa_routes_are_publicly_accessible() -> None:
+    manifest = client.get("/manifest.json", follow_redirects=False)
+    worker = client.get("/sw.js", follow_redirects=False)
+    offline = client.get("/offline", follow_redirects=False)
+
+    assert manifest.status_code == 200
+    assert worker.status_code == 200
+    assert offline.status_code == 200

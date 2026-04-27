@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong, Textarea
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -13,33 +13,12 @@ from app.infrastructure.submission_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
 def submission_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    tone_cls = {
-        "success": "alert alert-success",
-        "warning": "alert alert-warning",
-        "danger": "alert alert-danger",
-        "info": "alert alert-info",
-    }.get(tone, "alert alert-info")
-    return Div(H3(title, cls="h6 mb-2"), P(message, cls="mb-0"), cls=tone_cls)
-
-
-def _summary_card(label: str, value: str, note: str) -> Col:
-    return Col(
-        Card(
-            Div(
-                Span(label, cls="admin-metric-label"),
-                H3(value, cls="admin-metric-value"),
-                P(note, cls="admin-module-copy mb-0"),
-                cls="admin-metric-card-body",
-            ),
-            cls="admin-surface-card h-100",
-        ),
-        span=12,
-        md=4,
-    )
+    return status_alert(title, message, tone)
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
@@ -102,23 +81,19 @@ def _submission_card(item, *, selected: bool, kind: str, status: str, search: st
 
 
 def _notes_field(value: str = "") -> Div:
-    return Div(
-        Label("Internal Notes", fr="notes", cls="admin-form-label"),
-        Textarea(
-            value,
-            id="notes",
-            name="notes",
-            rows=5,
-            placeholder="Add follow-up notes, decisions, or next steps",
-            cls="form-control admin-form-control admin-form-textarea",
-        ),
-        cls="admin-form-group",
+    return textarea_field(
+        "Internal Notes",
+        "notes",
+        value,
+        rows=5,
+        placeholder="Add follow-up notes, decisions, or next steps",
     )
 
 
 def _editor_form(selected, *, kind: str, status: str, search: str) -> Form:
     selected_kind = selected.kind if selected else "contact"
     options = _status_options(selected_kind)
+    selected_status = selected.status if selected else options[0][0]
     return Form(
         Input(type="hidden", name="entry_id", value=selected.entry_id if selected else ""),
         Input(type="hidden", name="kind", value=selected_kind),
@@ -127,23 +102,7 @@ def _editor_form(selected, *, kind: str, status: str, search: str) -> Form:
         Input(type="hidden", name="current_search", value=search),
         Div(
             Label("Workflow Status", cls="admin-form-label"),
-            Div(
-                *[
-                    Label(
-                        Input(
-                            type="radio",
-                            name="status",
-                            value=value,
-                            checked=(selected.status == value if selected else value == options[0][0]),
-                            cls="admin-radio-input",
-                        ),
-                        Span(label, cls="admin-radio-label-text"),
-                        cls=f"admin-radio-pill{' active' if selected and selected.status == value else ''}",
-                    )
-                    for value, label in options
-                ],
-                cls="admin-radio-grid",
-            ),
+            toggle_pill_group("status", list(options), selected_value=selected_status),
             cls="admin-form-group",
         ),
         _notes_field(selected.notes if selected else ""),
@@ -183,20 +142,15 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
         _filter_link("Reviewing", f"/submissions?kind={kind}&status=reviewing&search={search}", active=status == "reviewing"),
         cls="admin-filter-row mt-3",
     )
-    search_form = Form(
-        Input(type="hidden", name="kind", value=kind),
-        Input(type="hidden", name="status", value=status),
-        Input(
-            type="search",
-            name="search",
-            value=search,
-            placeholder="Search sender, message, email, or status",
-            cls="form-control admin-form-control admin-search-input",
-        ),
-        Input(type="submit", value="Find", cls="btn admin-module-btn admin-search-btn"),
-        method="get",
-        action="/submissions",
-        cls="admin-search-form mt-3",
+    search_form = search_filter_bar(
+        endpoint="/submissions",
+        placeholder="Search sender, message, email, or status",
+        search_value=search,
+        hidden_fields={
+            "kind": kind,
+            "status": status,
+        },
+        form_cls="admin-search-form admin-filter-bar mt-3",
     )
 
     list_panel = Card(
@@ -318,9 +272,9 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
         ),
         *page_frame(
             Row(
-                _summary_card("Inbox Total", str(summary.total), "Combined contact and booking records currently available."),
-                _summary_card("Open Items", str(summary.new_items), "New and active records that still need attention."),
-                _summary_card("Booking Requests", str(summary.booking_items), f"Live source: {summary.source}."),
+                summary_card("Inbox Total", str(summary.total), "Combined contact and booking records currently available."),
+                summary_card("Open Items", str(summary.new_items), "New and active records that still need attention."),
+                summary_card("Booking Requests", str(summary.booking_items), f"Live source: {summary.source}."),
                 cls="g-4",
             ),
             SectionWrap(

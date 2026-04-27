@@ -50,9 +50,5 @@ window.addEventListener("DOMContentLoaded", () => {
     node.addEventListener("click", handleInstallClick);
   });
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/assets/sw.js").catch(() => null);
-  }
-
   setInstallVisibility(false);
 });

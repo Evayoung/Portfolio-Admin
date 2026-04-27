@@ -248,6 +248,44 @@ a {
   margin-top: 0.95rem;
 }
 
+.admin-sidebar-nav.sidebar-navbar {
+  width: 100% !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0;
+  margin-top: 0.95rem;
+}
+
+.admin-sidebar-nav .nav {
+  gap: 0.45rem;
+  padding-inline: 0 !important;
+}
+
+.admin-sidebar-nav .nav-link {
+  color: rgba(238, 246, 255, 0.76);
+  border-radius: 1rem;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-sidebar-nav .nav-link:hover,
+.admin-sidebar-nav .nav-link:focus-visible,
+.admin-sidebar-nav .nav-link.active {
+  color: #fff;
+  background: rgba(45, 184, 232, 0.12);
+  transform: translateX(0.1rem);
+}
+
+.admin-sidebar-nav .nav-link i {
+  font-size: 1rem;
+}
+
+.admin-sidebar-nav .nav-link span {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .admin-nav-link {
   display: flex;
   align-items: center;
@@ -376,6 +414,32 @@ a {
   align-items: center;
   border-radius: 999px;
   padding: 0.45rem 0.78rem;
+}
+
+.admin-overview-metric .card-body {
+  padding: 1.2rem;
+}
+
+.admin-overview-metric p {
+  margin-bottom: 0;
+}
+
+.admin-overview-metric .text-muted,
+.admin-overview-metric .text-success,
+.admin-overview-metric .text-danger {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-overview-metric h3 {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+  margin: 0.65rem 0 0;
 }
 
 .admin-section-block {
@@ -687,12 +751,33 @@ a {
   margin-top: 1rem;
 }
 
+.admin-floating-field {
+  margin-bottom: 0;
+}
+
 .admin-form-label {
   display: inline-block;
   margin-bottom: 0.45rem;
   color: #dceafd;
   font-size: 0.88rem;
   font-weight: 600;
+}
+
+.admin-floating-field.form-floating > label,
+.admin-floating-label {
+  color: rgba(151, 171, 192, 0.84);
+}
+
+.admin-floating-field.form-floating > .form-control {
+  height: calc(3.6rem + 2px);
+  min-height: calc(3.6rem + 2px);
+  padding-top: 1.5rem;
+  padding-bottom: 0.7rem;
+}
+
+.admin-floating-field.form-floating > .form-control:focus ~ label,
+.admin-floating-field.form-floating > .form-control:not(:placeholder-shown) ~ label {
+  color: rgba(220, 234, 253, 0.84);
 }
 
 .admin-form-control {
@@ -721,8 +806,31 @@ a {
 
 .admin-search-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.7rem;
   align-items: stretch;
+}
+
+.admin-filter-fields {
+  flex: 1 1 18rem;
+}
+
+.admin-filter-actions {
+  display: flex;
+  align-items: stretch;
+}
+
+.admin-filter-actions .btn {
+  min-width: 5.25rem;
+  border-radius: 999px;
+}
+
+.admin-search-field {
+  flex: 1 1 100%;
+}
+
+.admin-search-field .admin-search-input {
+  width: 100%;
 }
 
 .admin-search-input {
@@ -733,14 +841,19 @@ a {
   min-width: 5.25rem;
 }
 
+.admin-save-alert {
+  border-radius: 1rem;
+  border-width: 1px;
+}
+
 .admin-radio-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+  width: 100%;
 }
 
 .admin-radio-pill {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -750,6 +863,8 @@ a {
   background: rgba(255, 255, 255, 0.03);
   color: rgba(238, 246, 255, 0.84);
   cursor: pointer;
+  text-decoration: none;
+  box-shadow: none !important;
 }
 
 .admin-radio-input {
@@ -760,10 +875,18 @@ a {
 }
 
 .admin-radio-pill.active,
-.admin-radio-pill:has(.admin-radio-input:checked) {
+.admin-radio-pill.active,
+.admin-radio-pill[aria-pressed="true"] {
   background: rgba(45, 184, 232, 0.14);
   border-color: rgba(45, 184, 232, 0.28);
   color: #fff;
+}
+
+.admin-radio-pill:hover,
+.admin-radio-pill:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(130, 183, 214, 0.22);
 }
 
 .admin-radio-label-text {
@@ -892,6 +1015,14 @@ a {
 
   .admin-search-form {
     flex-direction: column;
+  }
+
+  .admin-filter-actions {
+    width: 100%;
+  }
+
+  .admin-filter-actions .btn {
+    width: 100%;
   }
 
   .admin-metric-card-body,

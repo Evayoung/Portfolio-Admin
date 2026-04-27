@@ -2,49 +2,39 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, Input, Label, P
+from fasthtml.common import A, Div, Form, H2, Input, P
 from faststrap import Card, Col, Container, Row, SEO
 
 from app.config import settings
-from app.presentation.shell import admin_logo
+from app.infrastructure.settings_repository import get_site_profile
+from app.presentation.page_helpers import floating_field, status_alert
+from app.presentation.shell import admin_logo, brand_name, public_site_url
 
 
 def login_page(*, next_path: str = "/", message: str = "", tone: str = "info", login_email: str = "") -> tuple:
+    profile = get_site_profile()
+    display_name = brand_name(profile)
     alert = None
     if message:
-        tone_cls = {
-            "success": "alert alert-success",
-            "warning": "alert alert-warning",
-            "danger": "alert alert-danger",
-            "info": "alert alert-info",
-        }.get(tone, "alert alert-info")
-        alert = Div(P(message, cls="mb-0"), cls=tone_cls)
+        alert = status_alert("Sign-in status", message, tone)
 
     login_form = Form(
-        Div(
-            Label("Login Email", fr="login_email", cls="admin-form-label"),
-            Input(
-                type="email",
-                id="login_email",
-                name="login_email",
-                value=login_email,
-                required=True,
-                autocomplete="username",
-                cls="form-control admin-form-control",
-            ),
-            cls="admin-form-group",
+        floating_field(
+            "Login Email",
+            "login_email",
+            login_email,
+            input_type="email",
+            placeholder="you@example.com",
+            required=True,
+            autocomplete="username",
         ),
-        Div(
-            Label("Password", fr="password", cls="admin-form-label"),
-            Input(
-                type="password",
-                id="password",
-                name="password",
-                required=True,
-                autocomplete="current-password",
-                cls="form-control admin-form-control",
-            ),
-            cls="admin-form-group mt-3",
+        floating_field(
+            "Password",
+            "password",
+            input_type="password",
+            placeholder="Password",
+            required=True,
+            autocomplete="current-password",
         ),
         Input(type="hidden", name="next", value=next_path or "/"),
         alert if alert else "",
@@ -59,13 +49,13 @@ def login_page(*, next_path: str = "/", message: str = "", tone: str = "info", l
 
     panel = Card(
         Div(
-            Div(admin_logo(), cls="admin-login-logo"),
-            P("Neo Admin", cls="admin-kicker mb-2"),
+            Div(admin_logo(profile), cls="admin-login-logo"),
+            P(display_name, cls="admin-kicker mb-2"),
             H2("Sign In", cls="admin-login-title"),
-            P("Protected publishing dashboard for portfolio content, inbox management, and settings control.", cls="admin-module-copy"),
+            P("Please sign in to access the dashboard.", cls="admin-module-copy"),
             login_form,
             Div(
-                A("View Public Site", href="https://olorundaremicheal.vercel.app", target="_blank", rel="noreferrer", cls="btn admin-install-btn w-100 mt-3"),
+                A("View Public Site", href=public_site_url(profile), target="_blank", rel="noreferrer", cls="btn admin-install-btn w-100 mt-3"),
                 cls="admin-login-actions",
             ),
             cls="admin-panel-stack",

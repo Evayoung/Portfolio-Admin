@@ -3,28 +3,12 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, H2, H3, P, Span
-from faststrap import Badge, Card, Col, Container, EmptyState, Icon, Row, SEO
+from faststrap import Card, Col, Icon, Row, SEO
 
 from app.config import settings
 from app.infrastructure.seed_data import ACTIVITY, METRICS, MODULES
+from app.presentation.page_helpers import overview_metric_card
 from app.presentation.shell import page_frame
-
-
-def _metric_card(item) -> Col:
-    return Col(
-        Card(
-            Div(
-                Span(item.label, cls="admin-metric-label"),
-                H3(item.value, cls="admin-metric-value"),
-                Badge(item.delta, cls=f"admin-metric-delta text-bg-{item.tone}"),
-                cls="admin-metric-card-body",
-            ),
-            cls="admin-surface-card h-100",
-        ),
-        span=12,
-        md=6,
-        xl=3,
-    )
 
 
 def _module_card(item) -> Col:
@@ -50,7 +34,7 @@ def _module_card(item) -> Col:
 
 
 def overview_page() -> tuple:
-    metrics = Row(*[_metric_card(item) for item in METRICS], cls="g-4")
+    metrics = Row(*[overview_metric_card(item) for item in METRICS], cls="g-4")
     modules = Row(*[_module_card(item) for item in MODULES], cls="g-4")
     activity = Card(
         Div(

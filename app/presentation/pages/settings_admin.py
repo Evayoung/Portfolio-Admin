@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import Div, Form, H2, H3, Input, Label, P, Span, Strong, Textarea
+from fasthtml.common import Div, Form, H2, H3, Input, P, Span, Strong
 from faststrap import Badge, Card, Col, Row, SEO
 
 from app.config import settings
@@ -10,65 +10,12 @@ from app.infrastructure.auth_repository import get_admin_access_profile
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import floating_field, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
 def settings_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    tone_cls = {
-        "success": "alert alert-success",
-        "warning": "alert alert-warning",
-        "danger": "alert alert-danger",
-        "info": "alert alert-info",
-    }.get(tone, "alert alert-info")
-    return Div(H3(title, cls="h6 mb-2"), P(message, cls="mb-0"), cls=tone_cls)
-
-
-def _summary_card(label: str, value: str, note: str) -> Col:
-    return Col(
-        Card(
-            Div(
-                Span(label, cls="admin-metric-label"),
-                H3(value, cls="admin-metric-value"),
-                P(note, cls="admin-module-copy mb-0"),
-                cls="admin-metric-card-body",
-            ),
-            cls="admin-surface-card h-100",
-        ),
-        span=12,
-        md=4,
-    )
-
-
-def _field(label: str, name: str, value: str = "", *, input_type: str = "text", placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Input(
-            type=input_type,
-            id=name,
-            name=name,
-            value=value,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control",
-        ),
-        cls="admin-form-group",
-    )
-
-
-def _textarea_field(label: str, name: str, value: str = "", *, rows: int = 5, placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Textarea(
-            value,
-            id=name,
-            name=name,
-            rows=rows,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control admin-form-textarea",
-        ),
-        cls="admin-form-group",
-    )
+    return status_alert(title, message, tone)
 
 
 def settings_workspace_page() -> tuple:
@@ -131,32 +78,32 @@ def settings_workspace_page() -> tuple:
 
     form = Form(
         Row(
-            Col(_field("Full Name", "full_name", profile.full_name, placeholder="Olorundare Micheal Babawale", required=True), span=12, md=7),
-            Col(_field("Role", "role", profile.role, placeholder="Full-Stack & AI Systems Architect", required=True), span=12, md=5, cls="mt-3 mt-md-0"),
+            Col(floating_field("Full Name", "full_name", profile.full_name, placeholder="Olorundare Micheal Babawale", required=True), span=12, md=7),
+            Col(floating_field("Role", "role", profile.role, placeholder="Full-Stack & AI Systems Architect", required=True), span=12, md=5, cls="mt-3 mt-md-0"),
             cls="g-3",
         ),
         Row(
-            Col(_field("Site Label", "site_name", profile.site_name, placeholder="Micheal Olorundare Portfolio", required=True), span=12, md=6),
-            Col(_field("Site URL", "site_url", profile.site_url, input_type="url", placeholder="https://your-domain.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+            Col(floating_field("Site Label", "site_name", profile.site_name, placeholder="Micheal Olorundare Portfolio", required=True), span=12, md=6),
+            Col(floating_field("Site URL", "site_url", profile.site_url, input_type="url", placeholder="https://your-domain.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
             cls="g-3 mt-1",
         ),
         Row(
-            Col(_field("Email", "email", profile.email, input_type="email", placeholder="name@example.com"), span=12, md=6),
-            Col(_field("Phone", "phone", profile.phone, placeholder="+234..."), span=12, md=6, cls="mt-3 mt-md-0"),
+            Col(floating_field("Email", "email", profile.email, input_type="email", placeholder="name@example.com"), span=12, md=6),
+            Col(floating_field("Phone", "phone", profile.phone, placeholder="+234..."), span=12, md=6, cls="mt-3 mt-md-0"),
             cls="g-3 mt-1",
         ),
         Row(
-            Col(_field("WhatsApp", "whatsapp", profile.whatsapp, placeholder="+234..."), span=12, md=6),
-            Col(_field("Location", "location", profile.location, placeholder="Ilorin, Nigeria"), span=12, md=6, cls="mt-3 mt-md-0"),
+            Col(floating_field("WhatsApp", "whatsapp", profile.whatsapp, placeholder="+234..."), span=12, md=6),
+            Col(floating_field("Location", "location", profile.location, placeholder="Ilorin, Nigeria"), span=12, md=6, cls="mt-3 mt-md-0"),
             cls="g-3 mt-1",
         ),
         Row(
-            Col(_field("GitHub URL", "github", profile.github, input_type="url", placeholder="https://github.com/..."), span=12, md=6),
-            Col(_field("LinkedIn URL", "linkedin", profile.linkedin, input_type="url", placeholder="https://linkedin.com/in/..."), span=12, md=6, cls="mt-3 mt-md-0"),
+            Col(floating_field("GitHub URL", "github", profile.github, input_type="url", placeholder="https://github.com/..."), span=12, md=6),
+            Col(floating_field("LinkedIn URL", "linkedin", profile.linkedin, input_type="url", placeholder="https://linkedin.com/in/..."), span=12, md=6, cls="mt-3 mt-md-0"),
             cls="g-3 mt-1",
         ),
-        _textarea_field("SEO Title", "seo_title", profile.seo_title, rows=2, required=True, placeholder="Portfolio SEO title"),
-        _textarea_field("SEO Description", "seo_description", profile.seo_description, rows=5, required=True, placeholder="Default meta description"),
+        textarea_field("SEO Title", "seo_title", profile.seo_title, rows=2, required=True, placeholder="Portfolio SEO title"),
+        textarea_field("SEO Description", "seo_description", profile.seo_description, rows=5, required=True, placeholder="Default meta description"),
         Div(
             Input(type="submit", value="Save Settings", cls="btn admin-module-btn"),
             Span(
@@ -185,9 +132,9 @@ def settings_workspace_page() -> tuple:
     )
 
     access_form = Form(
-        _field("Login Email", "login_email", access.login_email, input_type="email", placeholder="admin@neoportfolio.dev", required=True),
-        _field("New Password", "password", "", input_type="password", placeholder="Leave blank to keep the current password"),
-        _field("Confirm Password", "confirm_password", "", input_type="password", placeholder="Repeat the new password"),
+        floating_field("Login Email", "login_email", access.login_email, input_type="email", placeholder="admin@neoportfolio.dev", required=True, autocomplete="username"),
+        floating_field("New Password", "password", "", input_type="password", placeholder="Leave blank to keep the current password", autocomplete="new-password"),
+        floating_field("Confirm Password", "confirm_password", "", input_type="password", placeholder="Repeat the new password", autocomplete="new-password"),
         Div(
             Input(type="submit", value="Save Admin Access", cls="btn admin-module-btn"),
             Span(
@@ -228,9 +175,9 @@ def settings_workspace_page() -> tuple:
         ),
         *page_frame(
             Row(
-                _summary_card("Profile Source", profile.source.title(), "Where the current public identity data is being loaded from."),
-                _summary_card("Brand Label", profile.site_name.replace(" Portfolio", ""), "This drives the public short-name brand treatment."),
-                _summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
+                summary_card("Profile Source", profile.source.title(), "Where the current public identity data is being loaded from."),
+                summary_card("Brand Label", profile.site_name.replace(" Portfolio", ""), "This drives the public short-name brand treatment."),
+                summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
                 cls="g-4",
             ),
             SectionWrap(

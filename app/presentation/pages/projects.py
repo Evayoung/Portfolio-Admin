@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong, Textarea
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -14,37 +14,12 @@ from app.infrastructure.project_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import floating_field, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
 def project_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    tone_cls = {
-        "success": "alert alert-success",
-        "warning": "alert alert-warning",
-        "danger": "alert alert-danger",
-        "info": "alert alert-info",
-    }.get(tone, "alert alert-info")
-    return Div(
-        H3(title, cls="h6 mb-2"),
-        P(message, cls="mb-0"),
-        cls=tone_cls,
-    )
-
-
-def _summary_card(label: str, value: str, note: str) -> Col:
-    return Col(
-        Card(
-            Div(
-                Span(label, cls="admin-metric-label"),
-                H3(value, cls="admin-metric-value"),
-                P(note, cls="admin-module-copy mb-0"),
-                cls="admin-metric-card-body",
-            ),
-            cls="admin-surface-card h-100",
-        ),
-        span=12,
-        md=4,
-    )
+    return status_alert(title, message, tone)
 
 
 def _project_card(project, *, selected: bool, category: str, featured_only: bool, search: str) -> Card:
@@ -82,66 +57,18 @@ def _filter_link(label: str, href: str, *, active: bool) -> A:
     return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
 
 
-def _field(label: str, name: str, value: str = "", *, input_type: str = "text", placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Input(
-            type=input_type,
-            id=name,
-            name=name,
-            value=value,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control",
-        ),
-        cls="admin-form-group",
-    )
-
-
-def _textarea_field(label: str, name: str, value: str = "", *, rows: int = 5, placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Textarea(
-            value,
-            id=name,
-            name=name,
-            rows=rows,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control admin-form-textarea",
-        ),
-        cls="admin-form-group",
-    )
-
-
 def _editor_form(selected, *, category: str, featured_only: bool, search: str) -> Form:
     category_options = list_project_categories()[1:]
     selected_category = selected.category if selected else ""
-    category_buttons = Div(
-        *[
-            Label(
-                Input(
-                    type="radio",
-                    name="category",
-                    value=item_slug,
-                    checked=(item_slug == selected_category),
-                    cls="admin-radio-input",
-                ),
-                Span(label, cls="admin-radio-label-text"),
-                cls=f"admin-radio-pill{' active' if item_slug == selected_category else ''}",
-            )
-            for item_slug, label in category_options
-        ],
-        cls="admin-radio-grid",
-    )
+    category_buttons = toggle_pill_group("category", list(category_options), selected_value=selected_category)
     return Form(
         Input(type="hidden", name="original_slug", value=selected.slug if selected else ""),
         Input(type="hidden", name="current_category", value=category),
         Input(type="hidden", name="current_featured", value="1" if featured_only else "0"),
         Input(type="hidden", name="current_search", value=search),
         Row(
-            Col(_field("Title", "title", selected.title if selected else "", placeholder="Project title", required=True), span=12, md=8),
-            Col(_field("Slug", "slug", selected.slug if selected else "", placeholder="project-slug", required=True), span=12, md=4, cls="mt-3 mt-md-0"),
+            Col(floating_field("Title", "title", selected.title if selected else "", placeholder="Project title", required=True), span=12, md=8),
+            Col(floating_field("Slug", "slug", selected.slug if selected else "", placeholder="project-slug", required=True), span=12, md=4, cls="mt-3 mt-md-0"),
             cls="g-3",
         ),
         Div(
@@ -149,13 +76,13 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
             category_buttons,
             cls="admin-form-group mt-3",
         ),
-        _field("Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/example.jpg"),
-        _textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short public-facing project summary"),
-        _textarea_field("Narrative", "narrative", selected.narrative if selected else "", rows=6, required=True, placeholder="Longer case-study narrative"),
-        _field("Tech Stack", "tech_stack", ", ".join(selected.tech) if selected else "", placeholder="Python, FastAPI, PostgreSQL"),
+        floating_field("Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/example.jpg"),
+        textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short public-facing project summary"),
+        textarea_field("Narrative", "narrative", selected.narrative if selected else "", rows=6, required=True, placeholder="Longer case-study narrative"),
+        floating_field("Tech Stack", "tech_stack", ", ".join(selected.tech) if selected else "", placeholder="Python, FastAPI, PostgreSQL"),
         Row(
-            Col(_field("Complexity", "complexity", str(selected.complexity) if selected else "0", input_type="number", placeholder="0-100"), span=12, md=6),
-            Col(_field("Satisfaction", "satisfaction", str(selected.satisfaction) if selected else "0", input_type="number", placeholder="0-100"), span=12, md=6, cls="mt-3 mt-md-0"),
+            Col(floating_field("Complexity", "complexity", str(selected.complexity) if selected else "0", input_type="number", placeholder="0-100"), span=12, md=6),
+            Col(floating_field("Satisfaction", "satisfaction", str(selected.satisfaction) if selected else "0", input_type="number", placeholder="0-100"), span=12, md=6, cls="mt-3 mt-md-0"),
             cls="g-3 mt-1",
         ),
         Div(
@@ -212,20 +139,15 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
         f"/projects?category={category}&featured={'0' if featured_only else '1'}&search={search}",
         active=featured_only,
     )
-    search_form = Form(
-        Input(type="hidden", name="category", value=category),
-        Input(type="hidden", name="featured", value="1" if featured_only else "0"),
-        Input(
-            type="search",
-            name="search",
-            value=search,
-            placeholder="Search title, slug, or summary",
-            cls="form-control admin-form-control admin-search-input",
-        ),
-        Input(type="submit", value="Find", cls="btn admin-module-btn admin-search-btn"),
-        method="get",
-        action="/projects",
-        cls="admin-search-form mt-3",
+    search_form = search_filter_bar(
+        endpoint="/projects",
+        placeholder="Search title, slug, or summary",
+        search_value=search,
+        hidden_fields={
+            "category": category,
+            "featured": "1" if featured_only else "0",
+        },
+        form_cls="admin-search-form admin-filter-bar mt-3",
     )
 
     list_panel = Card(
@@ -347,9 +269,9 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
         ),
         *page_frame(
             Row(
-                _summary_card("Projects", str(summary.total), "Current portfolio records available in the workspace."),
-                _summary_card("Featured", str(summary.featured), "Flagged for homepage or primary discovery surfaces."),
-                _summary_card("Categories", str(summary.categories), f"Live source: {summary.source}."),
+                summary_card("Projects", str(summary.total), "Current portfolio records available in the workspace."),
+                summary_card("Featured", str(summary.featured), "Flagged for homepage or primary discovery surfaces."),
+                summary_card("Categories", str(summary.categories), f"Live source: {summary.source}."),
                 cls="g-4",
             ),
             SectionWrap(

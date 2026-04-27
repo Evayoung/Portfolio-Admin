@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong, Textarea
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -14,69 +14,16 @@ from app.infrastructure.blog_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import floating_field, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
 def blog_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    tone_cls = {
-        "success": "alert alert-success",
-        "warning": "alert alert-warning",
-        "danger": "alert alert-danger",
-        "info": "alert alert-info",
-    }.get(tone, "alert alert-info")
-    return Div(H3(title, cls="h6 mb-2"), P(message, cls="mb-0"), cls=tone_cls)
-
-
-def _summary_card(label: str, value: str, note: str) -> Col:
-    return Col(
-        Card(
-            Div(
-                Span(label, cls="admin-metric-label"),
-                H3(value, cls="admin-metric-value"),
-                P(note, cls="admin-module-copy mb-0"),
-                cls="admin-metric-card-body",
-            ),
-            cls="admin-surface-card h-100",
-        ),
-        span=12,
-        md=4,
-    )
+    return status_alert(title, message, tone)
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
     return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
-
-
-def _field(label: str, name: str, value: str = "", *, input_type: str = "text", placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Input(
-            type=input_type,
-            id=name,
-            name=name,
-            value=value,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control",
-        ),
-        cls="admin-form-group",
-    )
-
-
-def _textarea_field(label: str, name: str, value: str = "", *, rows: int = 5, placeholder: str = "", required: bool = False) -> Div:
-    return Div(
-        Label(label, fr=name, cls="admin-form-label"),
-        Textarea(
-            value,
-            id=name,
-            name=name,
-            rows=rows,
-            placeholder=placeholder,
-            required=required,
-            cls="form-control admin-form-control admin-form-textarea",
-        ),
-        cls="admin-form-group",
-    )
 
 
 def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
@@ -112,41 +59,25 @@ def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
 def _editor_form(selected, *, category: str, search: str) -> Form:
     category_options = list_blog_categories()[1:]
     selected_category = selected.category if selected else ""
-    category_buttons = Div(
-        *[
-            Label(
-                Input(
-                    type="radio",
-                    name="category",
-                    value=item_slug,
-                    checked=(item_slug == selected_category),
-                    cls="admin-radio-input",
-                ),
-                Span(label, cls="admin-radio-label-text"),
-                cls=f"admin-radio-pill{' active' if item_slug == selected_category else ''}",
-            )
-            for item_slug, label in category_options
-        ],
-        cls="admin-radio-grid",
-    )
+    category_buttons = toggle_pill_group("category", list(category_options), selected_value=selected_category)
     return Form(
         Input(type="hidden", name="original_slug", value=selected.slug if selected else ""),
         Input(type="hidden", name="current_category", value=category),
         Input(type="hidden", name="current_search", value=search),
         Row(
-            Col(_field("Title", "title", selected.title if selected else "", placeholder="Article title", required=True), span=12, md=8),
-            Col(_field("Slug", "slug", selected.slug if selected else "", placeholder="article-slug", required=True), span=12, md=4, cls="mt-3 mt-md-0"),
+            Col(floating_field("Title", "title", selected.title if selected else "", placeholder="Article title", required=True), span=12, md=8),
+            Col(floating_field("Slug", "slug", selected.slug if selected else "", placeholder="article-slug", required=True), span=12, md=4, cls="mt-3 mt-md-0"),
             cls="g-3",
         ),
         Div(Label("Category", cls="admin-form-label"), category_buttons, cls="admin-form-group mt-3"),
-        _field("Hero Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/hero-bg.jpg"),
+        floating_field("Hero Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/hero-bg.jpg"),
         Row(
-            Col(_field("Read Minutes", "read_minutes", str(selected.read_minutes) if selected else "5", input_type="number", placeholder="5"), span=12, md=4),
-            Col(_field("Tags", "tags", ", ".join(selected.tags) if selected else "", placeholder="FastAPI, Python, AI"), span=12, md=8, cls="mt-3 mt-md-0"),
+            Col(floating_field("Read Minutes", "read_minutes", str(selected.read_minutes) if selected else "5", input_type="number", placeholder="5"), span=12, md=4),
+            Col(floating_field("Tags", "tags", ", ".join(selected.tags) if selected else "", placeholder="FastAPI, Python, AI"), span=12, md=8, cls="mt-3 mt-md-0"),
             cls="g-3",
         ),
-        _textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short excerpt for listings and previews"),
-        _textarea_field("HTML Content", "content_html", selected.content_html if selected else "", rows=12, required=True, placeholder="<p>Article body...</p>"),
+        textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short excerpt for listings and previews"),
+        textarea_field("HTML Content", "content_html", selected.content_html if selected else "", rows=12, required=True, placeholder="<p>Article body...</p>"),
         Div(
             Label(
                 Input(type="checkbox", name="published", checked=(selected.published != "Draft" if selected else True), cls="form-check-input admin-check-input"),
@@ -186,19 +117,12 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
         ],
         cls="admin-filter-row",
     )
-    search_form = Form(
-        Input(type="hidden", name="category", value=category),
-        Input(
-            type="search",
-            name="search",
-            value=search,
-            placeholder="Search title, slug, summary, or tags",
-            cls="form-control admin-form-control admin-search-input",
-        ),
-        Input(type="submit", value="Find", cls="btn admin-module-btn admin-search-btn"),
-        method="get",
-        action="/blog",
-        cls="admin-search-form mt-3",
+    search_form = search_filter_bar(
+        endpoint="/blog",
+        placeholder="Search title, slug, summary, or tags",
+        search_value=search,
+        hidden_fields={"category": category},
+        form_cls="admin-search-form admin-filter-bar mt-3",
     )
 
     list_panel = Card(
@@ -317,9 +241,9 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
         ),
         *page_frame(
             Row(
-                _summary_card("Posts", str(summary.total), "Current editorial records available in the workspace."),
-                _summary_card("Categories", str(summary.categories), "Distinct public-facing post categories."),
-                _summary_card("Published", str(summary.published), f"Live source: {summary.source}."),
+                summary_card("Posts", str(summary.total), "Current editorial records available in the workspace."),
+                summary_card("Categories", str(summary.categories), "Distinct public-facing post categories."),
+                summary_card("Published", str(summary.published), f"Live source: {summary.source}."),
                 cls="g-4",
             ),
             SectionWrap(
