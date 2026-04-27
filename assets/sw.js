@@ -1,4 +1,4 @@
-const CACHE_NAME = "neo-admin-shell-v1";
+const CACHE_NAME = "neo-admin-shell-v2";
 const CORE_ASSETS = [
   "/",
   "/projects",
@@ -6,7 +6,7 @@ const CORE_ASSETS = [
   "/cv",
   "/submissions",
   "/settings",
-  "/assets/admin.css?v=20260426b",
+  "/assets/admin.css?v=20260427d",
   "/assets/admin.js?v=20260426a",
   "/assets/manifest.webmanifest",
   "/assets/icon-192.png",

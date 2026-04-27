@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Span
-from faststrap import BottomNav, BottomNavItem, Container, Icon
+from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Small, Span
+from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon
 
 from app.config import settings
 
@@ -77,13 +77,7 @@ def admin_sidebar(current: str = "/") -> Aside:
                         rel="noreferrer",
                         cls="btn admin-nav-btn w-100",
                     ),
-                    A(
-                        Icon("phone", cls="me-2"),
-                        "Install App",
-                        href="#",
-                        id="install-app-trigger",
-                        cls="btn admin-install-btn w-100 d-none",
-                    ),
+                    A(Icon("phone", cls="me-2"), "Install App", href="#", id="install-app-trigger", cls="btn admin-install-btn w-100"),
                     A(
                         Icon("box-arrow-right", cls="me-2"),
                         "Sign Out",
@@ -113,16 +107,18 @@ def admin_mobile_header(current: str = "/", title: str = "Overview") -> Div:
                 ),
                 Div(
                     A(
-                        Icon("sliders"),
-                        href="/settings",
+                        Icon("list"),
+                        href="#",
+                        data_bs_toggle="offcanvas",
+                        data_bs_target="#adminMobileDrawer",
                         cls="admin-mobile-action",
-                        aria_label="Open settings",
+                        aria_label="Open menu",
                     ),
                     A(
                         Icon("download"),
                         href="#",
                         id="install-app-trigger-mobile",
-                        cls="admin-mobile-action d-none",
+                        cls="admin-mobile-action",
                         aria_label="Install app",
                     ),
                     cls="admin-mobile-actions",
@@ -135,6 +131,7 @@ def admin_mobile_header(current: str = "/", title: str = "Overview") -> Div:
 
 
 def admin_bottom_nav(current: str = "/") -> Div:
+    main_items = BOTTOM_NAV_ITEMS[:4]
     return BottomNav(
         *[
             BottomNavItem(
@@ -144,11 +141,81 @@ def admin_bottom_nav(current: str = "/") -> Div:
                 active=href == current,
                 cls="admin-bottom-link",
             )
-            for label, href, icon in BOTTOM_NAV_ITEMS
+            for label, href, icon in main_items
         ],
+        A(
+            Icon("list", size="1.25em", cls="mb-1"),
+            Small("Menu", cls="d-block", style="font-size: 0.75rem; line-height: 1;"),
+            href="#",
+            data_bs_toggle="offcanvas",
+            data_bs_target="#adminMobileDrawer",
+            aria_label="Open menu",
+            cls="nav-link d-flex flex-column align-items-center justify-content-center w-100 flex-grow-1 py-2 admin-bottom-link",
+        ),
         variant="dark",
         cls="admin-bottom-nav d-lg-none",
         id="admin-bottom-nav",
+    )
+
+
+def admin_mobile_drawer(current: str = "/") -> Div:
+    nav_links = Div(
+        *[_nav_link(label, href, icon, current) for label, href, icon in NAV_ITEMS],
+        cls="admin-sidebar-links mt-0",
+    )
+    actions = Div(
+        A(
+            Icon("box-arrow-up-right", cls="me-2"),
+            "Public Site",
+            href="https://olorundaremicheal.vercel.app",
+            target="_blank",
+            rel="noreferrer",
+            cls="btn admin-nav-btn w-100",
+        ),
+        A(
+            Icon("phone", cls="me-2"),
+            "Install App",
+            href="#",
+            id="install-app-trigger-drawer",
+            cls="btn admin-install-btn w-100",
+        ),
+        A(
+            Icon("box-arrow-right", cls="me-2"),
+            "Sign Out",
+            href="/logout",
+            cls="btn admin-install-btn w-100",
+        ),
+        cls="admin-sidebar-actions mt-4",
+    )
+    return Drawer(
+        Div(
+            P("Workspace", cls="admin-sidebar-kicker mb-3"),
+            nav_links,
+            actions,
+            cls="admin-mobile-drawer-stack",
+        ),
+        drawer_id="adminMobileDrawer",
+        title="Menu",
+        placement="start",
+        cls="admin-mobile-drawer d-lg-none",
+        body_cls="admin-mobile-drawer-body",
+        dark=True,
+    )
+
+
+def admin_install_drawer() -> Div:
+    return Drawer(
+        Div(
+            P("On iPhone or iPad, open the browser share menu and choose Add to Home Screen.", cls="admin-module-copy"),
+            P("On Android, use the browser menu and choose Install App or Add to Home Screen if the native prompt does not appear automatically.", cls="admin-module-copy mb-0"),
+            cls="admin-mobile-drawer-stack",
+        ),
+        drawer_id="adminInstallDrawer",
+        title="Install Neo Admin",
+        placement="bottom",
+        cls="admin-install-drawer",
+        body_cls="admin-mobile-drawer-body",
+        dark=True,
     )
 
 
@@ -176,7 +243,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                         Container(
                             Div(
                                 P(
-                                    f"{chr(169)} 2026 {settings.owner_name}. Mobile-first publishing dashboard for your portfolio.",
+                                    f"{chr(169)} 2026 {settings.owner_name}.",
                                     cls="admin-footer-copy",
                                 ),
                                 cls="d-flex justify-content-center text-center",
@@ -191,4 +258,6 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
             cls="admin-layout",
         ),
         admin_bottom_nav(current),
+        admin_mobile_drawer(current),
+        admin_install_drawer(),
     )

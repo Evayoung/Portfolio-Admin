@@ -57,8 +57,8 @@ app.hdrs = app.hdrs + [
     Meta(name="apple-mobile-web-app-title", content="Neo Admin"),
     Link(rel="manifest", href="/assets/manifest.webmanifest"),
     Link(rel="apple-touch-icon", href="/assets/icon-192.png"),
-    Link(rel="stylesheet", href="/assets/admin.css?v=20260427d"),
-    Script(src="/assets/admin.js?v=20260426a", defer=True),
+    Link(rel="stylesheet", href="/assets/admin.css?v=20260427e"),
+    Script(src="/assets/admin.js?v=20260427b", defer=True),
 ]
 
 setup_routes(app)

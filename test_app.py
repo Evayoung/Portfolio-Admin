@@ -50,6 +50,7 @@ def test_login_page_renders() -> None:
     assert "Sign In" in html
     assert "Login Email" in html
     assert "Password" in html
+    assert "Use the seeded admin credentials first" not in html
 
 
 def test_core_routes_render() -> None:
@@ -68,6 +69,7 @@ def test_overview_contains_admin_shell_markers() -> None:
     assert "Content Modules" in html
     assert 'class="admin-sidebar' in html
     assert 'id="admin-bottom-nav"' in html
+    assert 'data-bs-target="#adminMobileDrawer"' in html
     assert "Published Projects" in html
 
 
@@ -250,9 +252,12 @@ def test_pwa_assets_are_exposed() -> None:
     assert manifest.status_code == 200
     assert '"display": "standalone"' in manifest.text
     assert '"start_url": "/"' in manifest.text
+    assert '"id": "/"' in manifest.text
 
     assert script.status_code == 200
     assert "serviceWorker.register" in script.text
+    assert "adminInstallDrawer" in script.text
 
     assert worker.status_code == 200
     assert "CACHE_NAME" in worker.text
+    assert "neo-admin-shell-v2" in worker.text

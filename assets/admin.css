@@ -115,6 +115,41 @@ a {
   color: var(--admin-text);
 }
 
+.admin-mobile-drawer .offcanvas-header,
+.admin-install-drawer .offcanvas-header {
+  border-bottom: 1px solid rgba(130, 183, 214, 0.12);
+  background: rgba(8, 16, 29, 0.98);
+}
+
+.admin-mobile-drawer .offcanvas-title,
+.admin-install-drawer .offcanvas-title {
+  color: #fff;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.admin-mobile-drawer .offcanvas-body,
+.admin-install-drawer .offcanvas-body {
+  background: linear-gradient(180deg, rgba(8, 16, 29, 0.98), rgba(10, 24, 39, 0.98));
+}
+
+.admin-mobile-drawer {
+  width: min(88vw, 22rem) !important;
+}
+
+.admin-install-drawer {
+  border-top-left-radius: 1.4rem;
+  border-top-right-radius: 1.4rem;
+}
+
+.admin-mobile-drawer-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-mobile-drawer-body {
+  padding: 1.25rem;
+}
+
 .admin-sidebar {
   width: var(--admin-sidebar-width);
   flex-shrink: 0;
