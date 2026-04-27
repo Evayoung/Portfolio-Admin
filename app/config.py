@@ -23,8 +23,8 @@ class Settings:
     owner_name: str = "Olorundare Micheal"
     session_cookie: str = "neo_admin_session"
     secret_key: str = os.getenv("NEO_ADMIN_SECRET_KEY", "neo-admin-local-dev-secret")
-    admin_login_email: str = os.getenv("NEO_ADMIN_LOGIN_EMAIL", "admin@neoportfolio.dev")
-    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD", "ChangeMe123!")
+    admin_login_email: str = os.getenv("NEO_ADMIN_LOGIN_EMAIL") or "meshelleva@gmail.com"
+    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD") or "Password123!"
     base_url: str = os.getenv("NEO_ADMIN_BASE_URL", "http://127.0.0.1:5063")
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")

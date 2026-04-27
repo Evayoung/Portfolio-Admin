@@ -74,7 +74,9 @@ def get_admin_access_profile() -> AdminAccessProfile:
         rows = _rest_request("GET", "admin_access", query="?select=login_email&limit=1")
         if isinstance(rows, list) and rows:
             row = rows[0]
-            return AdminAccessProfile(login_email=row.get("login_email") or seed_profile.login_email, source="supabase")
+            login_email = (row.get("login_email") or "").strip().lower()
+            if login_email:
+                return AdminAccessProfile(login_email=login_email, source="supabase")
     except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
         pass
     return seed_profile
@@ -95,9 +97,12 @@ def authenticate_admin(login_email: str, password: str) -> AdminLoginResult:
             rows = _rest_request("GET", "admin_access", query="?select=login_email,password_hash&limit=1")
             if isinstance(rows, list) and rows:
                 row = rows[0]
-                stored_email = (row.get("login_email") or stored_email).lower()
-                stored_hash = row.get("password_hash") or stored_hash
-                source = "supabase"
+                row_email = (row.get("login_email") or "").strip().lower()
+                row_hash = (row.get("password_hash") or "").strip()
+                if row_email and row_hash:
+                    stored_email = row_email
+                    stored_hash = row_hash
+                    source = "supabase"
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass
 

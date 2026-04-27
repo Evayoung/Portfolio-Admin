@@ -50,7 +50,6 @@ def login_page(*, next_path: str = "/", message: str = "", tone: str = "info", l
         alert if alert else "",
         Div(
             Input(type="submit", value="Sign In", cls="btn admin-module-btn w-100"),
-            P("Use the seeded admin credentials first, then rotate them from Settings > Admin Access.", cls="admin-save-note mt-3 mb-0"),
             cls="mt-4",
         ),
         method="post",
