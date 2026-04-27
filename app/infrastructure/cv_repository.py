@@ -7,6 +7,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -49,6 +50,8 @@ def _rest_request(
 @lru_cache(maxsize=1)
 def _cv_module():
     content_path = Path(__file__).resolve().parents[3] / "neoportfolio" / "cv_content.py"
+    if not content_path.exists():
+        return None
     spec = importlib.util.spec_from_file_location("neoportfolio_cv_admin_seed", content_path)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
@@ -57,18 +60,25 @@ def _cv_module():
     return module
 
 
+def _local_seed(name: str, default):
+    module = _cv_module()
+    if module is None:
+        return default
+    return getattr(module, name, default)
+
+
 def _local_meta() -> AdminCvMeta:
-    meta = _cv_module().CV_META
+    meta = _local_seed("CV_META", {})
     return AdminCvMeta(
-        name=meta["name"],
-        role=meta["role"],
-        email=meta["email"],
-        phone=meta["phone"],
-        whatsapp=meta["whatsapp"],
-        location=meta["location"],
-        github=meta["github"],
-        linkedin=meta["linkedin"],
-        summary=meta["summary"],
+        name=meta.get("name", ""),
+        role=meta.get("role", ""),
+        email=meta.get("email", ""),
+        phone=meta.get("phone", ""),
+        whatsapp=meta.get("whatsapp", ""),
+        location=meta.get("location", ""),
+        github=meta.get("github", ""),
+        linkedin=meta.get("linkedin", ""),
+        summary=meta.get("summary", ""),
         source="local",
     )
 
@@ -97,23 +107,96 @@ def get_cv_meta() -> AdminCvMeta:
 
 
 def list_work_history():
-    return _cv_module().WORK_HISTORY
+    if supabase_is_configured():
+        try:
+            rows = _rest_request("GET", "cv_work_history", query="?select=title,organisation,period,location,bullets&order=sort_order.asc")
+            if isinstance(rows, list) and rows:
+                return tuple(
+                    SimpleNamespace(
+                        title=row.get("title", ""),
+                        organisation=row.get("organisation", ""),
+                        period=row.get("period", ""),
+                        location=row.get("location", ""),
+                        bullets=tuple(row.get("bullets") or []),
+                    )
+                    for row in rows
+                )
+        except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+            pass
+    return _local_seed("WORK_HISTORY", tuple())
 
 
 def list_education():
-    return _cv_module().EDUCATION
+    if supabase_is_configured():
+        try:
+            rows = _rest_request("GET", "cv_education", query="?select=degree,institution,period,note&order=sort_order.asc")
+            if isinstance(rows, list) and rows:
+                return tuple(
+                    SimpleNamespace(
+                        degree=row.get("degree", ""),
+                        institution=row.get("institution", ""),
+                        period=row.get("period", ""),
+                        note=row.get("note", ""),
+                    )
+                    for row in rows
+                )
+        except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+            pass
+    return _local_seed("EDUCATION", tuple())
 
 
 def list_certifications():
-    return _cv_module().CERTIFICATIONS
+    if supabase_is_configured():
+        try:
+            rows = _rest_request("GET", "cv_certifications", query="?select=name,issuer,year,credential_url&order=sort_order.asc")
+            if isinstance(rows, list) and rows:
+                return tuple(
+                    SimpleNamespace(
+                        name=row.get("name", ""),
+                        issuer=row.get("issuer", ""),
+                        year=row.get("year", ""),
+                        credential_url=row.get("credential_url", ""),
+                    )
+                    for row in rows
+                )
+        except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+            pass
+    return _local_seed("CERTIFICATIONS", tuple())
 
 
 def list_tool_categories():
-    return _cv_module().TOOLS_GRID
+    if supabase_is_configured():
+        try:
+            rows = _rest_request("GET", "cv_tool_categories", query="?select=label,tools&order=sort_order.asc")
+            if isinstance(rows, list) and rows:
+                return tuple(
+                    SimpleNamespace(
+                        label=row.get("label", ""),
+                        tools=tuple(row.get("tools") or []),
+                    )
+                    for row in rows
+                )
+        except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+            pass
+    return _local_seed("TOOLS_GRID", tuple())
 
 
 def list_languages():
-    return _cv_module().LANGUAGES
+    if supabase_is_configured():
+        try:
+            rows = _rest_request("GET", "cv_languages", query="?select=label,proficiency_label,proficiency_score&order=sort_order.asc")
+            if isinstance(rows, list) and rows:
+                return tuple(
+                    (
+                        row.get("label", ""),
+                        row.get("proficiency_label", ""),
+                        int(row.get("proficiency_score") or 0),
+                    )
+                    for row in rows
+                )
+        except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+            pass
+    return _local_seed("LANGUAGES", tuple())
 
 
 def list_core_skills() -> tuple[str, ...]:
@@ -124,7 +207,7 @@ def list_core_skills() -> tuple[str, ...]:
                 return tuple(row.get("label", "").strip() for row in rows if row.get("label"))
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass
-    return _cv_module().CORE_SKILLS
+    return _local_seed("CORE_SKILLS", tuple())
 
 
 def list_competencies() -> tuple[str, ...]:
@@ -135,7 +218,7 @@ def list_competencies() -> tuple[str, ...]:
                 return tuple(row.get("label", "").strip() for row in rows if row.get("label"))
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass
-    return _cv_module().COMPETENCIES
+    return _local_seed("COMPETENCIES", tuple())
 
 
 def get_cv_workspace_summary() -> CvWorkspaceSummary:
