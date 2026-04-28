@@ -7,10 +7,11 @@ from faststrap import Badge, Card, Col, Row, SEO
 
 from app.config import settings
 from app.infrastructure.auth_repository import get_admin_access_profile
+from app.infrastructure.payment_account_repository import list_payment_accounts
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import floating_field, loading_action_button, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -21,6 +22,7 @@ def settings_save_status_fragment(title: str, message: str, tone: str = "info") 
 def settings_workspace_page() -> tuple:
     profile = get_site_profile()
     access = get_admin_access_profile()
+    accounts = list_payment_accounts()
     identity_panel = Card(
         Div(
             Div(
@@ -105,7 +107,7 @@ def settings_workspace_page() -> tuple:
         textarea_field("SEO Title", "seo_title", profile.seo_title, rows=2, required=True, placeholder="Portfolio SEO title"),
         textarea_field("SEO Description", "seo_description", profile.seo_description, rows=5, required=True, placeholder="Default meta description"),
         Div(
-            Input(type="submit", value="Save Settings", cls="btn admin-module-btn"),
+            loading_action_button("Save Settings", endpoint="/settings/save", target="#settings-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
                 cls="admin-save-note",
@@ -136,7 +138,7 @@ def settings_workspace_page() -> tuple:
         floating_field("New Password", "password", "", input_type="password", placeholder="Leave blank to keep the current password", autocomplete="new-password"),
         floating_field("Confirm Password", "confirm_password", "", input_type="password", placeholder="Repeat the new password", autocomplete="new-password"),
         Div(
-            Input(type="submit", value="Save Admin Access", cls="btn admin-module-btn"),
+            loading_action_button("Save Admin Access", endpoint="/settings/access", target="#access-save-result"),
             Span(
                 "Credentials are hashed before storage" if service_role_is_configured() else "Add the service-role key to enable saving",
                 cls="admin-save-note",
@@ -167,6 +169,63 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
+    account_form = Form(
+        Row(
+            Col(floating_field("Account Label", "label", "", placeholder="Primary business account", required=True), span=12, md=6),
+            Col(floating_field("Bank Name", "bank_name", "", placeholder="Access Bank", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+            cls="g-3",
+        ),
+        Row(
+            Col(floating_field("Account Name", "account_name", "", placeholder="Olorundare Micheal", required=True), span=12, md=6),
+            Col(floating_field("Account Number", "account_number", "", placeholder="0123456789", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+            cls="g-3 mt-1",
+        ),
+        textarea_field("Internal Note", "note", "", rows=3, placeholder="Use this account for deposits, final invoices, USD transfers, or specific client types."),
+        Div(
+            Span("Mark as default", cls="admin-check-label"),
+            Input(type="checkbox", name="is_default", value="1", cls="form-check-input admin-check-input"),
+            cls="admin-check-row mt-2",
+        ),
+        Div(
+            loading_action_button("Save Payment Account", endpoint="/settings/accounts", target="#account-save-result"),
+            Span(
+                "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
+                cls="admin-save-note",
+            ),
+            cls="admin-form-actions mt-4",
+        ),
+        Div(id="account-save-result", cls="mt-3"),
+        action="/settings/accounts",
+        method="post",
+        hx_post="/settings/accounts",
+        hx_target="#account-save-result",
+        hx_swap="innerHTML",
+        cls="admin-settings-form",
+    )
+
+    account_panel = Card(
+        Div(
+            H3("Payment Accounts", cls="admin-subsection-title"),
+            P("Saved accounts become available when drafting invoice links and PDF exports, so you can choose the receiving account per client workflow.", cls="admin-module-copy"),
+            Div(
+                *[
+                    Div(
+                        Div(Span(account.label, cls="admin-field-label"), Strong(account.bank_name)),
+                        Div(Span("Account Name", cls="admin-field-label"), Strong(account.account_name)),
+                        Div(Span("Account Number", cls="admin-field-label"), Strong(account.account_number)),
+                        Div(Span("Default", cls="admin-field-label"), Strong("Yes" if account.is_default else "No")),
+                        cls="admin-field-grid admin-detail-block mb-3",
+                    )
+                    for account in accounts
+                ],
+                cls="mb-4",
+            ),
+            account_form,
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
+
     return (
         *SEO(
             title=f"{settings.app_name} | Settings",
@@ -185,7 +244,7 @@ def settings_workspace_page() -> tuple:
                 Row(
                     Col(identity_panel, span=12, lg=5),
                     Col(
-                        Div(editor_panel, access_panel, cls="admin-settings-stack"),
+                        Div(editor_panel, access_panel, account_panel, cls="admin-settings-stack"),
                         span=12,
                         lg=7,
                         cls="mt-4 mt-lg-0",

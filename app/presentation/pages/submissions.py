@@ -13,7 +13,7 @@ from app.infrastructure.submission_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -76,7 +76,7 @@ def _submission_card(item, *, selected: bool, kind: str, status: str, search: st
             href=href,
             cls=f"admin-project-card-link{' is-selected' if selected else ''}",
         ),
-        cls="admin-surface-card admin-project-card",
+        cls=f"admin-surface-card admin-project-card{' is-new-item' if item.status == 'new' else ''}",
     )
 
 
@@ -107,7 +107,7 @@ def _editor_form(selected, *, kind: str, status: str, search: str) -> Form:
         ),
         _notes_field(selected.notes if selected else ""),
         Div(
-            Input(type="submit", value="Update Submission", cls="btn admin-module-btn"),
+            loading_action_button("Update Submission", endpoint="/submissions/save", target="#submission-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable updates",
                 cls="admin-save-note",
@@ -156,7 +156,11 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
     list_panel = Card(
         Div(
             Div(
-                H2("Inbox Records", cls="admin-section-title"),
+                Div(
+                    H2("Inbox Records", cls="admin-section-title"),
+                    Span(str(summary.new_items), cls="admin-unread-badge") if summary.new_items else "",
+                    cls="admin-inbox-header",
+                ),
                 P(summary.note, cls="admin-module-copy mb-0"),
                 cls="mb-3",
             ),
@@ -245,6 +249,15 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
                 Div(
                     H3("Inbox Workflow", cls="admin-subsection-title"),
                     P("Use this panel to keep inquiry status, follow-up notes, and response progress in one place.", cls="admin-module-copy"),
+                    Div(
+                        A(
+                            "Convert to Deal",
+                            href=f"/deals?from_submission={selected.entry_id}&from_kind={selected.kind}",
+                            cls="btn admin-install-btn",
+                        ),
+                        P("Use this when a serious inquiry is ready to move into proposal, quote, or invoice planning.", cls="admin-module-copy mt-2 mb-0"),
+                        cls="admin-detail-block mb-4",
+                    ),
                     _editor_form(selected, kind=kind, status=status, search=search),
                     cls="admin-detail-block mt-4",
                 ),
@@ -280,8 +293,20 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
             SectionWrap(
                 "Submissions Workspace",
                 Row(
-                    Col(list_panel, span=12, lg=5),
-                    Col(detail_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                    Col(list_panel, span=12, lg=5, id="submissions-list-panel"),
+                    Col(
+                        Div(
+                            "Show Detail Panel ↓",
+                            cls="admin-panel-toggle-btn",
+                            data_panel_toggle="submissions-detail-panel",
+                            id="submissions-panel-toggle",
+                        ),
+                        detail_panel,
+                        id="submissions-detail-panel",
+                        span=12,
+                        lg=7,
+                        cls="mt-4 mt-lg-0",
+                    ),
                     cls="g-4",
                 ),
             ),

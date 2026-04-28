@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from app.config import settings
 from app.domain.models import AdminSubmission, SubmissionSaveResult, SubmissionWorkspaceSummary
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
+import app.infrastructure.email_service as email_svc
 
 
 def _rest_headers(*, use_service_role: bool = False, prefer: str | None = None) -> dict[str, str]:
@@ -205,3 +206,30 @@ def update_submission(*, entry_id: str, kind: str, status: str, notes: str) -> S
         return SubmissionSaveResult(False, "danger", f"Supabase rejected the submission update. {details or exc.reason}", "Supabase")
     except (URLError, TimeoutError, ValueError) as exc:
         return SubmissionSaveResult(False, "danger", f"Could not reach Supabase to update this submission. {exc}", "Supabase")
+
+
+def notify_new_public_submission(
+    *,
+    name: str,
+    email: str,
+    kind: str,
+    subject: str,
+    message: str,
+) -> None:
+    """Fire-and-forget admin alert when a new public submission is received.
+
+    Intended to be called from the NeoPortfolio (or any public-facing form
+    handler) immediately after the row is written to Supabase.
+    Email is best-effort: never raises.
+    """
+    try:
+        email_svc.notify_new_submission(
+            name=name,
+            email=email,
+            kind=kind,
+            subject=subject,
+            message=message,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+

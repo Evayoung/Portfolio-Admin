@@ -14,7 +14,7 @@ from app.infrastructure.blog_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -76,6 +76,11 @@ def _editor_form(selected, *, category: str, search: str) -> Form:
             Col(floating_field("Tags", "tags", ", ".join(selected.tags) if selected else "", placeholder="FastAPI, Python, AI"), span=12, md=8, cls="mt-3 mt-md-0"),
             cls="g-3",
         ),
+        Div(
+            A("Open Media Library", href="/media", cls="btn admin-install-btn"),
+            P("Upload the hero image in Media first, then paste the generated public URL into the field above.", cls="admin-module-copy mt-2 mb-0"),
+            cls="admin-detail-block mt-3",
+        ),
         textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short excerpt for listings and previews"),
         textarea_field("HTML Content", "content_html", selected.content_html if selected else "", rows=12, required=True, placeholder="<p>Article body...</p>"),
         Div(
@@ -87,7 +92,7 @@ def _editor_form(selected, *, category: str, search: str) -> Form:
             cls="admin-check-grid mt-3",
         ),
         Div(
-            Input(type="submit", value="Save Post", cls="btn admin-module-btn"),
+            loading_action_button("Save Post", endpoint="/blog/save", target="#blog-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
                 cls="admin-save-note",

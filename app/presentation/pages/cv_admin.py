@@ -19,7 +19,7 @@ from app.infrastructure.cv_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import floating_field, loading_action_button, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -74,7 +74,7 @@ def cv_workspace_page() -> tuple:
         textarea_field("Core Skills", "core_skills", "\n".join(core_skills), rows=8, placeholder="One skill per line"),
         textarea_field("Competencies", "competencies", "\n".join(competencies), rows=6, placeholder="One competency per line"),
         Div(
-            Input(type="submit", value="Save CV Profile", cls="btn admin-module-btn"),
+            loading_action_button("Save CV Profile", endpoint="/cv/save", target="#cv-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
                 cls="admin-save-note",

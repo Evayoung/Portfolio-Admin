@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import os
 from pathlib import Path
 import sys
@@ -55,7 +56,7 @@ def test_login_page_renders() -> None:
 
 def test_core_routes_render() -> None:
     sign_in()
-    for route in ["/", "/projects", "/blog", "/cv", "/submissions", "/settings"]:
+    for route in ["/", "/projects", "/blog", "/cv", "/submissions", "/deals", "/media", "/settings"]:
         response = client.get(route)
         assert response.status_code == 200
 
@@ -71,6 +72,7 @@ def test_overview_contains_admin_shell_markers() -> None:
     assert 'id="admin-bottom-nav"' in html
     assert 'data-bs-target="#adminMobileDrawer"' in html
     assert "Published Projects" in html
+    assert "GitHub Pulse" in html
 
 
 def test_settings_workspace_renders_live_profile_shell() -> None:
@@ -125,6 +127,47 @@ def test_submissions_workspace_renders_real_inbox_shell() -> None:
     assert "Submissions Workspace" in html
     assert "Inbox Records" in html
     assert "Supabase" in html or "Pending" in html
+    if "Verification Contact" in html or "Verification Booking" in html:
+        assert "Convert to Deal" in html or "/deals?from_submission=" in html
+
+
+def test_deals_workspace_renders_pipeline_shell() -> None:
+    sign_in()
+    response = client.get("/deals")
+    html = response.text
+    assert response.status_code == 200
+    assert "Deals Workspace" in html
+    assert "Pipeline Records" in html
+    assert "Deal Studio" in html
+    assert "Farm Operations Dashboard" in html
+
+
+def test_deals_workspace_can_prefill_from_submission_query() -> None:
+    sign_in()
+    inbox = client.get("/submissions")
+    html = inbox.text
+    if "Convert to Deal" not in html:
+        return
+    marker = '/deals?from_submission='
+    start = html.find(marker)
+    assert start != -1
+    end = html.find('"', start)
+    href = html[start:end]
+    response = client.get(href)
+    detail = response.text
+    assert response.status_code == 200
+    assert "Deals Workspace" in detail
+    assert "New client pipeline record" in detail or "Selected deal" in detail
+
+
+def test_media_workspace_renders_library_shell() -> None:
+    sign_in()
+    response = client.get("/media")
+    html = response.text
+    assert response.status_code == 200
+    assert "Media Workspace" in html
+    assert "Asset Library" in html
+    assert "Upload Workspace" in html
 
 
 def test_project_save_route_reports_read_only_without_supabase_service_role() -> None:
@@ -199,6 +242,25 @@ def test_cv_save_route_reports_read_only_without_supabase_service_role() -> None
     assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the save request" in html
 
 
+def test_cv_delete_helper_uses_safe_scoped_query() -> None:
+    from app.infrastructure import cv_repository
+
+    calls: list[tuple[str, str, str]] = []
+
+    def fake_rest_request(method: str, path: str, **kwargs):
+        calls.append((method, path, kwargs.get("query", "")))
+        return None
+
+    original = cv_repository._rest_request
+    cv_repository._rest_request = fake_rest_request
+    try:
+        cv_repository._delete_all_rows("cv_core_skills")
+    finally:
+        cv_repository._rest_request = original
+
+    assert calls == [("DELETE", "cv_core_skills", "?id=not.is.null")]
+
+
 def test_submissions_update_route_handles_missing_or_read_only_state() -> None:
     sign_in()
     response = client.post(
@@ -215,19 +277,149 @@ def test_submissions_update_route_handles_missing_or_read_only_state() -> None:
     assert "Update not completed" in html
 
 
+def test_deals_save_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
+    response = client.post(
+        "/deals/save",
+        data={
+            "deal_id": "",
+            "client_name": "Acme Labs",
+            "client_email": "hello@acmelabs.dev",
+            "client_phone": "+2348000000000",
+            "company": "Acme Labs",
+            "project_title": "Internal Ops Portal",
+            "service_type": "custom-saas",
+            "stage": "proposal",
+            "document_kind": "proposal",
+            "document_status": "draft",
+            "document_title": "Internal Ops Portal Proposal",
+            "summary": "A structured summary",
+            "background_text": "Client background and objective",
+            "scope_notes": "Scope notes",
+            "option_notes_text": "Option A | Focused build | 100000",
+            "tech_stack": "FastHTML, Supabase",
+            "timeline_text": "3 weeks",
+            "payment_terms": "50% upfront",
+            "line_items": "Discovery | Workshop | 1 | 100000",
+            "exclusions_text": "No ecommerce",
+            "closing_note": "Ready to proceed after approval",
+            "amount_ngn": "100000",
+            "deposit_percent": "50",
+            "valid_until": "2026-05-12",
+            "due_date": "",
+        },
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "Save not completed" in html
+    assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the deal save request" in html
+
+
+def test_deal_document_update_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
+    response = client.post(
+        "/deals/documents/update",
+        data={
+            "deal_id": "deal-olivette",
+            "document_id": "doc-olivette-invoice",
+            "document_kind": "invoice",
+            "status": "paid",
+        },
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "Update not completed" in html
+    assert "cannot be saved from this environment" in html or "Could not reach Supabase" in html or "Supabase rejected the document workflow update" in html
+
+
+def test_deal_document_pdf_route_serves_pdf() -> None:
+    sign_in()
+    response = client.get("/deals/deal-farmtech/documents/proposal/pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+
+
+def test_public_document_route_is_accessible_without_login() -> None:
+    response = client.get("/documents/farmtech-proposal-demo", follow_redirects=False)
+    html = response.text
+    assert response.status_code == 200
+    assert "Farm Operations Dashboard Proposal" in html
+    assert "Background &amp; Objective" in html or "Background & Objective" in html
+    assert "Your Response" in html or "Respond" in html
+    assert "Download PDF" in html
+
+
+def test_public_invoice_route_shows_payment_account_actions() -> None:
+    response = client.get("/documents/olivette-invoice-demo", follow_redirects=False)
+    html = response.text
+    assert response.status_code == 200
+    assert "Payment Account" in html
+    assert "Copy Account Number" in html
+    assert "I Have Paid" in html
+
+
+def test_public_document_response_route_reports_read_only_without_supabase_service_role() -> None:
+    response = client.post(
+        "/documents/farmtech-proposal-demo/respond",
+        data={
+            "responder_name": "Client Reviewer",
+            "responder_email": "client@example.com",
+            "comment": "Looks good so far.",
+            "action": "accepted",
+        },
+        follow_redirects=False,
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "cannot be recorded from this environment" in html or "Could not reach Supabase" in html or "Supabase rejected the document response" in html
+
+
+def test_media_upload_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
+    response = client.post(
+        "/media/upload",
+        data={
+            "title": "Homepage Hero",
+            "kind": "image",
+            "alt_text": "Hero visual",
+            "current_kind": "all",
+            "current_search": "",
+        },
+        files={"asset_file": ("hero.png", io.BytesIO(b"fake-image"), "image/png")},
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "Media Workspace" in html
+    assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the media upload" in html
+
+
 def test_supabase_schema_file_exists() -> None:
     schema_path = Path(__file__).parent / "app" / "infrastructure" / "sql" / "001_initial_schema.sql"
     access_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "002_admin_access.sql"
+    pipeline_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "003_client_pipeline.sql"
+    media_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "004_media_assets.sql"
+    document_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "005_document_links_and_accounts.sql"
     assert schema_path.exists()
     assert access_schema.exists()
+    assert pipeline_schema.exists()
+    assert media_schema.exists()
+    assert document_schema.exists()
     schema = schema_path.read_text(encoding="utf-8")
     access = access_schema.read_text(encoding="utf-8")
+    pipeline = pipeline_schema.read_text(encoding="utf-8")
+    media = media_schema.read_text(encoding="utf-8")
+    document_links = document_schema.read_text(encoding="utf-8")
     assert "create table if not exists public.projects" in schema
     assert "create table if not exists public.blog_posts" in schema
     assert "create table if not exists public.cv_meta" in schema
     assert "create table if not exists public.contact_submissions" in schema
     assert "create table if not exists public.booking_requests" in schema
     assert "create table if not exists public.admin_access" in access
+    assert "create table if not exists public.client_deals" in pipeline
+    assert "create table if not exists public.client_documents" in pipeline
+    assert "create table if not exists public.media_assets" in media
+    assert "create table if not exists public.payment_accounts" in document_links
+    assert "create table if not exists public.client_document_responses" in document_links
 
 
 def test_admin_deploy_files_exist() -> None:

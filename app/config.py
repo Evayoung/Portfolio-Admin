@@ -29,9 +29,16 @@ class Settings:
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")
     supabase_service_role_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    github_username: str = os.getenv("GITHUB_USERNAME", "Evayoung")
+    github_access_token: str = os.getenv("GITHUB_ACCESS_TOKEN", "")
     supabase_schema_path: str = "app/infrastructure/sql/001_initial_schema.sql"
     use_cdn: bool = bool(os.getenv("VERCEL"))
     port: int = int(os.getenv("PORT", "5063"))
+    # Email notifications (Resend API — optional)
+    resend_api_key: str = os.getenv("RESEND_API_KEY", "")
+    admin_notify_email: str = os.getenv("ADMIN_NOTIFY_EMAIL", "") or os.getenv("NEO_ADMIN_LOGIN_EMAIL", "")
+    email_from: str = os.getenv("EMAIL_FROM", "noreply@neoportfolio.dev")
+    email_enabled: bool = bool(os.getenv("RESEND_API_KEY", ""))
 
 
 settings = Settings()

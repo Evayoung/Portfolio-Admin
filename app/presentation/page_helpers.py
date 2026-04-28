@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fasthtml.common import Div, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
+from faststrap.presets import LoadingButton
 
 
 _TONE_TO_VARIANT = {
@@ -198,4 +199,29 @@ def toggle_pill_group(
         values=[value for value, _label in options],
         active_index=active_index,
         cls="admin-radio-grid",
+    )
+
+
+def loading_action_button(
+    label: str,
+    *,
+    endpoint: str,
+    target: str,
+    form_selector: str = "closest form",
+    variant: str = "primary",
+    button_cls: str = "btn admin-module-btn",
+    method: str = "post",
+    **kwargs,
+):
+    """Shared Faststrap loading button for HTMX-backed form actions."""
+
+    return LoadingButton(
+        label,
+        endpoint=endpoint,
+        target=target,
+        method=method,
+        variant=variant,
+        hx_include=form_selector,
+        cls=button_cls,
+        **kwargs,
     )

@@ -41,6 +41,7 @@ app.before.append(
             r"/manifest\.json",
             r"/sw\.js",
             r"/offline",
+            r"/documents/.*",
         ],
     )
 )

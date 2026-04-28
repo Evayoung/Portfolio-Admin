@@ -244,6 +244,11 @@ def _get_existing_cv_meta_id() -> str | None:
     return None
 
 
+def _delete_all_rows(path: str) -> None:
+    # Supabase REST blocks unscoped DELETEs, so we use a safe all-rows filter.
+    _rest_request("DELETE", path, use_service_role=True, query="?id=not.is.null")
+
+
 def save_cv_profile(
     *,
     name: str,
@@ -309,7 +314,7 @@ def save_cv_profile(
         if not meta_row or "id" not in meta_row:
             return CvSaveResult(False, "danger", "Supabase did not return the saved CV meta record.", "Supabase")
 
-        _rest_request("DELETE", "cv_core_skills", use_service_role=True)
+        _delete_all_rows("cv_core_skills")
         skills = _parse_lines(core_skills)
         if skills:
             _rest_request(
@@ -320,7 +325,7 @@ def save_cv_profile(
                 prefer="return=minimal",
             )
 
-        _rest_request("DELETE", "cv_competencies", use_service_role=True)
+        _delete_all_rows("cv_competencies")
         competency_items = _parse_lines(competencies)
         if competency_items:
             _rest_request(

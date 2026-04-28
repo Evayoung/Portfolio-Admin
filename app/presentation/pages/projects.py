@@ -14,7 +14,7 @@ from app.infrastructure.project_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -86,6 +86,11 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
             cls="g-3 mt-1",
         ),
         Div(
+            A("Open Media Library", href="/media", cls="btn admin-install-btn"),
+            P("Upload fresh visuals in Media, then paste the generated public URL into the image field here.", cls="admin-module-copy mt-2 mb-0"),
+            cls="admin-detail-block mt-3",
+        ),
+        Div(
             Label(
                 Input(type="checkbox", name="featured", checked=(selected.featured if selected else False), cls="form-check-input admin-check-input"),
                 Span("Featured on key surfaces", cls="admin-check-label"),
@@ -99,7 +104,7 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
             cls="admin-check-grid mt-3",
         ),
         Div(
-            Input(type="submit", value="Save Project", cls="btn admin-module-btn"),
+            loading_action_button("Save Project", endpoint="/projects/save", target="#project-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
                 cls="admin-save-note",

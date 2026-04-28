@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, H2, H3, P, Span
+from fasthtml.common import A, Div, H2, H3, P, Span, Strong
 from faststrap import Card, Col, Icon, Row, SEO
 
 from app.config import settings
+from app.infrastructure.github_repository import get_github_stats
 from app.infrastructure.seed_data import ACTIVITY, METRICS, MODULES
+from app.infrastructure.deal_repository import get_deal_workspace_summary
 from app.presentation.page_helpers import overview_metric_card
 from app.presentation.shell import page_frame
 
@@ -34,7 +36,37 @@ def _module_card(item) -> Col:
 
 
 def overview_page() -> tuple:
+    github = get_github_stats()
+    deal_summary = get_deal_workspace_summary()
     metrics = Row(*[overview_metric_card(item) for item in METRICS], cls="g-4")
+
+    # Pipeline revenue strip — derived from live deal data
+    revenue_strip = Div(
+        Div(
+            Span("Active Deals", cls="admin-revenue-label"),
+            Div(str(deal_summary.total), cls="admin-revenue-value"),
+            cls="admin-revenue-cell",
+        ),
+        Div(
+            Span("Documents Issued", cls="admin-revenue-label"),
+            Div(
+                str(deal_summary.proposals + deal_summary.quotes + deal_summary.invoices),
+                cls="admin-revenue-value",
+            ),
+            cls="admin-revenue-cell",
+        ),
+        Div(
+            Span("Proposals", cls="admin-revenue-label"),
+            Div(str(deal_summary.proposals), cls="admin-revenue-value"),
+            cls="admin-revenue-cell",
+        ),
+        Div(
+            Span("Invoices", cls="admin-revenue-label"),
+            Div(str(deal_summary.invoices), cls="admin-revenue-value"),
+            cls="admin-revenue-cell",
+        ),
+        cls="admin-revenue-strip",
+    )
     modules = Row(*[_module_card(item) for item in MODULES], cls="g-4")
     activity = Card(
         Div(
@@ -88,6 +120,26 @@ def overview_page() -> tuple:
         ),
         cls="admin-surface-card h-100",
     )
+    github_card = Card(
+        Div(
+            H2("GitHub Pulse", cls="admin-section-title"),
+            P(
+                "Recent open-source proof pulled from your GitHub profile. This stays graceful even when the API is unavailable.",
+                cls="admin-module-copy",
+            ),
+            Div(
+                Div(Span("Profile", cls="admin-field-label"), Strong(github.username)),
+                Div(Span("Public Repos", cls="admin-field-label"), Strong(str(github.public_repos))),
+                Div(Span("Stars", cls="admin-field-label"), Strong(str(github.stars))),
+                Div(Span("Followers", cls="admin-field-label"), Strong(str(github.followers))),
+                Div(Span("Recent Commits", cls="admin-field-label"), Strong(str(github.recent_commits))),
+                Div(Span("Source", cls="admin-field-label"), Strong(github.source.title())),
+                cls="admin-field-grid mt-3",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
     return (
         *SEO(
             title=f"{settings.app_name} | Overview",
@@ -96,10 +148,15 @@ def overview_page() -> tuple:
         ),
         *page_frame(
             metrics,
+            revenue_strip,
             SectionWrap("Content Modules", modules),
             Row(
                 Col(activity, span=12, lg=7),
                 Col(next_steps, span=12, lg=5, cls="mt-4 mt-lg-0"),
+                cls="g-4 mt-1",
+            ),
+            Row(
+                Col(github_card, span=12),
                 cls="g-4 mt-1",
             ),
             current="/",

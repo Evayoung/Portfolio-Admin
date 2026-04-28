@@ -36,7 +36,7 @@ def login_page(*, next_path: str = "/", message: str = "", tone: str = "info", l
             required=True,
             autocomplete="current-password",
         ),
-        Input(type="hidden", name="next", value=next_path or "/"),
+        Input(type="hidden", name="next_path", value=next_path or "/"),
         alert if alert else "",
         Div(
             Input(type="submit", value="Sign In", cls="btn admin-module-btn w-100"),

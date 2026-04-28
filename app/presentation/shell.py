@@ -14,10 +14,18 @@ NAV_ITEMS = (
     ("Blog", "/blog", "journal-richtext"),
     ("CV", "/cv", "file-earmark-person"),
     ("Submissions", "/submissions", "inbox"),
+    ("Deals", "/deals", "briefcase"),
+    ("Media", "/media", "images"),
     ("Settings", "/settings", "sliders"),
 )
 
-BOTTOM_NAV_ITEMS = NAV_ITEMS[:5]
+BOTTOM_NAV_ITEMS = (
+    ("Overview", "/", "grid"),
+    ("Projects", "/projects", "kanban"),
+    ("Submissions", "/submissions", "inbox"),
+    ("Deals", "/deals", "briefcase"),
+    ("Settings", "/settings", "sliders"),
+)
 
 
 def _brand_profile():
@@ -34,6 +42,14 @@ def brand_name(profile) -> str:
 def profile_name(profile) -> str:
     full_name = (getattr(profile, "full_name", "") or "").strip()
     return full_name or settings.owner_name
+
+
+def sidebar_brand_title(profile) -> str:
+    full_name = profile_name(profile)
+    parts = [part for part in full_name.split() if part]
+    if len(parts) >= 2:
+        return parts[1]
+    return parts[0] if parts else brand_name(profile)
 
 
 def public_site_url(profile) -> str:
@@ -78,7 +94,6 @@ def _nav_link(label: str, href: str, icon: str, current: str, *, compact: bool =
 
 def admin_sidebar(current: str = "/", profile=None) -> Aside:
     profile = profile or _brand_profile()
-    display_name = brand_name(profile)
     sidebar_nav = SidebarNavbar(
         *[
             SidebarNavItem(
@@ -102,7 +117,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
             A(
                 admin_logo(profile),
                 Div(
-                    Span(display_name, cls="admin-brand-title"),
+                    Span(sidebar_brand_title(profile), cls="admin-brand-title"),
                     Span("Portfolio Admin", cls="admin-brand-subtitle"),
                     cls="admin-brand-text",
                 ),
@@ -115,7 +130,6 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                 cls="admin-sidebar-group",
             ),
             Div(
-                
                 Div(
                     A(
                         Icon("box-arrow-up-right", cls="me-2"),
@@ -150,19 +164,10 @@ def admin_mobile_header(current: str = "/", title: str = "Overview", profile=Non
             Div(
                 A(admin_logo(profile), href="/", cls="admin-mobile-brand"),
                 Div(
-                    Span(brand_name(profile), cls="admin-mobile-kicker"),
                     Span(active_item, cls="admin-mobile-title"),
                     cls="admin-mobile-text",
                 ),
                 Div(
-                    A(
-                        Icon("list"),
-                        href="#",
-                        data_bs_toggle="offcanvas",
-                        data_bs_target="#adminMobileDrawer",
-                        cls="admin-mobile-action",
-                        aria_label="Open menu",
-                    ),
                     A(
                         Icon("download"),
                         href="#",
@@ -282,6 +287,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                         Div(
                             P(brand_name(profile), cls="admin-kicker"),
                             H1(title, cls="admin-page-title"),
+                            Div(cls="admin-page-header-divider"),
                             P(
                                 f"Control panel for {brand_name(profile)}'s portfolio content, submissions, and publishing workflow.",
                                 cls="admin-page-copy",
@@ -294,12 +300,13 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                     Footer(
                         Container(
                             Div(
-                                P(
-                                    f"{chr(169)} 2026 {profile_name(profile)}.",
-                                    cls="admin-footer-copy",
-                                ),
-                                cls="d-flex justify-content-center text-center",
-                            )
+                                Span(f"© 2026 {profile_name(profile)}", cls="admin-footer-link"),
+                                Span("·", cls="admin-footer-sep"),
+                                A("Public Site", href=public_site_url(profile), target="_blank", rel="noreferrer", cls="admin-footer-link"),
+                                Span("·", cls="admin-footer-sep"),
+                                A("Sign Out", href="/logout", cls="admin-footer-link"),
+                                cls="admin-footer-inner",
+                            ),
                         ),
                         cls="admin-footer",
                     ),

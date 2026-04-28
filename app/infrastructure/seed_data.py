@@ -8,7 +8,8 @@ METRICS = (
     AdminMetric("Published Projects", "12", "Projects workspace is now live", "info"),
     AdminMetric("Blog Posts", "4", "+1 draft in progress", "success"),
     AdminMetric("CV Sections", "7", "All synced", "primary"),
-    AdminMetric("Inbox Workspace", "Live", "Public forms now feed the admin inbox", "warning"),
+    AdminMetric("Client Pipeline", "Live", "Proposals, quotes, and invoices now share one workflow", "warning"),
+    AdminMetric("Media Library", "Ready", "Upload once and reuse asset URLs everywhere", "info"),
 )
 
 MODULES = (
@@ -41,6 +42,20 @@ MODULES = (
         "inbox",
     ),
     AdminModule(
+        "Deals",
+        "Draft proposals, quick quotes, and invoices as connected stages of the same client deal.",
+        "/deals",
+        "Pipeline live",
+        "briefcase",
+    ),
+    AdminModule(
+        "Media",
+        "Upload reusable images and documents to Supabase Storage, then reuse the generated public URLs across the site.",
+        "/media",
+        "Storage-ready",
+        "images",
+    ),
+    AdminModule(
         "Site Settings",
         "Control profile details, links, defaults, and publishing preferences.",
         "/settings",
@@ -57,6 +72,8 @@ ACTIVITY = (
     ActivityItem("Blog workspace", "Editorial records now share the same live editing and publishing flow as projects.", "Live"),
     ActivityItem("CV workspace", "Profile, summary, and grouped skill content now power both the interactive CV and branded download.", "Live"),
     ActivityItem("Submissions workspace", "The admin inbox is live and already receiving public-site contact and booking records from Supabase.", "Live"),
+    ActivityItem("Deals workspace", "Client proposals, quotes, and invoices now sit inside a single pipeline so commercial documents can progress without re-entry.", "Live"),
+    ActivityItem("Media workspace", "Reusable uploads now have a dedicated library so new project and blog visuals no longer depend on manual asset hosting.", "Live"),
     ActivityItem("Settings workspace", "Public profile, contact details, links, and SEO defaults now have a dedicated admin editor.", "Live"),
     ActivityItem("Next phase", "The remaining work is deployment, visual QA, and any final schema refinements before ongoing content management.", "Ready"),
 )
