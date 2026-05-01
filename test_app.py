@@ -95,6 +95,7 @@ def test_projects_workspace_renders_real_project_data() -> None:
     assert "Local" in html or "Supabase" in html
     assert "Project Editor" in html
     assert "Save Project" in html
+    assert "New Category" in html
 
 
 def test_blog_workspace_renders_real_blog_data() -> None:
@@ -139,6 +140,8 @@ def test_deals_workspace_renders_pipeline_shell() -> None:
     assert "Deals Workspace" in html
     assert "Pipeline Records" in html
     assert "Deal Studio" in html
+    assert "Quick Document Studio" in html
+    assert "Generate Quick Document" in html
     assert "Farm Operations Dashboard" in html
 
 
@@ -315,6 +318,34 @@ def test_deals_save_route_reports_read_only_without_supabase_service_role() -> N
     assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the deal save request" in html
 
 
+def test_quick_document_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
+    response = client.post(
+        "/deals/quick",
+        data={
+            "client_name": "Friendly Client",
+            "client_email": "friend@example.com",
+            "client_phone": "+2348000000001",
+            "company": "",
+            "project_title": "Quick Invoice Task",
+            "document_kind": "invoice",
+            "document_status": "draft",
+            "document_title": "Quick Invoice",
+            "summary": "A lightweight invoice without a full lead workflow.",
+            "line_items": "",
+            "payment_terms": "Due on receipt",
+            "amount_ngn": "50000",
+            "deposit_percent": "100",
+            "valid_until": "",
+            "due_date": "2026-05-15",
+        },
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "Quick document not created" in html
+    assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the deal save request" in html
+
+
 def test_deal_document_update_route_reports_read_only_without_supabase_service_role() -> None:
     sign_in()
     response = client.post(
@@ -399,16 +430,19 @@ def test_supabase_schema_file_exists() -> None:
     pipeline_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "003_client_pipeline.sql"
     media_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "004_media_assets.sql"
     document_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "005_document_links_and_accounts.sql"
+    hardening_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "006_production_hardening.sql"
     assert schema_path.exists()
     assert access_schema.exists()
     assert pipeline_schema.exists()
     assert media_schema.exists()
     assert document_schema.exists()
+    assert hardening_schema.exists()
     schema = schema_path.read_text(encoding="utf-8")
     access = access_schema.read_text(encoding="utf-8")
     pipeline = pipeline_schema.read_text(encoding="utf-8")
     media = media_schema.read_text(encoding="utf-8")
     document_links = document_schema.read_text(encoding="utf-8")
+    hardening = hardening_schema.read_text(encoding="utf-8")
     assert "create table if not exists public.projects" in schema
     assert "create table if not exists public.blog_posts" in schema
     assert "create table if not exists public.cv_meta" in schema
@@ -420,6 +454,15 @@ def test_supabase_schema_file_exists() -> None:
     assert "create table if not exists public.media_assets" in media
     assert "create table if not exists public.payment_accounts" in document_links
     assert "create table if not exists public.client_document_responses" in document_links
+    assert "alter table public.client_deals enable row level security" in pipeline
+    assert "alter table public.client_documents enable row level security" in pipeline
+    assert "idx_client_documents_public_token" in pipeline
+    assert "alter table public.media_assets enable row level security" in media
+    assert "alter table public.payment_accounts enable row level security" in document_links
+    assert "alter table public.client_document_responses enable row level security" in document_links
+    assert "Neo Admin production hardening migration" in hardening
+    assert "Service role manages client deals" in hardening
+    assert "Public can read portfolio media objects" in hardening
 
 
 def test_admin_deploy_files_exist() -> None:

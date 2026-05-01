@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import secrets
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -417,6 +417,15 @@ def _generate_public_token(kind: str, deal_id: str) -> str:
     return f"{kind[:3]}-{deal_id.replace('-', '')[:6]}-{secrets.token_urlsafe(8)}".lower()
 
 
+def _document_is_expired(document: DealDocument) -> bool:
+    if not document.valid_until:
+        return False
+    try:
+        return datetime.strptime(document.valid_until, "%Y-%m-%d").date() < date.today()
+    except ValueError:
+        return False
+
+
 def save_document_response(
     *,
     token: str,
@@ -430,6 +439,14 @@ def save_document_response(
         return False, "danger", "This document link is not valid anymore."
     if action not in {"accepted", "rejected", "commented", "payment_submitted"}:
         return False, "warning", "Choose a valid response action."
+    if action == "accepted" and document.kind in {"proposal", "quote"} and _document_is_expired(document):
+        return False, "warning", "This document has expired, so acceptance is no longer available. Please request a refreshed copy."
+    if action == "accepted" and document.kind in {"proposal", "quote"} and document.status not in {"sent", "draft"}:
+        return False, "warning", "This document is no longer open for acceptance."
+    if action == "payment_submitted" and document.kind != "invoice":
+        return False, "warning", "Payment confirmation is only available for invoices."
+    if action == "payment_submitted" and document.status == "paid":
+        return False, "info", "This invoice is already marked as paid."
     if not service_role_is_configured():
         return False, "info", "Supabase write path is not configured yet, so client responses cannot be recorded from this environment."
     payload = {
@@ -463,24 +480,29 @@ def save_document_response(
             "commented": "The comment has been saved.",
             "payment_submitted": "The payment confirmation has been sent. It will still need to be confirmed from the admin dashboard.",
         }
-        # — Notify admin
-        email_svc.notify_document_response(
-            client_name=responder_name.strip(),
-            client_email=responder_email.strip(),
-            action=action,
-            document_kind=document.kind,
-            project_title=deal.project_title,
-            comment=comment.strip(),
-            deal_id=deal.deal_id,
-        )
-        # — Confirm to client
-        email_svc.send_response_confirmation_to_client(
-            client_name=responder_name.strip(),
-            client_email=responder_email.strip(),
-            action=action,
-            document_kind=document.kind,
-            project_title=deal.project_title,
-        )
+        try:
+            # — Notify admin
+            email_svc.notify_document_response(
+                client_name=responder_name.strip(),
+                client_email=responder_email.strip(),
+                action=action,
+                document_kind=document.kind,
+                project_title=deal.project_title,
+                comment=comment.strip(),
+                deal_id=deal.deal_id,
+            )
+            # — Confirm to client
+            email_svc.send_response_confirmation_to_client(
+                client_name=responder_name.strip(),
+                client_email=responder_email.strip(),
+                action=action,
+                document_kind=document.kind,
+                project_title=deal.project_title,
+            )
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning("Failed to dispatch document response emails: %s", exc)
+
         return True, "success", messages[action]
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
@@ -554,8 +576,9 @@ def update_document_status(
                         document_url=doc_url,
                         valid_until=document_obj.valid_until or "",
                     )
-            except Exception:  # noqa: BLE001 — email is best-effort
-                pass
+            except Exception as exc:  # noqa: BLE001 — email is best-effort
+                import logging
+                logging.getLogger(__name__).warning("Failed to dispatch email link to client: %s", exc)
         return True, "success", messages.get(status, "The document workflow state has been updated.")
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
@@ -732,3 +755,64 @@ def save_deal_document(
         return DealSaveResult(False, "danger", f"Supabase rejected the deal save request. {details or exc.reason}", "Supabase", deal_id=deal_id or None)
     except (URLError, TimeoutError, ValueError) as exc:
         return DealSaveResult(False, "danger", f"Could not reach Supabase to save the client pipeline record. {exc}", "Supabase", deal_id=deal_id or None)
+
+
+def save_quick_document(
+    *,
+    client_name: str,
+    client_email: str,
+    client_phone: str,
+    company: str,
+    project_title: str,
+    document_kind: str,
+    document_status: str,
+    document_title: str,
+    summary: str,
+    line_items: str,
+    payment_terms: str,
+    payment_account_id: str,
+    amount_ngn: str,
+    deposit_percent: str,
+    valid_until: str,
+    due_date: str,
+) -> DealSaveResult:
+    """Create a proposal, quote, or invoice without requiring a full pipeline workflow."""
+
+    stage = {
+        "proposal": "proposal",
+        "quote": "quoted",
+        "invoice": "invoiced",
+    }.get(document_kind, "lead")
+    clean_summary = summary.strip() or f"{document_kind.title()} for {project_title.strip()}."
+    clean_line_items = line_items.strip()
+    if not clean_line_items and amount_ngn.strip():
+        clean_line_items = f"{project_title.strip() or document_title.strip()} | {clean_summary} | 1 | {amount_ngn.strip()}"
+
+    return save_deal_document(
+        deal_id="",
+        client_name=client_name,
+        client_email=client_email,
+        client_phone=client_phone,
+        company=company,
+        project_title=project_title,
+        service_type="quick-document",
+        stage=stage,
+        document_kind=document_kind,
+        document_status=document_status,
+        document_title=document_title,
+        summary=clean_summary,
+        background_text=clean_summary,
+        scope_notes=clean_summary,
+        option_notes_text="",
+        tech_stack="",
+        timeline_text="",
+        payment_terms=payment_terms,
+        line_items=clean_line_items,
+        exclusions_text="",
+        closing_note="Thank you for reviewing this document. Please use the client link to respond or confirm next steps.",
+        payment_account_id=payment_account_id,
+        amount_ngn=amount_ngn,
+        deposit_percent=deposit_percent,
+        valid_until=valid_until,
+        due_date=due_date,
+    )

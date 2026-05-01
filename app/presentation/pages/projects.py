@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
+from urllib.parse import urlencode
+
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -14,7 +16,7 @@ from app.infrastructure.project_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -23,7 +25,7 @@ def project_save_status_fragment(title: str, message: str, tone: str = "info") -
 
 
 def _project_card(project, *, selected: bool, category: str, featured_only: bool, search: str) -> Card:
-    href = f"/projects?slug={project.slug}&category={category}&featured={'1' if featured_only else '0'}&search={search}"
+    href = _project_href(slug=project.slug, category=category, featured="1" if featured_only else "0", search=search)
     return Card(
         A(
             Div(
@@ -57,10 +59,13 @@ def _filter_link(label: str, href: str, *, active: bool) -> A:
     return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
 
 
+def _project_href(**params: str) -> str:
+    return f"/projects?{urlencode(params)}"
+
+
 def _editor_form(selected, *, category: str, featured_only: bool, search: str) -> Form:
     category_options = list_project_categories()[1:]
     selected_category = selected.category if selected else ""
-    category_buttons = toggle_pill_group("category", list(category_options), selected_value=selected_category)
     return Form(
         Input(type="hidden", name="original_slug", value=selected.slug if selected else ""),
         Input(type="hidden", name="current_category", value=category),
@@ -73,7 +78,21 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
         ),
         Div(
             Label("Category", cls="admin-form-label"),
-            category_buttons,
+            Select(
+                Option("Choose category", value=""),
+                *[
+                    Option(label, value=value, selected=value == selected_category)
+                    for value, label in category_options
+                ],
+                name="category",
+                cls="form-select admin-form-control",
+            ),
+            floating_field(
+                "New Category",
+                "category_custom",
+                "",
+                placeholder="Use this to create or override a category",
+            ),
             cls="admin-form-group mt-3",
         ),
         floating_field("Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/example.jpg"),
@@ -132,7 +151,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
         *[
             _filter_link(
                 label,
-                f"/projects?category={item_slug}&featured={'1' if featured_only else '0'}&search={search}",
+                _project_href(category=item_slug, featured="1" if featured_only else "0", search=search),
                 active=item_slug == category,
             )
             for item_slug, label in categories
@@ -141,7 +160,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
     )
     featured_toggle = _filter_link(
         "Featured only",
-        f"/projects?category={category}&featured={'0' if featured_only else '1'}&search={search}",
+        _project_href(category=category, featured="0" if featured_only else "1", search=search),
         active=featured_only,
     )
     search_form = search_filter_bar(

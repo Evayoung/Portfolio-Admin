@@ -42,3 +42,17 @@ class Settings:
 
 
 settings = Settings()
+
+
+def _validate_production_settings() -> None:
+    if not os.getenv("VERCEL"):
+        return
+    if settings.secret_key == "neo-admin-local-dev-secret":
+        raise RuntimeError("NEO_ADMIN_SECRET_KEY must be set to a secure value in production.")
+    if settings.admin_login_password == "Password123!":
+        raise RuntimeError("NEO_ADMIN_LOGIN_PASSWORD must be changed before deploying Neo Admin.")
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production.")
+
+
+_validate_production_settings()

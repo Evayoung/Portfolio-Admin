@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -295,8 +295,9 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
                 Row(
                     Col(list_panel, span=12, lg=5, id="submissions-list-panel"),
                     Col(
-                        Div(
+                        Button(
                             "Show Detail Panel ↓",
+                            type="button",
                             cls="admin-panel-toggle-btn",
                             data_panel_toggle="submissions-detail-panel",
                             id="submissions-panel-toggle",

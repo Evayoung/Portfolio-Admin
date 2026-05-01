@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -16,16 +17,35 @@ from app.config import settings
 from app.domain.models import AdminProject, ProjectSaveResult, ProjectWorkspaceSummary
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
 
+logger = logging.getLogger(__name__)
+
+DEFAULT_PROJECT_CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("ai-ml", "AI / ML"),
+    ("web-app", "Web App"),
+    ("dashboard", "Dashboard"),
+    ("automation", "Automation"),
+    ("portfolio", "Portfolio"),
+)
+
 
 @lru_cache(maxsize=1)
-def _neoportfolio_projects():
+def _neoportfolio_projects() -> tuple:
     content_path = Path(__file__).resolve().parents[3] / "neoportfolio" / "content.py"
+    if not content_path.exists():
+        logger.info("Local NeoPortfolio content module not found at %s", content_path)
+        return ()
     spec = importlib.util.spec_from_file_location("neoportfolio_content_admin_seed", content_path)
+    if not spec or not spec.loader:
+        logger.warning("Could not load local NeoPortfolio content module spec from %s", content_path)
+        return ()
     module = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module.PROJECTS
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:  # noqa: BLE001 - local seed content should not break admin rendering
+        logger.warning("Could not import local NeoPortfolio content module: %s", exc)
+        return ()
+    return tuple(getattr(module, "PROJECTS", ()) or ())
 
 
 def _project_from_local(item) -> AdminProject:
@@ -158,7 +178,10 @@ def list_project_categories() -> tuple[tuple[str, str], ...]:
     for item in items:
         if item.category not in seen:
             seen.append(item.category)
-    return (("all", "All"),) + tuple((slug, slug.replace("-", " ").title()) for slug in seen)
+    categories = tuple((slug, slug.replace("-", " ").title()) for slug in seen)
+    if not categories:
+        categories = DEFAULT_PROJECT_CATEGORIES
+    return (("all", "All"),) + categories
 
 
 def get_project_workspace_summary() -> ProjectWorkspaceSummary:
@@ -191,8 +214,10 @@ def save_project(
     satisfaction: str,
     featured: bool,
     published: bool,
+    category_custom: str = "",
 ) -> ProjectSaveResult:
-    if not slug.strip() or not title.strip() or not category.strip() or not summary.strip() or not narrative.strip():
+    resolved_category = (category_custom.strip() or category.strip()).strip()
+    if not slug.strip() or not title.strip() or not resolved_category or not summary.strip() or not narrative.strip():
         return ProjectSaveResult(
             success=False,
             tone="warning",
@@ -224,7 +249,7 @@ def save_project(
     payload = {
         "slug": clean_slug,
         "title": title.strip(),
-        "category": category.strip(),
+        "category": resolved_category,
         "summary": summary.strip(),
         "narrative": narrative.strip(),
         "image_url": image_url.strip(),

@@ -354,7 +354,14 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         # ── Group 5: Financials ───────────────────────────────────
         Div(
             P("Financials", cls="admin-form-section-title"),
-            textarea_field("Line Items", "line_items", selected.line_items_text if selected else "", rows=5, placeholder="One per line: Item | Description | Qty | Amount"),
+            textarea_field(
+                "Line Items",
+                "line_items",
+                selected.line_items_text if selected else "",
+                rows=5,
+                placeholder="One per line: Item | Description | Qty | Amount",
+                help_text="Format: Item | Description | Qty | Amount (e.g. Design | Wireframes | 1 | 50000)",
+            ),
             textarea_field("Payment Terms", "payment_terms", selected.payment_terms if selected else "", rows=4, placeholder="Deposit expectations, milestone payments, revision rules, and invoice notes."),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", str(selected.amount_ngn) if selected else "", input_type="number", placeholder="850000"), span=12, md=6),
@@ -391,7 +398,115 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
     )
 
 
+def _quick_document_form() -> Form:
+    accounts = list_payment_accounts()
+    return Form(
+        Div(
+            P("Client", cls="admin-form-section-title"),
+            Row(
+                Col(floating_field("Client Name", "client_name", "", placeholder="Client or friend name", required=True), span=12, md=6),
+                Col(floating_field("Client Email", "client_email", "", input_type="email", placeholder="client@example.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+                cls="g-3",
+            ),
+            Row(
+                Col(floating_field("Client Phone", "client_phone", "", placeholder="+234..."), span=12, md=6),
+                Col(floating_field("Company", "company", "", placeholder="Optional company"), span=12, md=6, cls="mt-3 mt-md-0"),
+                cls="g-3 mt-3",
+            ),
+            cls="admin-form-section mt-0",
+        ),
+        Div(
+            P("Document", cls="admin-form-section-title"),
+            Row(
+                Col(
+                    Div(
+                        Label("Document Type", cls="admin-form-label"),
+                        toggle_pill_group("document_kind", _document_options(), selected_value="invoice"),
+                        cls="admin-form-group",
+                    ),
+                    span=12,
+                    md=7,
+                ),
+                Col(
+                    Div(
+                        Label("Status", cls="admin-form-label"),
+                        Select(
+                            *[Option(label, value=value, selected=value == "draft") for value, label in _document_status_options()],
+                            name="document_status",
+                            cls="form-select admin-form-control",
+                        ),
+                        cls="admin-form-group",
+                    ),
+                    span=12,
+                    md=5,
+                    cls="mt-3 mt-md-0",
+                ),
+                cls="g-3",
+            ),
+            floating_field("Project / Work Title", "project_title", "", placeholder="Logo cleanup, landing page, consultation", required=True),
+            floating_field("Document Title", "document_title", "", placeholder="Invoice for consultation", required=True),
+            textarea_field("Short Summary", "summary", "", rows=3, placeholder="Short context for the work, payment, or approval request."),
+            cls="admin-form-section",
+        ),
+        Div(
+            P("Money & Dates", cls="admin-form-section-title"),
+            textarea_field(
+                "Line Items",
+                "line_items",
+                "",
+                rows=4,
+                placeholder="One per line: Item | Description | Qty | Amount",
+                help_text="Leave blank and use Amount if this is a simple one-line invoice.",
+            ),
+            Row(
+                Col(floating_field("Amount (NGN)", "amount_ngn", "", input_type="number", placeholder="50000"), span=12, md=6),
+                Col(floating_field("Deposit %", "deposit_percent", "100", input_type="number", placeholder="100"), span=12, md=6, cls="mt-3 mt-md-0"),
+                cls="g-3 mt-1",
+            ),
+            Row(
+                Col(floating_field("Valid Until", "valid_until", "", input_type="date", placeholder=""), span=12, md=6),
+                Col(floating_field("Due Date", "due_date", "", input_type="date", placeholder=""), span=12, md=6, cls="mt-3 mt-md-0"),
+                cls="g-3 mt-1",
+            ),
+            Div(
+                Label("Payment Account", cls="admin-form-label"),
+                Select(
+                    Option("Use default / none", value=""),
+                    *[
+                        Option(
+                            f"{account.label} - {account.bank_name} ({account.account_number})",
+                            value=account.account_id,
+                        )
+                        for account in accounts
+                    ],
+                    name="payment_account_id",
+                    cls="form-select admin-form-control",
+                ),
+                cls="admin-form-group mt-3",
+            ),
+            textarea_field("Payment Terms", "payment_terms", "", rows=3, placeholder="Bank transfer, due on receipt, or friendly payment note."),
+            cls="admin-form-section",
+        ),
+        Div(
+            loading_action_button("Generate Quick Document", endpoint="/deals/quick", target="#quick-document-result"),
+            Span(
+                "Creates a lightweight record and client link" if service_role_is_configured() else "Add the service-role key to enable generation",
+                cls="admin-save-note",
+            ),
+            cls="admin-form-actions mt-4",
+        ),
+        Div(id="quick-document-result", cls="mt-3"),
+        action="/deals/quick",
+        method="post",
+        hx_post="/deals/quick",
+        hx_target="#quick-document-result",
+        hx_swap="innerHTML",
+        cls="admin-settings-form",
+    )
+
+
 def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind: str = "all", search: str = "", from_submission: str = "", from_kind: str = "") -> tuple:
+    all_items = list_deals()
     items = list_deals(stage=stage, document_kind=document_kind, search=search)
     selected = get_deal(deal_id)
     if not selected and from_submission:
@@ -529,7 +644,23 @@ def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind
     )
 
     # Pipeline progress strip — clickable stage counters
-    stage_counts = {s: sum(1 for i in items if i.stage == s) for s, _ in _stage_options()}
+    quick_panel = Card(
+        Div(
+            Div(
+                H2("Quick Document Studio", cls="admin-section-title"),
+                P(
+                    "Generate a proposal, quote, or invoice directly when you do not need the full lead workflow. Neo Admin still keeps a lightweight record so the link, PDF, and response history remain traceable.",
+                    cls="admin-module-copy mb-0",
+                ),
+                cls="mb-3",
+            ),
+            _quick_document_form(),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card",
+    )
+
+    stage_counts = {s: sum(1 for i in all_items if i.stage == s) for s, _ in _stage_options()}
     pipeline_strip = Div(
         *[
             A(
@@ -560,6 +691,10 @@ def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind
             SectionWrap(
                 "Deals Workspace",
                 Div(
+                    Row(
+                        Col(quick_panel, span=12),
+                        cls="g-4 mb-4",
+                    ),
                     pipeline_strip,
                     Row(
                         Col(list_panel, span=12, lg=5),

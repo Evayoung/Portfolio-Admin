@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+from html import escape
 import urllib.error
 import urllib.request
 from typing import Any
@@ -68,20 +69,23 @@ def _send(*, to: str, subject: str, html: str) -> bool:
 # ── Email templates ───────────────────────────────────────────────────────────
 
 def _base_html(*, title: str, body: str, cta_label: str = "", cta_url: str = "") -> str:
+    safe_title = escape(title)
+    safe_cta_label = escape(cta_label)
+    safe_cta_url = escape(cta_url, quote=True)
     cta_block = ""
-    if cta_label and cta_url:
+    if safe_cta_label and safe_cta_url:
         cta_block = f"""
         <div style="margin:28px 0 0;">
-          <a href="{cta_url}"
+          <a href="{safe_cta_url}"
              style="display:inline-block;padding:12px 28px;background:#46c8ee;color:#082032;
                     border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;">
-            {cta_label}
+            {safe_cta_label}
           </a>
         </div>"""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title}</title></head>
+<title>{safe_title}</title></head>
 <body style="margin:0;padding:0;background:#f2f6fb;font-family:Inter,system-ui,sans-serif;">
   <div style="max-width:540px;margin:40px auto;background:#fff;border-radius:12px;
               border:1px solid #d9e8f0;overflow:hidden;box-shadow:0 2px 12px rgba(7,17,31,.07);">
@@ -100,9 +104,12 @@ def _base_html(*, title: str, body: str, cta_label: str = "", cta_url: str = "")
 
 
 def _field(label: str, value: str) -> str:
+    safe_label = escape(label)
+    safe_value = escape(value or "-")
+    value = safe_value
     return f"""<div style="margin-bottom:10px;">
       <span style="color:#8596aa;font-size:11px;font-weight:700;letter-spacing:.1em;
-                   text-transform:uppercase;">{label}</span><br>
+                   text-transform:uppercase;">{safe_label}</span><br>
       <span style="color:#132131;font-size:14px;font-weight:600;">{value or "—"}</span>
     </div>"""
 

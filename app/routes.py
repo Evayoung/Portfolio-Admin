@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from fasthtml.common import Redirect
+from fasthtml.common import A, Div, Redirect
 from starlette.datastructures import UploadFile
 from starlette.responses import FileResponse, JSONResponse
 
@@ -12,7 +12,7 @@ try:
     from .infrastructure.blog_repository import save_blog_post
     from .infrastructure.cv_repository import save_cv_profile
     from .infrastructure.deal_pdf import build_deal_document_pdf
-    from .infrastructure.deal_repository import get_deal, save_deal_document, save_document_response, update_document_status
+    from .infrastructure.deal_repository import get_deal, save_deal_document, save_document_response, save_quick_document, update_document_status
     from .infrastructure.media_repository import upload_media_asset
     from .infrastructure.payment_account_repository import save_payment_account
     from .infrastructure.project_repository import save_project
@@ -36,6 +36,7 @@ except ImportError:
     from infrastructure.deal_repository import save_deal_document
     from infrastructure.deal_repository import get_deal
     from infrastructure.deal_repository import save_document_response
+    from infrastructure.deal_repository import save_quick_document
     from infrastructure.deal_repository import update_document_status
     from infrastructure.media_repository import upload_media_asset
     from infrastructure.payment_account_repository import save_payment_account
@@ -89,6 +90,7 @@ def setup_routes(app: Any) -> None:
         slug: str = "",
         title: str = "",
         category: str = "",
+        category_custom: str = "",
         summary: str = "",
         narrative: str = "",
         tech_stack: str = "",
@@ -103,6 +105,7 @@ def setup_routes(app: Any) -> None:
             slug=slug,
             title=title,
             category=category,
+            category_custom=category_custom,
             summary=summary,
             narrative=narrative,
             tech_stack=tech_stack,
@@ -299,6 +302,57 @@ def setup_routes(app: Any) -> None:
         )
         title_text = "Deal draft saved" if result.success else "Save not completed"
         return deal_save_status_fragment(title_text, result.message, tone=result.tone)
+
+    @app.post("/deals/quick")
+    def deals_quick_document_save(
+        client_name: str = "",
+        client_email: str = "",
+        client_phone: str = "",
+        company: str = "",
+        project_title: str = "",
+        document_kind: str = "invoice",
+        document_status: str = "draft",
+        document_title: str = "",
+        summary: str = "",
+        line_items: str = "",
+        payment_terms: str = "",
+        payment_account_id: str = "",
+        amount_ngn: str = "0",
+        deposit_percent: str = "100",
+        valid_until: str = "",
+        due_date: str = "",
+    ) -> Any:
+        result = save_quick_document(
+            client_name=client_name,
+            client_email=client_email,
+            client_phone=client_phone,
+            company=company,
+            project_title=project_title,
+            document_kind=document_kind,
+            document_status=document_status,
+            document_title=document_title,
+            summary=summary,
+            line_items=line_items,
+            payment_terms=payment_terms,
+            payment_account_id=payment_account_id,
+            amount_ngn=amount_ngn,
+            deposit_percent=deposit_percent,
+            valid_until=valid_until,
+            due_date=due_date,
+        )
+        title_text = "Quick document created" if result.success else "Quick document not created"
+        actions = ""
+        if result.success and result.deal_id:
+            deal = get_deal(result.deal_id)
+            document = next((item for item in deal.documents if item.kind == document_kind), deal.latest_document) if deal else None
+            if document:
+                actions = Div(
+                    A("Open Client Link", href=f"/documents/{document.public_token}", target="_blank", cls="btn admin-module-btn mt-3"),
+                    A("Download PDF", href=f"/deals/{result.deal_id}/documents/{document.kind}/pdf", target="_blank", cls="btn admin-install-btn mt-3"),
+                    A("Open Deal Record", href=f"/deals?deal_id={result.deal_id}", cls="btn admin-install-btn mt-3"),
+                    cls="d-flex flex-wrap gap-2",
+                )
+        return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone), actions)
 
     @app.post("/deals/documents/update")
     def deal_document_update(
