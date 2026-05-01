@@ -14,7 +14,8 @@ except ImportError:  # pragma: no cover - dependency is installed in app environ
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(BASE_DIR / ".env")
+if not os.getenv("VERCEL"):
+    load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass(frozen=True)
@@ -47,11 +48,14 @@ settings = Settings()
 def _validate_production_settings() -> None:
     if not os.getenv("VERCEL"):
         return
-    if settings.secret_key == "neo-admin-local-dev-secret":
+    if settings.secret_key in {"", "neo-admin-local-dev-secret", "replace-with-a-secure-secret"}:
         raise RuntimeError("NEO_ADMIN_SECRET_KEY must be set to a secure value in production.")
-    if settings.admin_login_password == "Password123!":
+    if settings.admin_login_password in {"", "Password123!", "replace-with-a-strong-password"}:
         raise RuntimeError("NEO_ADMIN_LOGIN_PASSWORD must be changed before deploying Neo Admin.")
-    if not settings.supabase_url or not settings.supabase_service_role_key:
+    if (
+        settings.supabase_url in {"", "https://your-project-id.supabase.co"}
+        or settings.supabase_service_role_key in {"", "your-service-role-key"}
+    ):
         raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production.")
 
 
