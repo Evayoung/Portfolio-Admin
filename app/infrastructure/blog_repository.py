@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -20,6 +21,8 @@ from app.infrastructure.supabase_client import service_role_is_configured, supab
 @lru_cache(maxsize=1)
 def _neoportfolio_blog_module():
     content_path = Path(__file__).resolve().parents[3] / "neoportfolio" / "blog_content.py"
+    if not content_path.exists():
+        return SimpleNamespace(BLOG_POSTS=(), BLOG_CATEGORIES=(("all", "All"),))
     spec = importlib.util.spec_from_file_location("neoportfolio_blog_admin_seed", content_path)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
