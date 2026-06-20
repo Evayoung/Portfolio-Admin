@@ -5,7 +5,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
-from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Row, SEO
 
 from app.config import settings
 from app.infrastructure.project_repository import (
@@ -60,6 +60,15 @@ def _filter_link(label: str, href: str, *, active: bool) -> A:
 
 def _project_href(**params: str) -> str:
     return f"/projects?{urlencode(params)}"
+
+
+def _new_project_href(*, category: str, featured_only: bool, search: str) -> str:
+    return _project_href(
+        category=category,
+        featured="1" if featured_only else "0",
+        search=search,
+        new="1",
+    )
 
 
 def _editor_form(selected, *, category: str, featured_only: bool, search: str) -> Form:
@@ -139,11 +148,12 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
     )
 
 
-def projects_page(*, slug: str = "", category: str = "all", featured: str = "0", search: str = "") -> tuple:
+def projects_page(*, slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> tuple:
     featured_only = featured == "1"
+    creating_new = new == "1"
     categories = list_project_categories()
     projects = list_projects(category=category, featured_only=featured_only, search=search)
-    selected = get_project(slug) or (projects[0] if projects else None)
+    selected = None if creating_new else get_project(slug) or (projects[0] if projects else None)
     summary = get_project_workspace_summary()
 
     category_links = Div(
@@ -177,8 +187,17 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
         Div(
             Div(
                 H2("Project Records", cls="admin-section-title"),
-                P("Select a project to review, refine, and keep aligned with the public portfolio.", cls="admin-module-copy mb-0"),
+                P(
+                    "Select a project to review, refine, and keep aligned with the public portfolio.",
+                    cls="admin-module-copy mb-0",
+                ),
                 cls="mb-3",
+            ),
+            A(
+                Icon("plus-lg", cls="me-2"),
+                Span("New Project"),
+                href=_new_project_href(category=category, featured_only=featured_only, search=search),
+                cls="btn admin-install-btn mt-3",
             ),
             category_links,
             Div(featured_toggle, cls="mt-3"),
@@ -205,84 +224,121 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
             ),
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
-    )
+            cls="admin-surface-card h-100",
+        )
 
-    detail_panel = (
-        Card(
+    if creating_new:
+        detail_panel = Card(
             Div(
                 Div(
                     Div(
                         Span("Selected record", cls="admin-kicker"),
-                        H2(selected.title, cls="admin-section-title mb-2"),
-                        P(selected.summary, cls="admin-module-copy mb-0"),
+                        H2("Create New Project", cls="admin-section-title mb-2"),
+                        P(
+                            "Add a previous project manually, even if it was never stored in Supabase before.",
+                            cls="admin-module-copy mb-0",
+                        ),
                         cls="admin-detail-copy",
                     ),
                     Div(
-                        Badge(summary.source, cls="text-bg-secondary admin-metric-delta"),
+                        Badge("Manual add", cls="text-bg-primary admin-metric-delta"),
                         Badge("Live sync on" if service_role_is_configured() else "Setup needed", cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta"),
                         cls="d-flex flex-wrap gap-2 mt-3 mt-lg-0",
                     ),
                     cls="d-flex flex-column flex-lg-row justify-content-between gap-3",
                 ),
                 Div(
-                    Row(
-                        Col(
-                            Div(
-                                H3("Content Snapshot", cls="admin-subsection-title"),
-                                Div(
-                                    Div(Span("Slug", cls="admin-field-label"), Strong(selected.slug)),
-                                    Div(Span("Category", cls="admin-field-label"), Strong(selected.category.replace("-", " ").title())),
-                                    Div(Span("Featured", cls="admin-field-label"), Strong("Yes" if selected.featured else "No")),
-                                    Div(Span("Published", cls="admin-field-label"), Strong("Yes" if selected.published else "No")),
-                                    cls="admin-field-grid",
-                                ),
-                                cls="admin-detail-block",
-                            ),
-                            span=12,
-                            md=6,
-                        ),
-                        Col(
-                            Div(
-                                H3("Score Signals", cls="admin-subsection-title"),
-                                Div(
-                                    Div(Span("Complexity", cls="admin-field-label"), Strong(f"{selected.complexity}%")),
-                                    Div(Span("Satisfaction", cls="admin-field-label"), Strong(f"{selected.satisfaction}%")),
-                                    Div(Span("Image", cls="admin-field-label"), Strong(selected.image)),
-                                    Div(Span("Source", cls="admin-field-label"), Strong(selected.source.title())),
-                                    cls="admin-field-grid",
-                                ),
-                                cls="admin-detail-block",
-                            ),
-                            span=12,
-                            md=6,
-                            cls="mt-4 mt-md-0",
-                        ),
-                        cls="g-4 mt-1",
-                    ),
-                    cls="mt-4",
-                ),
-                Div(
                     H3("Project Editor", cls="admin-subsection-title"),
-                    P("Update the project record, publishing flags, and story details from one focused workspace.", cls="admin-module-copy"),
-                    _editor_form(selected, category=category, featured_only=featured_only, search=search),
+                    P("Fill in the details, then save to create the project record and make it editable from the list.", cls="admin-module-copy"),
+                    _editor_form(None, category=category, featured_only=featured_only, search=search),
                     cls="admin-detail-block mt-4",
                 ),
                 cls="admin-panel-stack",
             ),
             cls="admin-surface-card h-100",
         )
-        if selected
-        else Card(
-            EmptyState(
-                icon="kanban",
-                title="No project selected",
-                description="Pick a project from the list to inspect its content, metadata, and publishing details.",
-                cls="py-5",
-            ),
-            cls="admin-surface-card h-100",
+    else:
+        detail_panel = (
+            Card(
+                Div(
+                    Div(
+                        Div(
+                            Span("Selected record", cls="admin-kicker"),
+                            H2(selected.title, cls="admin-section-title mb-2"),
+                            P(selected.summary, cls="admin-module-copy mb-0"),
+                            cls="admin-detail-copy",
+                        ),
+                        Div(
+                            Badge(summary.source, cls="text-bg-secondary admin-metric-delta"),
+                            Badge(
+                                "Live sync on" if service_role_is_configured() else "Setup needed",
+                                cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta",
+                            ),
+                            cls="d-flex flex-wrap gap-2 mt-3 mt-lg-0",
+                        ),
+                        cls="d-flex flex-column flex-lg-row justify-content-between gap-3",
+                    ),
+                    Div(
+                        Row(
+                            Col(
+                                Div(
+                                    H3("Content Snapshot", cls="admin-subsection-title"),
+                                    Div(
+                                        Div(Span("Slug", cls="admin-field-label"), Strong(selected.slug)),
+                                        Div(Span("Category", cls="admin-field-label"), Strong(selected.category.replace("-", " ").title())),
+                                        Div(Span("Featured", cls="admin-field-label"), Strong("Yes" if selected.featured else "No")),
+                                        Div(Span("Published", cls="admin-field-label"), Strong("Yes" if selected.published else "No")),
+                                        cls="admin-field-grid",
+                                    ),
+                                    cls="admin-detail-block",
+                                ),
+                                span=12,
+                                md=6,
+                            ),
+                            Col(
+                                Div(
+                                    H3("Score Signals", cls="admin-subsection-title"),
+                                    Div(
+                                        Div(Span("Complexity", cls="admin-field-label"), Strong(f"{selected.complexity}%")),
+                                        Div(Span("Satisfaction", cls="admin-field-label"), Strong(f"{selected.satisfaction}%")),
+                                        Div(Span("Image", cls="admin-field-label"), Strong(selected.image)),
+                                        Div(Span("Source", cls="admin-field-label"), Strong(selected.source.title())),
+                                        cls="admin-field-grid",
+                                    ),
+                                    cls="admin-detail-block",
+                                ),
+                                span=12,
+                                md=6,
+                                cls="mt-4 mt-md-0",
+                            ),
+                            cls="g-4 mt-1",
+                        ),
+                        cls="mt-4",
+                    ),
+                    Div(
+                        H3("Project Editor", cls="admin-subsection-title"),
+                        P(
+                            "Update the project record, publishing flags, and story details from one focused workspace.",
+                            cls="admin-module-copy",
+                        ),
+                        _editor_form(selected, category=category, featured_only=featured_only, search=search),
+                        cls="admin-detail-block mt-4",
+                    ),
+                    cls="admin-panel-stack",
+                ),
+                cls="admin-surface-card h-100",
+            )
+            if selected
+            else Card(
+                EmptyState(
+                    icon="kanban",
+                    title="No project selected",
+                    description="Pick a project from the list to inspect its content, metadata, and publishing details.",
+                    cls="py-5",
+                ),
+                cls="admin-surface-card h-100",
+            )
         )
-    )
 
     return (
         *SEO(

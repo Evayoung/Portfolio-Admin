@@ -99,6 +99,16 @@ def test_projects_workspace_renders_real_project_data() -> None:
     assert "New Category" in html
 
 
+def test_projects_workspace_can_open_blank_create_mode() -> None:
+    sign_in()
+    response = client.get("/projects?new=1")
+    html = response.text
+    assert response.status_code == 200
+    assert "Create New Project" in html
+    assert "New Project" in html
+    assert "Save Project" in html
+
+
 def test_blog_workspace_renders_real_blog_data() -> None:
     sign_in()
     response = client.get("/blog")

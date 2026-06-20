@@ -81,8 +81,8 @@ def setup_routes(app: Any) -> None:
         return overview_page()
 
     @app.get("/projects")
-    def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "") -> Any:
-        return projects_page(slug=slug, category=category, featured=featured, search=search)
+    def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:
+        return projects_page(slug=slug, category=category, featured=featured, search=search, new=new)
 
     @app.post("/projects/save")
     def project_save(
