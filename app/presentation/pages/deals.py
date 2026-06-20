@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -16,8 +16,7 @@ from app.infrastructure.deal_repository import (
 from app.infrastructure.payment_account_repository import list_payment_accounts
 from app.infrastructure.submission_repository import get_submission
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
-from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -63,25 +62,23 @@ def _deal_card(item, *, selected: bool, stage: str, document_kind: str, search: 
         A(
             Div(
                 Div(
-                    Div(
-                        Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
-                        Badge(latest_label, cls="text-bg-secondary admin-project-flag"),
-                        cls="d-flex align-items-center gap-2 flex-wrap",
-                    ),
-                    Span(_money(item.amount_ngn), cls="admin-project-meta"),
-                    cls="d-flex justify-content-between align-items-start gap-2",
+                    Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
+                    Badge(latest_label, cls="text-bg-secondary admin-project-flag"),
+                    cls="d-flex align-items-center gap-2 flex-wrap",
                 ),
-                H3(item.project_title, cls="admin-project-title"),
-                P(item.summary, cls="admin-project-copy"),
-                Div(
-                    Span(item.client_name, cls="admin-project-meta"),
-                    Span(latest_status, cls="admin-project-meta"),
-                    cls="d-flex justify-content-between flex-wrap gap-2 mt-3",
-                ),
-                cls="admin-project-card-body",
+                Badge("Published", cls="text-bg-success admin-project-flag") if latest and latest.status == "paid" else Badge(latest_status, cls="text-bg-secondary admin-project-flag"),
+                cls="d-flex justify-content-between align-items-start gap-2",
             ),
+            Span(_money(item.amount_ngn), cls="admin-project-meta"),
+            H3(item.project_title, cls="admin-project-title"),
+            P(item.summary, cls="admin-project-copy"),
+            Div(
+                Span(item.client_name, cls="admin-project-meta"),
+                Span(latest_status, cls="admin-project-meta"),
+                cls="d-flex justify-content-between flex-wrap gap-2 mt-3",
+            ),
+            cls="admin-project-card-body",
             href=href,
-            cls=f"admin-project-card-link{' is-selected' if selected else ''}",
         ),
         cls="admin-surface-card admin-project-card",
     )
@@ -691,16 +688,30 @@ def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind
             SectionWrap(
                 "Deals Workspace",
                 Div(
-                    Row(
-                        Col(quick_panel, span=12),
-                        cls="g-4 mb-4",
-                    ),
                     pipeline_strip,
                     Row(
                         Col(list_panel, span=12, lg=5),
-                        Col(detail_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                        Col(
+                            Button(
+                                "Show Editor ↓",
+                                type="button",
+                                cls="admin-panel-toggle-btn",
+                                data_panel_toggle="deals-detail-panel",
+                                id="deals-panel-toggle",
+                            ),
+                            span=12,
+                            cls="d-lg-none",
+                        ),
+                        Col(
+                            detail_panel,
+                            id="deals-detail-panel",
+                            span=12,
+                            lg=7,
+                            cls="admin-panel-hidden",
+                        ),
                         cls="g-4",
                     ),
+                    SectionWrap("Quick Document Studio", quick_panel),
                 ),
             ),
             current="/deals",

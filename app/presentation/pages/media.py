@@ -8,8 +8,7 @@ from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 from app.config import settings
 from app.infrastructure.media_repository import get_media_workspace_summary, list_media_assets
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import floating_field, search_filter_bar, status_alert, summary_card, toggle_pill_group
-from app.presentation.pages.dashboard import SectionWrap
+from app.presentation.page_helpers import SectionWrap, floating_field, search_filter_bar, status_alert, summary_card, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -127,12 +126,12 @@ def media_workspace_page(*, kind: str = "all", search: str = "", message: str = 
             ),
             kind_links,
             search_form,
-            Div(
+            Row(
                 *[
                     Col(_asset_card(asset), span=12, md=6, xl=4)
                     for asset in assets
                 ],
-                cls="g-4 mt-1 row",
+                cls="g-4 mt-1",
             )
             if assets
             else EmptyState(

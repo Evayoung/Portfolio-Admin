@@ -72,7 +72,7 @@ def test_overview_contains_admin_shell_markers() -> None:
     assert 'id="admin-bottom-nav"' in html
     assert 'data-bs-target="#adminMobileDrawer"' in html
     assert "Published Projects" in html
-    assert "GitHub Pulse" in html
+    assert "Workspace Status" in html
 
 
 def test_settings_workspace_renders_live_profile_shell() -> None:
@@ -83,6 +83,7 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
     assert "Settings Workspace" in html
     assert "Settings Editor" in html
     assert "Public identity" in html
+    assert "GitHub Pulse" in html
 
 
 def test_projects_workspace_renders_real_project_data() -> None:
@@ -396,7 +397,7 @@ def test_public_document_response_route_reports_read_only_without_supabase_servi
             "responder_name": "Client Reviewer",
             "responder_email": "client@example.com",
             "comment": "Looks good so far.",
-            "action": "accepted",
+            "action": "commented",
         },
         follow_redirects=False,
     )

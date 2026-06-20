@@ -18,8 +18,7 @@ from app.infrastructure.cv_repository import (
     list_work_history,
 )
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, loading_action_button, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -158,6 +157,7 @@ def cv_workspace_page() -> tuple:
             ),
             span=12,
             lg=6,
+            cls="d-none d-lg-block",
         ),
         Col(
             _stack_panel(
@@ -166,7 +166,7 @@ def cv_workspace_page() -> tuple:
             ),
             span=12,
             lg=6,
-            cls="mt-4 mt-lg-0",
+            cls="mt-4 mt-lg-0 d-lg-block",
         ),
         cls="g-4",
     )
@@ -178,6 +178,7 @@ def cv_workspace_page() -> tuple:
             ),
             span=12,
             lg=6,
+            cls="d-lg-block",
         ),
         Col(
             _stack_panel(
@@ -186,7 +187,7 @@ def cv_workspace_page() -> tuple:
             ),
             span=12,
             lg=6,
-            cls="mt-4 mt-lg-0",
+            cls="mt-4 mt-lg-0 d-lg-block",
         ),
         cls="g-4 mt-1",
     )

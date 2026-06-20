@@ -281,7 +281,7 @@ a {
   font-size: 1rem;
 }
 
-.admin-sidebar-nav .nav-link span {
+.admin-sidebar-nav .nav-link .admin-nav-label {
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -415,10 +415,6 @@ a {
   align-items: center;
   border-radius: 999px;
   padding: 0.45rem 0.78rem;
-}
-
-.admin-overview-metric .card-body {
-  padding: 1.2rem;
 }
 
 .admin-overview-metric p {
@@ -572,6 +568,11 @@ a {
 .admin-bottom-link .admin-nav-label {
   font-size: 0.68rem;
   font-weight: 600;
+}
+
+.admin-bottom-small {
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 .admin-bottom-link.active,
@@ -876,7 +877,6 @@ a {
 }
 
 .admin-radio-pill.active,
-.admin-radio-pill.active,
 .admin-radio-pill[aria-pressed="true"] {
   background: rgba(45, 184, 232, 0.14);
   border-color: rgba(45, 184, 232, 0.28);
@@ -974,6 +974,8 @@ a {
   white-space: pre-wrap;
 }
 
+
+
 @media (min-width: 992px) {
   .admin-layout {
     display: grid;
@@ -997,6 +999,13 @@ a {
 
   .admin-revenue-strip {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .admin-revenue-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
   }
 }
 
@@ -1033,7 +1042,7 @@ a {
   .admin-metric-card-body,
   .admin-module-card-body,
   .admin-panel-stack {
-    padding: 1rem;
+    padding: 0.85rem;
   }
 }
 
@@ -1307,3 +1316,48 @@ a {
     border-right: 0;
   }
 }
+
+/* ── Mobile responsiveness & panel toggling ──────────────── */
+@media (max-width: 991.98px) {
+  .admin-panel-hidden {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Reduce outer container padding */
+  .admin-shell {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Reduce panel stack padding on mobile to save space */
+  .admin-panel-stack {
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  /* Flatten nested blocks and sections to avoid content shrinking & concentric borders */
+  .admin-detail-block,
+  .admin-form-section {
+    padding: 0.75rem 0.6rem !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  /* Reduce gap in field grids */
+  .admin-field-grid {
+    gap: 0.65rem;
+  }
+
+  /* Reduce default Bootstrap gutter widths on mobile to maximize field width */
+  .g-4, .gx-4 {
+    --bs-gutter-x: 0.75rem !important;
+    --bs-gutter-y: 0.75rem !important;
+  }
+  .g-3, .gx-3 {
+    --bs-gutter-x: 0.5rem !important;
+    --bs-gutter-y: 0.5rem !important;
+  }
+}
+

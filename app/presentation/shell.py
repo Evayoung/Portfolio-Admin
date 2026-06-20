@@ -167,15 +167,12 @@ def admin_mobile_header(current: str = "/", title: str = "Overview", profile=Non
                     Span(active_item, cls="admin-mobile-title"),
                     cls="admin-mobile-text",
                 ),
-                Div(
-                    A(
-                        Icon("download"),
-                        href="#",
-                        id="install-app-trigger-mobile",
-                        cls="admin-mobile-action",
-                        aria_label="Install app",
-                    ),
-                    cls="admin-mobile-actions",
+                A(
+                    Icon("download"),
+                    href="#",
+                    id="install-app-trigger-mobile",
+                    cls="admin-mobile-action",
+                    aria_label="Install app",
                 ),
                 cls="admin-mobile-header-row",
             ),
@@ -199,7 +196,7 @@ def admin_bottom_nav(current: str = "/") -> Div:
         ],
         A(
             Icon("list", size="1.25em", cls="mb-1"),
-            Small("Menu", cls="d-block", style="font-size: 0.75rem; line-height: 1;"),
+            Small("Menu", cls="d-block admin-bottom-small"),
             href="#",
             data_bs_toggle="offcanvas",
             data_bs_target="#adminMobileDrawer",

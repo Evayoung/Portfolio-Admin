@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
 from app.infrastructure.blog_repository import (
@@ -13,8 +13,7 @@ from app.infrastructure.blog_repository import (
     list_blog_posts,
 )
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -255,7 +254,24 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
                 "Blog Workspace",
                 Row(
                     Col(list_panel, span=12, lg=5),
-                    Col(detail_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                    Col(
+                        Button(
+                            "Show Editor ↓",
+                            type="button",
+                            cls="admin-panel-toggle-btn",
+                            data_panel_toggle="blog-detail-panel",
+                            id="blog-panel-toggle",
+                        ),
+                        span=12,
+                        cls="d-lg-none",
+                    ),
+                    Col(
+                        detail_panel,
+                        id="blog-detail-panel",
+                        span=12,
+                        lg=7,
+                        cls="admin-panel-hidden",
+                    ),
                     cls="g-4",
                 ),
             ),

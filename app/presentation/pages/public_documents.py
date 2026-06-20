@@ -8,7 +8,7 @@ from fasthtml.common import (
     A, Button, Div, Form, H1, H2, H3, Input, P, Script, Span, Strong,
     Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr,
 )
-from faststrap import Icon, SEO
+from faststrap import Col, Icon, Row, SEO
 
 from app.config import settings
 from app.infrastructure.deal_repository import get_document_by_token, list_document_responses
@@ -359,23 +359,30 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         ),
         Div(
             feedback,
-            Div(
-                Input(
-                    type="text",
-                    name="responder_name",
-                    placeholder="Your name",
-                    cls="doc-response-input",
-                    required=True,
+            Row(
+                Col(
+                    Input(
+                        type="text",
+                        name="responder_name",
+                        placeholder="Your name",
+                        cls="doc-response-input w-100",
+                        required=True,
+                    ),
+                    span=12,
+                    sm=6,
                 ),
-                Input(
-                    type="email",
-                    name="responder_email",
-                    placeholder="Your email address",
-                    cls="doc-response-input",
-                    required=True,
+                Col(
+                    Input(
+                        type="email",
+                        name="responder_email",
+                        placeholder="Your email address",
+                        cls="doc-response-input w-100",
+                        required=True,
+                    ),
+                    span=12,
+                    sm=6,
                 ),
-                style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;",
-                cls="doc-name-email-row",
+                cls="g-3 doc-name-email-row",
             ),
             Textarea(
                 name="comment",
@@ -483,25 +490,6 @@ _COPY_SCRIPT = Script("""
   });
 })();
 """)
-
-# Mobile name/email row responsive fix
-_NAME_EMAIL_SCRIPT = Script("""
-(function(){
-  function fixNameEmailRow(){
-    var rows = document.querySelectorAll('.doc-name-email-row');
-    rows.forEach(function(row){
-      if(window.innerWidth < 600){
-        row.style.gridTemplateColumns = '1fr';
-      } else {
-        row.style.gridTemplateColumns = '1fr 1fr';
-      }
-    });
-  }
-  fixNameEmailRow();
-  window.addEventListener('resize', fixNameEmailRow);
-})();
-""")
-
 
 # ── Main page function ────────────────────────────────────────────────────────
 
@@ -616,7 +604,6 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             cls="doc-shell",
         ),
         _COPY_SCRIPT,
-        _NAME_EMAIL_SCRIPT,
     )
 
 

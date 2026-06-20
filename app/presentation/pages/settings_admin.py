@@ -7,11 +7,11 @@ from faststrap import Badge, Card, Col, Row, SEO
 
 from app.config import settings
 from app.infrastructure.auth_repository import get_admin_access_profile
+from app.infrastructure.github_repository import get_github_stats
 from app.infrastructure.payment_account_repository import list_payment_accounts
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import floating_field, loading_action_button, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -23,6 +23,7 @@ def settings_workspace_page() -> tuple:
     profile = get_site_profile()
     access = get_admin_access_profile()
     accounts = list_payment_accounts()
+    github = get_github_stats()
     identity_panel = Card(
         Div(
             Div(
@@ -226,6 +227,27 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
+    github_card = Card(
+        Div(
+            H3("GitHub Pulse", cls="admin-subsection-title"),
+            P(
+                "Open-source proof from your GitHub profile. Stays graceful even when the API is unavailable.",
+                cls="admin-module-copy",
+            ),
+            Div(
+                Div(Span("Profile", cls="admin-field-label"), Strong(github.username)),
+                Div(Span("Public Repos", cls="admin-field-label"), Strong(str(github.public_repos))),
+                Div(Span("Stars", cls="admin-field-label"), Strong(str(github.stars))),
+                Div(Span("Followers", cls="admin-field-label"), Strong(str(github.followers))),
+                Div(Span("Recent Commits", cls="admin-field-label"), Strong(str(github.recent_commits))),
+                Div(Span("Source", cls="admin-field-label"), Strong(github.source.title())),
+                cls="admin-field-grid mt-3",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
+
     return (
         *SEO(
             title=f"{settings.app_name} | Settings",
@@ -242,12 +264,12 @@ def settings_workspace_page() -> tuple:
             SectionWrap(
                 "Settings Workspace",
                 Row(
-                    Col(identity_panel, span=12, lg=5),
+                    # Identity panel — reference only; hidden on mobile to prioritise the edit forms
+                    Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
-                        Div(editor_panel, access_panel, account_panel, cls="admin-settings-stack"),
+                        Div(editor_panel, access_panel, account_panel, github_card, cls="admin-settings-stack"),
                         span=12,
                         lg=7,
-                        cls="mt-4 mt-lg-0",
                     ),
                     cls="g-4",
                 ),

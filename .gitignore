@@ -5,5 +5,8 @@ __pycache__/
 *.pyc
 admin-run.log
 admin-run.err
+test_output.txt
+Mcmoren_Website_Proposal.pdf
+assets/generated/
 
 .vercel

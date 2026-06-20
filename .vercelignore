@@ -1,0 +1,7 @@
+.env
+.pytest_cache/
+.vercel/
+__pycache__/
+assets/generated/
+Mcmoren_Website_Proposal.pdf
+test_output.txt

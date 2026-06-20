@@ -12,8 +12,7 @@ from app.infrastructure.submission_repository import (
     list_submissions,
 )
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.pages.dashboard import SectionWrap
-from app.presentation.page_helpers import loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import SectionWrap, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -296,17 +295,21 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
                     Col(list_panel, span=12, lg=5, id="submissions-list-panel"),
                     Col(
                         Button(
-                            "Show Detail Panel ↓",
+                            "Show Editor ↓",
                             type="button",
                             cls="admin-panel-toggle-btn",
                             data_panel_toggle="submissions-detail-panel",
                             id="submissions-panel-toggle",
                         ),
+                        span=12,
+                        cls="d-lg-none",
+                    ),
+                    Col(
                         detail_panel,
                         id="submissions-detail-panel",
                         span=12,
                         lg=7,
-                        cls="mt-4 mt-lg-0",
+                        cls="admin-panel-hidden",
                     ),
                     cls="g-4",
                 ),

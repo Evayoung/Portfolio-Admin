@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import Div, H3, Input, P, Span, Textarea
+from fasthtml.common import Div, H2, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
 from faststrap.presets import LoadingButton
 
@@ -152,6 +152,7 @@ def textarea_field(
     *,
     rows: int = 5,
     placeholder: str = "",
+    help_text: str = "",
     required: bool = False,
 ) -> Div:
     """Shared textarea field wrapped with Faststrap FormGroup."""
@@ -168,6 +169,7 @@ def textarea_field(
     return FormGroup(
         textarea,
         label=label,
+        help_text=help_text,
         required=required,
         cls="admin-form-group",
     )
@@ -224,4 +226,14 @@ def loading_action_button(
         hx_include=form_selector,
         cls=button_cls,
         **kwargs,
+    )
+
+
+def SectionWrap(title: str, content) -> Div:
+    """Shared section wrapper — adds a Space Grotesk H2 title above the content block."""
+
+    return Div(
+        H2(title, cls="admin-section-title"),
+        content,
+        cls="admin-section-block",
     )
