@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from typing import Any
-from fasthtml.common import A, Div, Redirect
+from fasthtml.common import A, Button, Div, Redirect
 from starlette.datastructures import UploadFile
 from starlette.responses import FileResponse, JSONResponse
 
 try:
+    from .config import settings
     from .infrastructure.auth_repository import authenticate_admin, save_admin_access
     from .infrastructure.blog_repository import save_blog_post
     from .infrastructure.cv_repository import save_cv_profile
@@ -29,6 +30,7 @@ try:
     from .presentation.pages.settings_admin import settings_save_status_fragment, settings_workspace_page
     from .presentation.pages.submissions import submission_save_status_fragment, submissions_workspace_page
 except ImportError:
+    from config import settings
     from infrastructure.auth_repository import authenticate_admin, save_admin_access
     from infrastructure.blog_repository import save_blog_post
     from infrastructure.cv_repository import save_cv_profile
@@ -116,11 +118,11 @@ def setup_routes(app: Any) -> None:
             published=bool(published),
         )
         title_text = "Project saved" if result.success else "Save not completed"
-        return project_save_status_fragment(title_text, result.message, tone=result.tone)
+        return project_save_status_fragment(title_text, result.message, tone=result.tone, slug=result.slug or "")
 
     @app.get("/blog")
-    def blog(slug: str = "", category: str = "all", search: str = "") -> Any:
-        return blog_workspace_page(slug=slug, category=category, search=search)
+    def blog(slug: str = "", category: str = "all", search: str = "", new: str = "") -> Any:
+        return blog_workspace_page(slug=slug, category=category, search=search, new=new)
 
     @app.post("/blog/save")
     def blog_save(
@@ -148,7 +150,7 @@ def setup_routes(app: Any) -> None:
             published=bool(published),
         )
         title_text = "Blog post saved" if result.success else "Save not completed"
-        return blog_save_status_fragment(title_text, result.message, tone=result.tone)
+        return blog_save_status_fragment(title_text, result.message, tone=result.tone, slug=result.slug or "")
 
     @app.get("/cv")
     def cv() -> Any:
@@ -167,6 +169,11 @@ def setup_routes(app: Any) -> None:
         summary: str = "",
         core_skills: str = "",
         competencies: str = "",
+        work_history: str = "",
+        education: str = "",
+        certifications: str = "",
+        tool_categories: str = "",
+        languages: str = "",
     ) -> Any:
         result = save_cv_profile(
             name=name,
@@ -180,6 +187,11 @@ def setup_routes(app: Any) -> None:
             summary=summary,
             core_skills=core_skills,
             competencies=competencies,
+            work_history=work_history,
+            education=education,
+            certifications=certifications,
+            tool_categories=tool_categories,
+            languages=languages,
         )
         title_text = "CV profile saved" if result.success else "Save not completed"
         return cv_save_status_fragment(title_text, result.message, tone=result.tone)
@@ -348,6 +360,13 @@ def setup_routes(app: Any) -> None:
             if document:
                 actions = Div(
                     A("Open Client Link", href=f"/documents/{document.public_token}", target="_blank", cls="btn admin-module-btn mt-3"),
+                    Button(
+                        "Copy Client Link",
+                        type="button",
+                        cls="btn admin-install-btn mt-3",
+                        data_copy_target=f"{settings.base_url.rstrip('/')}/documents/{document.public_token}",
+                        data_copy_label="Copy Client Link",
+                    ),
                     A("Download PDF", href=f"/deals/{result.deal_id}/documents/{document.kind}/pdf", target="_blank", cls="btn admin-install-btn mt-3"),
                     A("Open Deal Record", href=f"/deals?deal_id={result.deal_id}", cls="btn admin-install-btn mt-3"),
                     cls="d-flex flex-wrap gap-2",

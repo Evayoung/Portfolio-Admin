@@ -10,13 +10,25 @@ from app.infrastructure.auth_repository import get_admin_access_profile
 from app.infrastructure.github_repository import get_github_stats
 from app.infrastructure.payment_account_repository import list_payment_accounts
 from app.infrastructure.settings_repository import get_site_profile
-from app.infrastructure.supabase_client import service_role_is_configured
+from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
 from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
 def settings_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
     return status_alert(title, message, tone)
+
+
+def _health_row(label: str, ready: bool, note: str) -> Div:
+    return Div(
+        Div(
+            Span(label, cls="admin-field-label"),
+            Strong("Ready" if ready else "Needs setup"),
+        ),
+        Badge("OK" if ready else "Check", cls=f"{'text-bg-success' if ready else 'text-bg-warning'} admin-project-flag"),
+        P(note, cls="admin-module-copy mb-0"),
+        cls="admin-detail-block",
+    )
 
 
 def settings_workspace_page() -> tuple:
@@ -248,6 +260,23 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
+    production_card = Card(
+        Div(
+            H3("Production Health", cls="admin-subsection-title"),
+            P("Quick visibility for the environment pieces that decide whether the admin can read, write, email, and generate shareable links.", cls="admin-module-copy"),
+            Div(
+                _health_row("Supabase Read", supabase_is_configured(), "Requires SUPABASE_URL and SUPABASE_ANON_KEY."),
+                _health_row("Supabase Write", service_role_is_configured(), "Requires SUPABASE_SERVICE_ROLE_KEY for admin saves and uploads."),
+                _health_row("Email Sending", settings.email_enabled, "Requires RESEND_API_KEY plus a valid sender domain when email actions are added."),
+                _health_row("Public Base URL", settings.base_url.startswith("https://"), "Use the deployed https admin URL so copied document links are production-safe."),
+                _health_row("GitHub Pulse", bool(settings.github_access_token), "Optional, but improves GitHub stats reliability and rate limits."),
+                cls="admin-settings-stack",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
+
     return (
         *SEO(
             title=f"{settings.app_name} | Settings",
@@ -267,7 +296,7 @@ def settings_workspace_page() -> tuple:
                     # Identity panel — reference only; hidden on mobile to prioritise the edit forms
                     Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
-                        Div(editor_panel, access_panel, account_panel, github_card, cls="admin-settings-stack"),
+                        Div(editor_panel, access_panel, account_panel, production_card, github_card, cls="admin-settings-stack"),
                         span=12,
                         lg=7,
                     ),

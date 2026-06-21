@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
+from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
 from app.infrastructure.media_repository import get_media_workspace_summary, list_media_assets
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import SectionWrap, floating_field, search_filter_bar, status_alert, summary_card, toggle_pill_group
+from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -18,6 +18,13 @@ def media_save_status_fragment(title: str, message: str, tone: str = "info", pub
         Div(
             Span("Uploaded URL", cls="admin-field-label"),
             A(public_url, href=public_url, target="_blank", rel="noreferrer", cls="admin-project-meta") if public_url else "",
+            action_group(
+                Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=public_url, data_copy_label="Copy URL"),
+                action_link("Open Asset", public_url, variant="secondary", target="_blank"),
+                action_link("Back to Images", "/media?kind=image", variant="secondary"),
+            )
+            if public_url
+            else "",
             cls="admin-detail-block mt-3",
         )
         if public_url
@@ -41,8 +48,10 @@ def _kind_options() -> list[tuple[str, str]]:
 
 def _asset_card(asset) -> Card:
     size_kb = max(1, round(asset.size_bytes / 1024))
+    is_image = (asset.content_type or "").startswith("image/")
     return Card(
         Div(
+            Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb") if is_image and asset.public_url else "",
             Div(
                 Span(asset.kind.title(), cls="admin-project-category"),
                 Badge(asset.created_at or "Recent", cls="text-bg-secondary admin-project-flag"),
@@ -57,6 +66,7 @@ def _asset_card(asset) -> Card:
             ),
             Div(
                 A("Open Asset", href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-install-btn"),
+                Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=asset.public_url, data_copy_label="Copy URL"),
                 cls="d-flex flex-wrap gap-2 mt-3",
             ),
             cls="admin-project-card-body",
@@ -83,7 +93,7 @@ def _upload_form(*, kind: str, search: str) -> Form:
             cls="admin-form-group mt-3",
         ),
         Div(
-            Input(type="submit", value="Upload Media", cls="btn admin-module-btn"),
+            loading_action_button("Upload Media", endpoint="/media/upload", target="body", button_cls="btn admin-module-btn"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable uploads",
                 cls="admin-save-note",
@@ -92,6 +102,9 @@ def _upload_form(*, kind: str, search: str) -> Form:
         ),
         action="/media/upload",
         method="post",
+        hx_post="/media/upload",
+        hx_target="body",
+        hx_swap="innerHTML",
         enctype="multipart/form-data",
         cls="admin-settings-form",
     )

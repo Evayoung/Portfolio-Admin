@@ -690,6 +690,16 @@ a {
   padding: 1.2rem;
 }
 
+.admin-media-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 1rem;
+}
+
 .admin-project-category {
   font-size: 0.76rem;
   text-transform: uppercase;
@@ -1360,4 +1370,3 @@ a {
     --bs-gutter-y: 0.5rem !important;
   }
 }
-

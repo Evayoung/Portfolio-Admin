@@ -26,6 +26,29 @@ def cv_save_status_fragment(title: str, message: str, tone: str = "info") -> Div
     return status_alert(title, message, tone)
 
 
+def _format_work_history(items) -> str:
+    return "\n".join(
+        f"{item.title} | {item.organisation} | {item.period} | {item.location} | {'; '.join(item.bullets)}"
+        for item in items
+    )
+
+
+def _format_education(items) -> str:
+    return "\n".join(f"{item.degree} | {item.institution} | {item.period} | {item.note}" for item in items)
+
+
+def _format_certifications(items) -> str:
+    return "\n".join(f"{item.name} | {item.issuer} | {item.year} | {item.credential_url}" for item in items)
+
+
+def _format_tools(items) -> str:
+    return "\n".join(f"{item.label} | {', '.join(item.tools)}" for item in items)
+
+
+def _format_languages(items) -> str:
+    return "\n".join(f"{label} | {level} | {score}" for label, level, score in items)
+
+
 def _stack_panel(title: str, lines: list[str]) -> Card:
     return Card(
         Div(
@@ -72,6 +95,46 @@ def cv_workspace_page() -> tuple:
         textarea_field("Professional Summary", "summary", meta.summary, rows=7, required=True, placeholder="CV summary"),
         textarea_field("Core Skills", "core_skills", "\n".join(core_skills), rows=8, placeholder="One skill per line"),
         textarea_field("Competencies", "competencies", "\n".join(competencies), rows=6, placeholder="One competency per line"),
+        textarea_field(
+            "Experience",
+            "work_history",
+            _format_work_history(work_history),
+            rows=8,
+            placeholder="Title | Organisation | Period | Location | Bullet one; Bullet two",
+            help_text="One role per line. Bullets are separated with semicolons.",
+        ),
+        textarea_field(
+            "Education",
+            "education",
+            _format_education(education),
+            rows=4,
+            placeholder="Degree | Institution | Period | Note",
+            help_text="One education item per line.",
+        ),
+        textarea_field(
+            "Certifications",
+            "certifications",
+            _format_certifications(certifications),
+            rows=4,
+            placeholder="Name | Issuer | Year | Credential URL",
+            help_text="One certification per line.",
+        ),
+        textarea_field(
+            "Tools & Technologies",
+            "tool_categories",
+            _format_tools(tool_categories),
+            rows=5,
+            placeholder="Category | Python, FastAPI, Supabase",
+            help_text="One tool group per line. Tools are comma-separated.",
+        ),
+        textarea_field(
+            "Languages",
+            "languages",
+            _format_languages(languages),
+            rows=4,
+            placeholder="English | Fluent | 95",
+            help_text="One language per line. Score must be 0 to 100.",
+        ),
         Div(
             loading_action_button("Save CV Profile", endpoint="/cv/save", target="#cv-save-result"),
             Span(
@@ -140,7 +203,7 @@ def cv_workspace_page() -> tuple:
             ),
             Div(
                 H3("CV Editor", cls="admin-subsection-title"),
-                P("Update the profile, summary, and grouped skill surfaces that power both the interactive CV and the branded download.", cls="admin-module-copy"),
+                P("Update the profile, skills, experience, education, certifications, tools, and languages that power both the interactive CV and the branded download.", cls="admin-module-copy"),
                 editor_form,
                 cls="admin-detail-block mt-4",
             ),

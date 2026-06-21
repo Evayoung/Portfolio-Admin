@@ -84,6 +84,7 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
     assert "Settings Editor" in html
     assert "Public identity" in html
     assert "GitHub Pulse" in html
+    assert "Production Health" in html
 
 
 def test_projects_workspace_renders_real_project_data() -> None:
@@ -106,7 +107,16 @@ def test_projects_workspace_can_open_blank_create_mode() -> None:
     assert response.status_code == 200
     assert "Create New Project" in html
     assert "New Project" in html
+    assert "Open Media Library" in html
     assert "Save Project" in html
+
+
+def test_project_save_response_links_to_saved_record_when_success() -> None:
+    from app.presentation.pages.projects import project_save_status_fragment
+
+    html = str(project_save_status_fragment("Project saved", "Saved.", tone="success", slug="demo-project"))
+    assert "/projects?slug=demo-project" in html
+    assert "Create Another" in html
 
 
 def test_blog_workspace_renders_real_blog_data() -> None:
@@ -118,6 +128,25 @@ def test_blog_workspace_renders_real_blog_data() -> None:
     assert "BackendForge: What Happens When 18 AI Agents Write Your FastAPI Backend" in html
     assert "Save Post" in html
     assert "HTML Content" in html
+    assert "New Post" in html
+
+
+def test_blog_workspace_can_open_blank_create_mode() -> None:
+    sign_in()
+    response = client.get("/blog?new=1")
+    html = response.text
+    assert response.status_code == 200
+    assert "Create New Post" in html
+    assert "Save Post" in html
+    assert "Open Media Library" in html
+
+
+def test_blog_save_response_links_to_saved_record_when_success() -> None:
+    from app.presentation.pages.blog_admin import blog_save_status_fragment
+
+    html = str(blog_save_status_fragment("Blog post saved", "Saved.", tone="success", slug="demo-post"))
+    assert "/blog?slug=demo-post" in html
+    assert "Create Another" in html
 
 
 def test_cv_workspace_renders_real_cv_data() -> None:
@@ -129,6 +158,8 @@ def test_cv_workspace_renders_real_cv_data() -> None:
     assert "Olorundare Micheal Babawale" in html
     assert "Save CV Profile" in html
     assert "Experience" in html
+    assert "Tools &amp; Technologies" in html or "Tools & Technologies" in html
+    assert "One role per line" in html
 
 
 def test_submissions_workspace_renders_real_inbox_shell() -> None:
@@ -153,6 +184,7 @@ def test_deals_workspace_renders_pipeline_shell() -> None:
     assert "Deal Studio" in html
     assert "Quick Document Studio" in html
     assert "Generate Quick Document" in html
+    assert "document_kind" in html
     assert "Farm Operations Dashboard" in html
 
 
@@ -182,6 +214,7 @@ def test_media_workspace_renders_library_shell() -> None:
     assert "Media Workspace" in html
     assert "Asset Library" in html
     assert "Upload Workspace" in html
+    assert "Copy URL" in html or "Upload Media" in html
 
 
 def test_project_save_route_reports_read_only_without_supabase_service_role() -> None:

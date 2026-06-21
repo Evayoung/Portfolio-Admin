@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import Div, H2, H3, Input, P, Span, Textarea
+from fasthtml.common import A, Div, H2, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
 from faststrap.presets import LoadingButton
 
@@ -30,6 +30,24 @@ def status_alert(title: str, message: str, tone: str = "info") -> Div:
         heading=H3(title, cls="h6 mb-2"),
         variant=_TONE_TO_VARIANT.get(tone, "info"),
         cls="admin-save-alert",
+    )
+
+
+def action_group(*actions) -> Div:
+    """Render a compact row of post-save or record actions."""
+
+    return Div(*actions, cls="d-flex flex-wrap gap-2 mt-3")
+
+
+def action_link(label: str, href: str, *, variant: str = "primary", target: str = "") -> A:
+    """Shared Bootstrap/Faststrap-friendly action link."""
+
+    external_kwargs = {"target": target, "rel": "noreferrer"} if target else {}
+    return A(
+        label,
+        href=href,
+        cls=f"btn {'admin-module-btn' if variant == 'primary' else 'admin-install-btn'}",
+        **external_kwargs,
     )
 
 

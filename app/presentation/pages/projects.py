@@ -15,12 +15,21 @@ from app.infrastructure.project_repository import (
     list_projects,
 )
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field
 from app.presentation.shell import page_frame
 
 
-def project_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    return status_alert(title, message, tone)
+def project_save_status_fragment(title: str, message: str, tone: str = "info", slug: str = "") -> Div:
+    return Div(
+        status_alert(title, message, tone),
+        action_group(
+            action_link("Open Saved Project", f"/projects?slug={slug}", variant="secondary"),
+            action_link("Create Another", "/projects?new=1", variant="secondary"),
+            action_link("Open Media Library", "/media", variant="secondary"),
+        )
+        if slug and tone == "success"
+        else "",
+    )
 
 
 def _project_card(project, *, selected: bool, category: str, featured_only: bool, search: str) -> Card:
@@ -113,8 +122,12 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
             cls="g-3 mt-1",
         ),
         Div(
-            A("Open Media Library", href="/media", cls="btn admin-install-btn"),
-            P("Upload fresh visuals in Media, then paste the generated public URL into the image field here.", cls="admin-module-copy mt-2 mb-0"),
+            Div(
+                A("Open Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
+                A("Upload Project Image", href="/media?kind=image", cls="btn admin-install-btn"),
+                cls="d-flex flex-wrap gap-2",
+            ),
+            P("Use the media page to upload or copy an existing public URL, then place it in Image URL.", cls="admin-module-copy mt-2 mb-0"),
             cls="admin-detail-block mt-3",
         ),
         Div(
@@ -193,11 +206,15 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                 ),
                 cls="mb-3",
             ),
-            A(
-                Icon("plus-lg", cls="me-2"),
-                Span("New Project"),
-                href=_new_project_href(category=category, featured_only=featured_only, search=search),
-                cls="btn admin-install-btn mt-3",
+            Div(
+                A(
+                    Icon("plus-lg", cls="me-2"),
+                    Span("New Project"),
+                    href=_new_project_href(category=category, featured_only=featured_only, search=search),
+                    cls="btn admin-module-btn",
+                ),
+                A("Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
+                cls="d-flex flex-wrap gap-2 mt-3",
             ),
             category_links,
             Div(featured_toggle, cls="mt-3"),
@@ -234,10 +251,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                     Div(
                         Span("Selected record", cls="admin-kicker"),
                         H2("Create New Project", cls="admin-section-title mb-2"),
-                        P(
-                            "Add a previous project manually, even if it was never stored in Supabase before.",
-                            cls="admin-module-copy mb-0",
-                        ),
+                        P("Add a previous project manually, attach a media URL, and save it as an editable portfolio record.", cls="admin-module-copy mb-0"),
                         cls="admin-detail-copy",
                     ),
                     Div(
@@ -249,7 +263,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                 ),
                 Div(
                     H3("Project Editor", cls="admin-subsection-title"),
-                    P("Fill in the details, then save to create the project record and make it editable from the list.", cls="admin-module-copy"),
+                    P("Fill in the details, then save. The response will give you a direct link back to the saved record.", cls="admin-module-copy"),
                     _editor_form(None, category=category, featured_only=featured_only, search=search),
                     cls="admin-detail-block mt-4",
                 ),

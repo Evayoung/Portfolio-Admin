@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fasthtml.common import A, Div, Form, H2, H3, Input, Label, P, Span, Strong
-from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Row, SEO
 
 from app.config import settings
 from app.infrastructure.blog_repository import (
@@ -13,16 +15,33 @@ from app.infrastructure.blog_repository import (
     list_blog_posts,
 )
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
+from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
-def blog_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
-    return status_alert(title, message, tone)
+def blog_save_status_fragment(title: str, message: str, tone: str = "info", slug: str = "") -> Div:
+    return Div(
+        status_alert(title, message, tone),
+        action_group(
+            action_link("Open Saved Post", f"/blog?slug={slug}", variant="secondary"),
+            action_link("Create Another", "/blog?new=1", variant="secondary"),
+            action_link("Open Media Library", "/media?kind=image", variant="secondary"),
+        )
+        if slug and tone == "success"
+        else "",
+    )
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
     return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
+
+
+def _blog_href(**params: str) -> str:
+    return f"/blog?{urlencode(params)}"
+
+
+def _new_blog_href(*, category: str, search: str) -> str:
+    return _blog_href(category=category, search=search, new="1")
 
 
 def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
@@ -76,8 +95,12 @@ def _editor_form(selected, *, category: str, search: str) -> Form:
             cls="g-3",
         ),
         Div(
-            A("Open Media Library", href="/media", cls="btn admin-install-btn"),
-            P("Upload the hero image in Media first, then paste the generated public URL into the field above.", cls="admin-module-copy mt-2 mb-0"),
+            Div(
+                A("Open Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
+                A("Upload Hero Image", href="/media?kind=image", cls="btn admin-install-btn"),
+                cls="d-flex flex-wrap gap-2",
+            ),
+            P("Use Media to upload or copy a reusable public URL, then place it in Hero Image URL.", cls="admin-module-copy mt-2 mb-0"),
             cls="admin-detail-block mt-3",
         ),
         textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short excerpt for listings and previews"),
@@ -108,10 +131,11 @@ def _editor_form(selected, *, category: str, search: str) -> Form:
     )
 
 
-def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = "") -> tuple:
+def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = "", new: str = "") -> tuple:
+    creating_new = new == "1"
     categories = list_blog_categories()
     posts = list_blog_posts(category=category, search=search)
-    selected = get_blog_post(slug) or (posts[0] if posts else None)
+    selected = None if creating_new else get_blog_post(slug) or (posts[0] if posts else None)
     summary = get_blog_workspace_summary()
 
     category_links = Div(
@@ -135,6 +159,16 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
                 H2("Blog Records", cls="admin-section-title"),
                 P("Select a post to refine its editorial details and keep the public blog up to date.", cls="admin-module-copy mb-0"),
                 cls="mb-3",
+            ),
+            Div(
+                A(
+                    Icon("plus-lg", cls="me-2"),
+                    Span("New Post"),
+                    href=_new_blog_href(category=category, search=search),
+                    cls="btn admin-module-btn",
+                ),
+                A("Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
+                cls="d-flex flex-wrap gap-2 mt-3",
             ),
             category_links,
             search_form,
@@ -162,7 +196,35 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
         cls="admin-surface-card h-100",
     )
 
-    detail_panel = (
+    if creating_new:
+        detail_panel = Card(
+            Div(
+                Div(
+                    Div(
+                        Span("Editorial draft", cls="admin-kicker"),
+                        H2("Create New Post", cls="admin-section-title mb-2"),
+                        P("Draft a new article, attach a hero image URL, and publish when it is ready.", cls="admin-module-copy mb-0"),
+                        cls="admin-detail-copy",
+                    ),
+                    Div(
+                        Badge("Manual add", cls="text-bg-primary admin-metric-delta"),
+                        Badge("Live sync on" if service_role_is_configured() else "Setup needed", cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta"),
+                        cls="d-flex flex-wrap gap-2 mt-3 mt-lg-0",
+                    ),
+                    cls="d-flex flex-column flex-lg-row justify-content-between gap-3",
+                ),
+                Div(
+                    H3("Article Editor", cls="admin-subsection-title"),
+                    P("Write the core metadata and content, then save. The response will link back to the saved post.", cls="admin-module-copy"),
+                    _editor_form(None, category=category, search=search),
+                    cls="admin-detail-block mt-4",
+                ),
+                cls="admin-panel-stack",
+            ),
+            cls="admin-surface-card h-100",
+        )
+    else:
+        detail_panel = (
         Card(
             Div(
                 Div(
@@ -235,7 +297,7 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
             ),
             cls="admin-surface-card h-100",
         )
-    )
+        )
 
     return (
         *SEO(
