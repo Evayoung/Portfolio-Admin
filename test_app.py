@@ -13,6 +13,7 @@ from starlette.testclient import TestClient
 os.environ["SUPABASE_URL"] = ""
 os.environ["SUPABASE_ANON_KEY"] = ""
 os.environ["SUPABASE_SERVICE_ROLE_KEY"] = ""
+os.environ["GROQ_API_KEY"] = ""
 os.environ["NEO_ADMIN_LOGIN_EMAIL"] = "admin@neoportfolio.dev"
 os.environ["NEO_ADMIN_LOGIN_PASSWORD"] = "ChangeMe123!"
 
@@ -85,6 +86,7 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
     assert "Public identity" in html
     assert "GitHub Pulse" in html
     assert "Production Health" in html
+    assert "Groq Drafting" in html
 
 
 def test_projects_workspace_renders_real_project_data() -> None:
@@ -184,7 +186,11 @@ def test_deals_workspace_renders_pipeline_shell() -> None:
     assert "Deal Studio" in html
     assert "Quick Document Studio" in html
     assert "Generate Quick Document" in html
+    assert "AI Draft Assistant" in html
+    assert "Generate AI Draft" in html
     assert "document_kind" in html
+    assert "Resend Link" in html
+    assert "New Version Link" in html
     assert "Farm Operations Dashboard" in html
 
 
@@ -468,6 +474,53 @@ def test_media_upload_route_reports_read_only_without_supabase_service_role() ->
     assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the media upload" in html
 
 
+def test_media_management_routes_report_read_only_or_validation_state() -> None:
+    sign_in()
+    for endpoint, data in [
+        ("/media/update", {"asset_id": "missing", "title": "Updated", "kind": "image", "alt_text": "Updated"}),
+        ("/media/delete", {"asset_id": "missing"}),
+    ]:
+        response = client.post(endpoint, data=data)
+        html = response.text
+        assert response.status_code == 200
+        assert "Media Workspace" in html
+        assert "Choose an existing media asset" in html or "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html
+
+
+def test_document_link_action_route_reports_read_only_without_supabase_service_role() -> None:
+    sign_in()
+    response = client.post(
+        "/deals/documents/link",
+        data={
+            "deal_id": "deal-farmtech",
+            "document_id": "doc-farmtech-proposal",
+            "document_kind": "proposal",
+            "action": "revoke",
+        },
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "Document link updated" in html or "Link action not completed" in html
+
+
+def test_deals_ai_draft_reports_missing_groq_key() -> None:
+    sign_in()
+    response = client.post(
+        "/deals/ai-draft",
+        data={
+            "ai_draft_kind": "proposal",
+            "client_name": "Demo Client",
+            "project_title": "Demo Portal",
+            "summary": "A production portal for client operations.",
+            "scope_notes": "Discovery, implementation, and launch support.",
+        },
+    )
+    html = response.text
+    assert response.status_code == 200
+    assert "AI draft not generated" in html or "AI draft ready" in html
+    assert "Groq is not configured" in html or "AI draft generated" in html or "Groq rejected" in html
+
+
 def test_supabase_schema_file_exists() -> None:
     schema_path = Path(__file__).parent / "app" / "infrastructure" / "sql" / "001_initial_schema.sql"
     access_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "002_admin_access.sql"
@@ -475,18 +528,21 @@ def test_supabase_schema_file_exists() -> None:
     media_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "004_media_assets.sql"
     document_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "005_document_links_and_accounts.sql"
     hardening_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "006_production_hardening.sql"
+    production_schema = Path(__file__).parent / "app" / "infrastructure" / "sql" / "007_admin_production_hardening.sql"
     assert schema_path.exists()
     assert access_schema.exists()
     assert pipeline_schema.exists()
     assert media_schema.exists()
     assert document_schema.exists()
     assert hardening_schema.exists()
+    assert production_schema.exists()
     schema = schema_path.read_text(encoding="utf-8")
     access = access_schema.read_text(encoding="utf-8")
     pipeline = pipeline_schema.read_text(encoding="utf-8")
     media = media_schema.read_text(encoding="utf-8")
     document_links = document_schema.read_text(encoding="utf-8")
     hardening = hardening_schema.read_text(encoding="utf-8")
+    production = production_schema.read_text(encoding="utf-8")
     assert "create table if not exists public.projects" in schema
     assert "create table if not exists public.blog_posts" in schema
     assert "create table if not exists public.cv_meta" in schema
@@ -507,6 +563,9 @@ def test_supabase_schema_file_exists() -> None:
     assert "Neo Admin production hardening migration" in hardening
     assert "Service role manages client deals" in hardening
     assert "Public can read portfolio media objects" in hardening
+    assert "create table if not exists public.admin_audit_logs" in production
+    assert "revoked_at" in production
+    assert "version_number" in production
 
 
 def test_admin_deploy_files_exist() -> None:

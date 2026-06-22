@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.domain.models import AdminDeal, ClientDocumentResponse, DealDocument, DealSaveResult, DealWorkspaceSummary
+from app.infrastructure.audit_repository import record_audit_event
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
 import app.infrastructure.email_service as email_svc
 
@@ -579,12 +580,95 @@ def update_document_status(
             except Exception as exc:  # noqa: BLE001 — email is best-effort
                 import logging
                 logging.getLogger(__name__).warning("Failed to dispatch email link to client: %s", exc)
+        record_audit_event(action=f"document_marked_{status}", target_type="client_document", target_id=document_id, detail=document_kind)
         return True, "success", messages.get(status, "The document workflow state has been updated.")
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
         return False, "danger", f"Supabase rejected the document workflow update. {details or exc.reason}"
     except (URLError, TimeoutError, ValueError) as exc:
         return False, "danger", f"Could not reach Supabase to update the document workflow. {exc}"
+
+
+def revoke_document_link(*, deal_id: str, document_id: str) -> tuple[bool, str, str]:
+    if not deal_id.strip() or not document_id.strip():
+        return False, "warning", "Choose a valid document before revoking its link."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so document links cannot be revoked."
+    try:
+        _rest_request(
+            "PATCH",
+            "client_documents",
+            params={"id": f"eq.{document_id}"},
+            payload={"public_token": "", "status": "expired", "revoked_at": datetime.now(timezone.utc).isoformat()},
+            prefer="return=minimal",
+        )
+        record_audit_event(action="document_link_revoked", target_type="client_document", target_id=document_id, detail=deal_id)
+        return True, "success", "The client link has been revoked. The old URL will no longer resolve."
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the revoke request. {details or exc.reason}"
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to revoke the document link. {exc}"
+
+
+def regenerate_document_link(*, deal_id: str, document_id: str, document_kind: str) -> tuple[bool, str, str]:
+    if not deal_id.strip() or not document_id.strip():
+        return False, "warning", "Choose a valid document before regenerating its link."
+    if document_kind not in {"proposal", "quote", "invoice"}:
+        return False, "warning", "Choose a valid document type before regenerating its link."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so document links cannot be regenerated."
+    token = _generate_public_token(document_kind, deal_id)
+    try:
+        _rest_request(
+            "PATCH",
+            "client_documents",
+            params={"id": f"eq.{document_id}"},
+            payload={"public_token": token, "status": "draft", "version_number": 2, "revoked_at": None},
+            prefer="return=minimal",
+        )
+        record_audit_event(action="document_link_regenerated", target_type="client_document", target_id=document_id, detail=token)
+        return True, "success", "A fresh client link has been generated. Mark sent when you are ready to email or share it."
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the link regeneration. {details or exc.reason}"
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to regenerate the document link. {exc}"
+
+
+def resend_document_link(*, document_id: str, document_kind: str) -> tuple[bool, str, str]:
+    if not document_id.strip():
+        return False, "warning", "Choose a valid document before resending its link."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so document links cannot be resent."
+    deal = get_deal_by_document_id(document_id)
+    document = next((item for item in deal.documents if item.document_id == document_id), None) if deal else None
+    if not deal or not document:
+        return False, "warning", "The document could not be found."
+    if not document.public_token:
+        return False, "warning", "Generate a client link before resending this document."
+    if not deal.client_email:
+        return False, "warning", "Add a client email before resending this document."
+    try:
+        email_svc.send_document_link_to_client(
+            client_name=deal.client_name,
+            client_email=deal.client_email,
+            document_kind=document_kind,
+            project_title=deal.project_title,
+            document_url=f"{settings.base_url.rstrip('/')}/documents/{document.public_token}",
+            valid_until=document.valid_until or "",
+        )
+        _rest_request(
+            "PATCH",
+            "client_documents",
+            params={"id": f"eq.{document_id}"},
+            payload={"last_sent_at": datetime.now(timezone.utc).isoformat(), "status": "sent"},
+            prefer="return=minimal",
+        )
+        record_audit_event(action="document_link_resent", target_type="client_document", target_id=document_id, detail=deal.client_email)
+        return True, "success", "The client document link has been resent."
+    except Exception as exc:  # noqa: BLE001
+        return False, "danger", f"Could not resend the document link. {exc}"
 
 
 def save_deal_document(

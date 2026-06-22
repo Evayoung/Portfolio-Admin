@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong, Textarea
 from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -22,6 +22,23 @@ from app.presentation.shell import page_frame
 
 def deal_save_status_fragment(title: str, message: str, tone: str = "info") -> Div:
     return status_alert(title, message, tone)
+
+
+def ai_draft_result_fragment(title: str, message: str, tone: str = "info", draft: str = "") -> Div:
+    return Div(
+        status_alert(title, message, tone),
+        Div(
+            Textarea(draft, rows=12, readonly=True, cls="form-control admin-form-control admin-form-textarea"),
+            Div(
+                Button("Copy Draft", type="button", cls="btn admin-module-btn", data_copy_target=draft, data_copy_label="Copy Draft"),
+                cls="d-flex flex-wrap gap-2 mt-3",
+            ),
+            P("Review the draft, copy useful sections, then paste into the right editor fields before saving.", cls="admin-module-copy mt-2 mb-0"),
+            cls="admin-detail-block mt-3",
+        )
+        if draft
+        else "",
+    )
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
@@ -47,6 +64,23 @@ def _document_action_form(*, deal_id: str, document_id: str, document_kind: str,
         action="/deals/documents/update",
         method="post",
         hx_post="/deals/documents/update",
+        hx_target=f"#{target_id}",
+        hx_swap="innerHTML",
+        cls="d-inline-flex",
+    )
+
+
+def _document_link_action_form(*, deal_id: str, document_id: str, document_kind: str, action: str, label: str, button_cls: str = "btn admin-install-btn mt-3") -> Form:
+    target_id = f"deal-document-status-result-{document_id}"
+    return Form(
+        Input(type="hidden", name="deal_id", value=deal_id),
+        Input(type="hidden", name="document_id", value=document_id),
+        Input(type="hidden", name="document_kind", value=document_kind),
+        Input(type="hidden", name="action", value=action),
+        loading_action_button(label, endpoint="/deals/documents/link", target=f"#{target_id}", button_cls=button_cls),
+        action="/deals/documents/link",
+        method="post",
+        hx_post="/deals/documents/link",
         hx_target=f"#{target_id}",
         hx_swap="innerHTML",
         cls="d-inline-flex",
@@ -113,6 +147,16 @@ def _document_status_options() -> list[tuple[str, str]]:
     ]
 
 
+def _ai_draft_options() -> list[tuple[str, str]]:
+    return [
+        ("proposal", "Proposal"),
+        ("quote", "Quotation"),
+        ("invoice", "Invoice"),
+        ("scope", "Scope"),
+        ("payment_terms", "Payment Terms"),
+    ]
+
+
 def _document_stack(selected) -> Div:
     documents = selected.documents if selected else ()
     if not documents:
@@ -128,6 +172,26 @@ def _document_stack(selected) -> Div:
             for document in documents
         ],
         cls="admin-panel-stack mt-4",
+    )
+
+
+def _ai_draft_panel(selected_kind: str) -> Div:
+    draft_kind = selected_kind if selected_kind in {"proposal", "quote", "invoice"} else "proposal"
+    return Div(
+        P("AI Draft Assistant", cls="admin-form-section-title"),
+        P("Use Groq to draft editable proposal, quotation, invoice, scope, or payment text from the current form values. Nothing is sent to clients automatically.", cls="admin-module-copy"),
+        Div(
+            Label("Draft Type", cls="admin-form-label"),
+            toggle_pill_group("ai_draft_kind", _ai_draft_options(), selected_value=draft_kind),
+            cls="admin-form-group",
+        ),
+        Div(
+            loading_action_button("Generate AI Draft", endpoint="/deals/ai-draft", target="#ai-draft-result"),
+            Span("Backend-only Groq call. Review before saving.", cls="admin-save-note"),
+            cls="admin-form-actions mt-3",
+        ),
+        Div(id="ai-draft-result", cls="mt-3"),
+        cls="admin-form-section",
     )
 
 
@@ -211,6 +275,32 @@ def _document_card(selected, document) -> Div:
                 label="Confirm Paid",
             )
             if document.kind == "invoice" and document.status != "paid" and response_action == "payment_submitted"
+            else "",
+            _document_link_action_form(
+                deal_id=selected.deal_id,
+                document_id=document.document_id,
+                document_kind=document.kind,
+                action="resend",
+                label="Resend Link",
+            )
+            if document.public_token
+            else "",
+            _document_link_action_form(
+                deal_id=selected.deal_id,
+                document_id=document.document_id,
+                document_kind=document.kind,
+                action="regenerate",
+                label="New Version Link",
+            ),
+            _document_link_action_form(
+                deal_id=selected.deal_id,
+                document_id=document.document_id,
+                document_kind=document.kind,
+                action="revoke",
+                label="Revoke Link",
+                button_cls="btn btn-outline-danger mt-3",
+            )
+            if document.public_token
             else "",
             cls="d-flex flex-wrap gap-2",
         ),
@@ -349,6 +439,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         ),
 
         # ── Group 5: Financials ───────────────────────────────────
+        _ai_draft_panel(selected_kind),
         Div(
             P("Financials", cls="admin-form-section-title"),
             textarea_field(

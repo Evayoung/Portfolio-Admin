@@ -268,6 +268,7 @@ def settings_workspace_page() -> tuple:
                 _health_row("Supabase Read", supabase_is_configured(), "Requires SUPABASE_URL and SUPABASE_ANON_KEY."),
                 _health_row("Supabase Write", service_role_is_configured(), "Requires SUPABASE_SERVICE_ROLE_KEY for admin saves and uploads."),
                 _health_row("Email Sending", settings.email_enabled, "Requires RESEND_API_KEY plus a valid sender domain when email actions are added."),
+                _health_row("Groq Drafting", settings.groq_enabled, "Requires GROQ_API_KEY for internal proposal, quote, and invoice drafts."),
                 _health_row("Public Base URL", settings.base_url.startswith("https://"), "Use the deployed https admin URL so copied document links are production-safe."),
                 _health_row("GitHub Pulse", bool(settings.github_access_token), "Optional, but improves GitHub stats reliability and rate limits."),
                 cls="admin-settings-stack",

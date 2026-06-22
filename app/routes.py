@@ -10,11 +10,12 @@ from starlette.responses import FileResponse, JSONResponse
 try:
     from .config import settings
     from .infrastructure.auth_repository import authenticate_admin, save_admin_access
+    from .infrastructure.ai_draft_repository import generate_document_draft
     from .infrastructure.blog_repository import save_blog_post
     from .infrastructure.cv_repository import save_cv_profile
     from .infrastructure.deal_pdf import build_deal_document_pdf
-    from .infrastructure.deal_repository import get_deal, save_deal_document, save_document_response, save_quick_document, update_document_status
-    from .infrastructure.media_repository import upload_media_asset
+    from .infrastructure.deal_repository import get_deal, regenerate_document_link, resend_document_link, revoke_document_link, save_deal_document, save_document_response, save_quick_document, update_document_status
+    from .infrastructure.media_repository import delete_media_asset, replace_media_asset, update_media_asset, upload_media_asset
     from .infrastructure.payment_account_repository import save_payment_account
     from .infrastructure.project_repository import save_project
     from .infrastructure.settings_repository import save_site_profile
@@ -23,7 +24,7 @@ try:
     from .presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
     from .presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
     from .presentation.pages.dashboard import overview_page
-    from .presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
+    from .presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
     from .presentation.pages.media import media_workspace_page
     from .presentation.pages.public_documents import document_portal_page
     from .presentation.pages.projects import project_save_status_fragment, projects_page
@@ -31,6 +32,7 @@ try:
     from .presentation.pages.submissions import submission_save_status_fragment, submissions_workspace_page
 except ImportError:
     from config import settings
+    from infrastructure.ai_draft_repository import generate_document_draft
     from infrastructure.auth_repository import authenticate_admin, save_admin_access
     from infrastructure.blog_repository import save_blog_post
     from infrastructure.cv_repository import save_cv_profile
@@ -39,8 +41,8 @@ except ImportError:
     from infrastructure.deal_repository import get_deal
     from infrastructure.deal_repository import save_document_response
     from infrastructure.deal_repository import save_quick_document
-    from infrastructure.deal_repository import update_document_status
-    from infrastructure.media_repository import upload_media_asset
+    from infrastructure.deal_repository import regenerate_document_link, resend_document_link, revoke_document_link, update_document_status
+    from infrastructure.media_repository import delete_media_asset, replace_media_asset, update_media_asset, upload_media_asset
     from infrastructure.payment_account_repository import save_payment_account
     from infrastructure.project_repository import save_project
     from infrastructure.settings_repository import save_site_profile
@@ -49,7 +51,7 @@ except ImportError:
     from presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
     from presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
     from presentation.pages.dashboard import overview_page
-    from presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
+    from presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
     from presentation.pages.media import media_workspace_page
     from presentation.pages.public_documents import document_portal_page
     from presentation.pages.projects import project_save_status_fragment, projects_page
@@ -373,6 +375,62 @@ def setup_routes(app: Any) -> None:
                 )
         return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone), actions)
 
+    @app.post("/deals/ai-draft")
+    def deals_ai_draft(
+        session,
+        ai_draft_kind: str = "proposal",
+        client_name: str = "",
+        client_email: str = "",
+        company: str = "",
+        project_title: str = "",
+        service_type: str = "",
+        document_kind: str = "proposal",
+        document_title: str = "",
+        summary: str = "",
+        background_text: str = "",
+        scope_notes: str = "",
+        option_notes_text: str = "",
+        tech_stack: str = "",
+        timeline_text: str = "",
+        payment_terms: str = "",
+        line_items: str = "",
+        exclusions_text: str = "",
+        closing_note: str = "",
+        amount_ngn: str = "0",
+        deposit_percent: str = "50",
+        valid_until: str = "",
+        due_date: str = "",
+    ) -> Any:
+        result = generate_document_draft(
+            draft_kind=ai_draft_kind,
+            actor_email=session.get("admin_login_email", ""),
+            context={
+                "client_name": client_name,
+                "client_email": client_email,
+                "company": company,
+                "project_title": project_title,
+                "service_type": service_type,
+                "document_kind": document_kind,
+                "document_title": document_title,
+                "summary": summary,
+                "background": background_text,
+                "scope": scope_notes,
+                "options": option_notes_text,
+                "tech_stack": tech_stack,
+                "timeline": timeline_text,
+                "payment_terms": payment_terms,
+                "line_items": line_items,
+                "exclusions": exclusions_text,
+                "closing_note": closing_note,
+                "amount_ngn": amount_ngn,
+                "deposit_percent": deposit_percent,
+                "valid_until": valid_until,
+                "due_date": due_date,
+            },
+        )
+        title_text = "AI draft ready" if result.success else "AI draft not generated"
+        return ai_draft_result_fragment(title_text, result.message, tone=result.tone, draft=result.draft)
+
     @app.post("/deals/documents/update")
     def deal_document_update(
         deal_id: str = "",
@@ -387,6 +445,24 @@ def setup_routes(app: Any) -> None:
             status=status,
         )
         title_text = "Document updated" if success else "Update not completed"
+        return deal_save_status_fragment(title_text, message, tone=tone)
+
+    @app.post("/deals/documents/link")
+    def deal_document_link_action(
+        deal_id: str = "",
+        document_id: str = "",
+        document_kind: str = "",
+        action: str = "",
+    ) -> Any:
+        if action == "revoke":
+            success, tone, message = revoke_document_link(deal_id=deal_id, document_id=document_id)
+        elif action == "regenerate":
+            success, tone, message = regenerate_document_link(deal_id=deal_id, document_id=document_id, document_kind=document_kind)
+        elif action == "resend":
+            success, tone, message = resend_document_link(document_id=document_id, document_kind=document_kind)
+        else:
+            success, tone, message = False, "warning", "Choose a valid document link action."
+        title_text = "Document link updated" if success else "Link action not completed"
         return deal_save_status_fragment(title_text, message, tone=tone)
 
     @app.get("/media")
@@ -410,6 +486,21 @@ def setup_routes(app: Any) -> None:
             tone=result.tone,
             public_url=result.public_url or "",
         )
+
+    @app.post("/media/update")
+    def media_update(asset_id: str = "", title: str = "", kind: str = "image", alt_text: str = "") -> Any:
+        result = update_media_asset(asset_id=asset_id, title=title, kind=kind, alt_text=alt_text)
+        return media_workspace_page(message=result.message, tone=result.tone, public_url=result.public_url or "")
+
+    @app.post("/media/replace")
+    def media_replace(asset_id: str = "", asset_file: UploadFile | None = None) -> Any:
+        result = replace_media_asset(asset_id=asset_id, asset_file=asset_file)
+        return media_workspace_page(message=result.message, tone=result.tone, public_url=result.public_url or "")
+
+    @app.post("/media/delete")
+    def media_delete(asset_id: str = "") -> Any:
+        result = delete_media_asset(asset_id=asset_id)
+        return media_workspace_page(message=result.message, tone=result.tone)
 
     @app.get("/settings")
     def settings_page() -> Any:

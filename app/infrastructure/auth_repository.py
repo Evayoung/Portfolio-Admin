@@ -6,12 +6,18 @@ import hashlib
 import hmac
 import json
 import secrets
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.domain.models import AdminAccessProfile, AdminAccessSaveResult, AdminLoginResult
+from app.infrastructure.audit_repository import record_audit_event
 from app.infrastructure.supabase_client import service_role_is_configured
+
+_LOGIN_FAILURES: dict[str, tuple[int, float]] = {}
+_MAX_LOGIN_FAILURES = 5
+_LOCKOUT_SECONDS = 15 * 60
 
 
 def _rest_headers(*, prefer: str | None = None) -> dict[str, str]:
@@ -86,6 +92,9 @@ def authenticate_admin(login_email: str, password: str) -> AdminLoginResult:
     email = login_email.strip().lower()
     if not email or not password:
         return AdminLoginResult(False, "warning", "Enter both your login email and password.", "", "Validation")
+    failures, locked_until = _LOGIN_FAILURES.get(email, (0, 0.0))
+    if failures >= _MAX_LOGIN_FAILURES and locked_until > time.time():
+        return AdminLoginResult(False, "danger", "Too many failed attempts. Try again in a few minutes.", email, "Rate Limit")
 
     seed_profile, seed_hash = _seed_profile()
     stored_email = seed_profile.login_email.lower()
@@ -107,8 +116,12 @@ def authenticate_admin(login_email: str, password: str) -> AdminLoginResult:
             pass
 
     if email != stored_email or not _verify_password(password, stored_hash):
+        current_failures = failures + 1
+        lock_until = time.time() + _LOCKOUT_SECONDS if current_failures >= _MAX_LOGIN_FAILURES else 0.0
+        _LOGIN_FAILURES[email] = (current_failures, lock_until)
         return AdminLoginResult(False, "danger", "The login credentials did not match this admin workspace.", email, source.title())
 
+    _LOGIN_FAILURES.pop(email, None)
     return AdminLoginResult(True, "success", "Signed in successfully.", stored_email, source.title())
 
 
@@ -119,15 +132,20 @@ def save_admin_access(*, login_email: str, password: str, confirm_password: str)
 
     if password and password != confirm_password:
         return AdminAccessSaveResult(False, "warning", "The new password and confirmation did not match.", "Validation")
+    if password and len(password) < 10:
+        return AdminAccessSaveResult(False, "warning", "Use at least 10 characters for the new admin password.", "Validation")
 
     if not service_role_is_configured():
         return AdminAccessSaveResult(False, "info", "Supabase write path is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to manage admin access from the dashboard.", "Seed")
 
     seed_profile, seed_hash = _seed_profile()
     try:
-        rows = _rest_request("GET", "admin_access", query="?select=id,password_hash&limit=1")
+        rows = _rest_request("GET", "admin_access", query="?select=id,password_hash,login_email&limit=1")
         if isinstance(rows, list) and rows:
             row = rows[0]
+            row_id = str(row.get("id") or "")
+            if not row_id:
+                return AdminAccessSaveResult(False, "danger", "Supabase returned an admin access row without an id. Check the admin_access table schema.", "Supabase")
             next_hash = row.get("password_hash") or seed_hash
             if password:
                 next_hash = _hash_password(password)
@@ -136,7 +154,7 @@ def save_admin_access(*, login_email: str, password: str, confirm_password: str)
                 "admin_access",
                 payload={"login_email": email, "password_hash": next_hash},
                 prefer="return=representation",
-                query=f"?id=eq.{row['id']}",
+                query=f"?id=eq.{row_id}",
             )
         else:
             _rest_request(
@@ -146,6 +164,12 @@ def save_admin_access(*, login_email: str, password: str, confirm_password: str)
                 prefer="return=representation",
             )
 
+        record_audit_event(
+            action="admin_access_updated",
+            target_type="admin_access",
+            actor_email=email,
+            detail="Admin login email/password was updated." if password else "Admin login email was updated.",
+        )
         if password:
             message = "Admin login credentials saved."
         elif email != seed_profile.login_email.lower():

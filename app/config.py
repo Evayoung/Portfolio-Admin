@@ -40,6 +40,9 @@ class Settings:
     admin_notify_email: str = os.getenv("ADMIN_NOTIFY_EMAIL", "") or os.getenv("NEO_ADMIN_LOGIN_EMAIL", "")
     email_from: str = os.getenv("EMAIL_FROM", "noreply@neoportfolio.dev")
     email_enabled: bool = bool(os.getenv("RESEND_API_KEY", ""))
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+    groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    groq_enabled: bool = bool(os.getenv("GROQ_API_KEY", ""))
 
 
 settings = Settings()
