@@ -143,6 +143,15 @@ def test_blog_workspace_can_open_blank_create_mode() -> None:
     assert "Open Media Library" in html
 
 
+def test_blog_editor_survives_empty_category_source(monkeypatch) -> None:
+    from app.presentation.pages import blog_admin
+
+    monkeypatch.setattr(blog_admin, "list_blog_categories", lambda: (("all", "All"),))
+    html = str(blog_admin._editor_form(None, category="all", search=""))
+    assert "Engineering" in html
+    assert "Save Post" in html
+
+
 def test_blog_save_response_links_to_saved_record_when_success() -> None:
     from app.presentation.pages.blog_admin import blog_save_status_fragment
 

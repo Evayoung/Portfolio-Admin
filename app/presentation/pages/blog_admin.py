@@ -75,8 +75,12 @@ def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
 
 
 def _editor_form(selected, *, category: str, search: str) -> Form:
-    category_options = list_blog_categories()[1:]
-    selected_category = selected.category if selected else ""
+    category_options = list(list_blog_categories()[1:]) or [
+        ("engineering", "Engineering"),
+        ("case-study", "Case Study"),
+        ("ai-systems", "AI Systems"),
+    ]
+    selected_category = selected.category if selected else category_options[0][0]
     category_buttons = toggle_pill_group("category", list(category_options), selected_value=selected_category)
     return Form(
         Input(type="hidden", name="original_slug", value=selected.slug if selected else ""),

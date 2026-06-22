@@ -201,6 +201,9 @@ def toggle_pill_group(
 ) -> Div:
     """Shared pill-style single-select group built on Faststrap ToggleGroup."""
 
+    if not options:
+        return Div(Input(type="hidden", name=name, value=selected_value), cls="d-none")
+
     active_index = next(
         (index for index, (value, _label) in enumerate(options) if value == selected_value),
         0,
