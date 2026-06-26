@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fasthtml.common import A, Div, H2, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
+
 from faststrap.presets import LoadingButton
 
 
@@ -137,6 +138,47 @@ def search_filter_bar(
     )
 
 
+def live_search_bar(
+    *,
+    endpoint: str,
+    target: str,
+    placeholder: str,
+    search_value: str,
+    hidden_fields: dict[str, str] | None = None,
+    debounce: int = 300,
+    form_cls: str = "",
+) -> Div:
+    """Live-updating search bar using HTMX ActiveSearch pattern.
+
+    Sends debounced GET requests as the user types and swaps results
+    into the target container — no page reload or submit button needed.
+    """
+    hidden_inputs = [
+        Input(type="hidden", name=name, value=value)
+        for name, value in (hidden_fields or {}).items()
+    ]
+    search_input = Input(
+        type="search",
+        name="search",
+        value=search_value,
+        placeholder=placeholder,
+        cls="form-control admin-form-control admin-search-input",
+    )
+    return FilterBar(
+        *hidden_inputs,
+        Div(search_input, cls="admin-search-field"),
+        endpoint=endpoint,
+        method="get",
+        mode="auto",
+        debounce=debounce,
+        hx_target=target,
+        hx_swap="innerHTML",
+        form_cls=form_cls,
+        filters_cls="admin-filter-fields",
+        actions_cls="d-none",  # Hide actions since auto-submit doesn't need buttons
+    )
+
+
 def floating_field(
     label: str,
     name: str,
@@ -250,7 +292,7 @@ def loading_action_button(
     )
 
 
-def SectionWrap(title: str, content) -> Div:
+def section_wrap(title: str, content) -> Div:
     """Shared section wrapper — adds a Space Grotesk H2 title above the content block."""
 
     return Div(
@@ -258,3 +300,6 @@ def SectionWrap(title: str, content) -> Div:
         content,
         cls="admin-section-block",
     )
+
+
+SectionWrap = section_wrap

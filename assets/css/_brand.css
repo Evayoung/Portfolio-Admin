@@ -1,0 +1,39 @@
+/* ============================================================
+   _brand.css — CSS Custom Properties & Brand Tokens
+   ============================================================ */
+
+:root {
+  --admin-bg: #07111f;
+  --admin-bg-soft: #0d1828;
+  --admin-surface: rgba(12, 27, 44, 0.92);
+  --admin-surface-strong: #122338;
+  --admin-surface-soft: rgba(255, 255, 255, 0.03);
+  --admin-border: rgba(130, 183, 214, 0.16);
+  --admin-text: #eef6ff;
+  --admin-muted: #97abc0;
+  --admin-primary: #2db8e8;
+  --admin-secondary: #f3a53d;
+  --admin-success: #6cd8a4;
+  --admin-warning: #f2c35b;
+  --admin-shadow: 0 16px 48px rgba(2, 6, 23, 0.2);
+  --admin-sidebar-width: 18.75rem;
+  --admin-bottom-nav-height: 5.6rem;
+}
+
+/* ── Light theme overrides ─────────────────────────────── */
+
+[data-bs-theme="light"] {
+  --admin-bg: #f0f4f8;
+  --admin-bg-soft: #f8fafc;
+  --admin-surface: rgba(255, 255, 255, 0.95);
+  --admin-surface-strong: #ffffff;
+  --admin-surface-soft: rgba(0, 0, 0, 0.02);
+  --admin-border: rgba(0, 0, 0, 0.1);
+  --admin-text: #1e293b;
+  --admin-muted: #64748b;
+  --admin-primary: #0284c7;
+  --admin-secondary: #d97706;
+  --admin-success: #059669;
+  --admin-warning: #ca8a04;
+  --admin-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}

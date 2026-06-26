@@ -1,0 +1,143 @@
+/* ============================================================
+   _surfaces.css — Card Styles, Surface Variants, Shadows
+   ============================================================ */
+
+/* ── Body background atmosphere ────────────────────────── */
+
+html,
+body {
+  background:
+    radial-gradient(circle at top right, rgba(45, 184, 232, 0.16), transparent 28%),
+    radial-gradient(circle at left bottom, rgba(243, 165, 61, 0.10), transparent 24%),
+    linear-gradient(180deg, #08101d 0%, #091321 100%);
+}
+
+/* ── Main surface card ─────────────────────────────────── */
+
+.admin-surface-card {
+  background: linear-gradient(180deg, rgba(14, 28, 45, 0.96), rgba(11, 22, 36, 0.96));
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 8px;
+  box-shadow: var(--admin-shadow);
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-surface-card:hover {
+  border-color: rgba(45, 184, 232, 0.24) !important;
+}
+
+/* ── Project card additions ────────────────────────────── */
+
+.admin-project-card {
+  overflow: hidden;
+}
+
+.admin-project-card:hover {
+  border-color: rgba(45, 184, 232, 0.24) !important;
+}
+
+.admin-project-card-link.admin-is-selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(45, 184, 232, 0.34);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.admin-project-card.admin-is-new-item {
+  border-left: 3px solid var(--admin-secondary) !important;
+  padding-left: calc(0.85rem - 3px);
+}
+
+/* ── Card body padding ─────────────────────────────────── */
+
+.admin-metric-card-body,
+.admin-module-card-body,
+.admin-panel-stack {
+  padding: 1.2rem;
+}
+
+/* ── Module icon box ───────────────────────────────────── */
+
+.admin-module-icon-box {
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(45, 184, 232, 0.12);
+  color: var(--admin-primary);
+}
+
+.admin-module-icon {
+  font-size: 1.15rem;
+}
+
+/* ── Metric delta badge ────────────────────────────────── */
+
+.admin-metric-delta {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.45rem 0.78rem;
+}
+
+/* ── Unread badge ──────────────────────────────────────── */
+
+.admin-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--admin-secondary);
+  color: #3d1e00;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+/* ── Login page surface ────────────────────────────────── */
+
+.admin-login-shell {
+  min-height: 100vh;
+}
+
+/* ── Overview metric ───────────────────────────────────── */
+
+.admin-overview-metric p {
+  margin-bottom: 0;
+}
+
+.admin-overview-metric .text-muted,
+.admin-overview-metric .text-success,
+.admin-overview-metric .text-danger {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Light theme overrides ─────────────────────────────── */
+
+[data-bs-theme="light"] html,
+[data-bs-theme="light"] body {
+  background:
+    radial-gradient(circle at top right, rgba(2, 132, 199, 0.08), transparent 28%),
+    radial-gradient(circle at left bottom, rgba(217, 119, 6, 0.06), transparent 24%),
+    linear-gradient(180deg, #eef2f6 0%, #f0f4f8 100%);
+}
+
+[data-bs-theme="light"] .admin-surface-card {
+  background: #ffffff;
+}
+
+[data-bs-theme="light"] .admin-unread-badge {
+  color: #fff;
+}

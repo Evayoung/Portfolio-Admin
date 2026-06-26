@@ -73,9 +73,9 @@ def _submission_card(item, *, selected: bool, kind: str, status: str, search: st
                 cls="admin-project-card-body",
             ),
             href=href,
-            cls=f"admin-project-card-link{' is-selected' if selected else ''}",
+            cls=f"admin-project-card-link{' admin-is-selected' if selected else ''}"
         ),
-        cls=f"admin-surface-card admin-project-card{' is-new-item' if item.status == 'new' else ''}",
+        cls=f"admin-surface-card admin-project-card{' admin-is-new-item' if item.status == 'new' else ''}"
     )
 
 

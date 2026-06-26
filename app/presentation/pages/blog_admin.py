@@ -59,7 +59,7 @@ def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
                 ),
                 H3(post.title, cls="admin-project-title"),
                 P(post.summary, cls="admin-project-copy"),
-                Div(*[Span(item, cls="admin-tech-pill") for item in post.tags], cls="admin-tech-row"),
+                Div(*[Badge(item, variant="secondary", cls="me-1") for item in post.tags], cls="admin-tech-row"),
                 Div(
                     Span(post.slug, cls="admin-project-meta"),
                     Span(f"{post.read_minutes} min read", cls="admin-project-meta"),
@@ -68,7 +68,7 @@ def _post_card(post, *, selected: bool, category: str, search: str) -> Card:
                 cls="admin-project-card-body",
             ),
             href=href,
-            cls=f"admin-project-card-link{' is-selected' if selected else ''}",
+            cls=f"admin-project-card-link{' admin-is-selected' if selected else ''}"
         ),
         cls="admin-surface-card admin-project-card",
     )

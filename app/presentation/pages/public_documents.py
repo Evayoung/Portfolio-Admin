@@ -471,25 +471,6 @@ def _doc_footer(profile, deal, document) -> Div:
     )
 
 
-# ── Clipboard JS ──────────────────────────────────────────────────────────────
-
-_COPY_SCRIPT = Script("""
-(function(){
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('[data-copy-target]');
-    if(!btn) return;
-    var text = btn.dataset.copyTarget;
-    var label = btn.dataset.copyLabel || btn.textContent.trim();
-    navigator.clipboard.writeText(text).then(function(){
-      btn.textContent = 'Copied!';
-      setTimeout(function(){ btn.textContent = label; }, 1800);
-    }).catch(function(){
-      btn.textContent = 'Copy failed';
-      setTimeout(function(){ btn.textContent = label; }, 2000);
-    });
-  });
-})();
-""")
 
 # ── Main page function ────────────────────────────────────────────────────────
 
@@ -518,9 +499,8 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
                     cls="doc-not-found-card",
                 ),
                 cls="doc-not-found doc-shell",
-            ),
-            _COPY_SCRIPT,
-        )
+            )
+    )
 
     # ── Data ─────────────────────────────────────────────────────────────────
     account = (
@@ -603,11 +583,10 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             ),
             cls="doc-shell",
         ),
-        _COPY_SCRIPT,
     )
 
 
 def _doc_stylesheet_link():
     """Return a Link tag injecting doc-portal.css — separate from admin.css."""
     from fasthtml.common import Link
-    return Link(rel="stylesheet", href="/assets/doc-portal.css")
+    return Link(rel="stylesheet", href="/assets/css/doc-portal.css")

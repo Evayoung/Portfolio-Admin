@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, H2, H3, P, Span, Strong
-from faststrap import Card, Col, Icon, Row, SEO
+from faststrap import Card, Col, Icon, MetricCard, Row, SEO
+from faststrap.presets import AutoRefresh, LazyLoad
 
 from app.config import settings
 from app.infrastructure.blog_repository import get_blog_workspace_summary
@@ -79,47 +80,46 @@ def _workspace_status_card(projects, blog, submissions, deals, cv) -> Div:
     )
 
 
+def _metrics_ring() -> Row:
+    """Render the metrics row — both full-page and HTMX partial use this."""
+    return Row(*[overview_metric_card(item) for item in METRICS], cls="g-4")
+
+
+def _workspace_status_partial() -> Div:
+    """Render just the workspace status card — used by LazyLoad."""
+    return Div(
+        _workspace_status_card(
+            get_project_workspace_summary(),
+            get_blog_workspace_summary(),
+            get_submission_workspace_summary(),
+            get_deal_workspace_summary(),
+            get_cv_workspace_summary(),
+        ),
+        cls="admin-section-block",
+    )
+
+
 def overview_page() -> tuple:
     deal_summary = get_deal_workspace_summary()
-    project_summary = get_project_workspace_summary()
-    blog_summary = get_blog_workspace_summary()
-    submission_summary = get_submission_workspace_summary()
-    cv_summary = get_cv_workspace_summary()
 
-    metrics = Row(*[overview_metric_card(item) for item in METRICS], cls="g-4")
+    metrics = AutoRefresh(
+        endpoint="/dashboard/metrics",
+        target="this",
+        interval=30000,
+        content=_metrics_ring(),
+        hx_swap="outerHTML",
+    )
 
-    # Pipeline revenue strip — derived from live deal data
-    revenue_strip = Div(
-        Div(
-            Span("Active Deals", cls="admin-revenue-label"),
-            Div(str(deal_summary.total), cls="admin-revenue-value"),
-            cls="admin-revenue-cell",
-        ),
-        Div(
-            Span("Documents Issued", cls="admin-revenue-label"),
-            Div(
-                str(deal_summary.proposals + deal_summary.quotes + deal_summary.invoices),
-                cls="admin-revenue-value",
-            ),
-            cls="admin-revenue-cell",
-        ),
-        Div(
-            Span("Proposals", cls="admin-revenue-label"),
-            Div(str(deal_summary.proposals), cls="admin-revenue-value"),
-            cls="admin-revenue-cell",
-        ),
-        Div(
-            Span("Invoices", cls="admin-revenue-label"),
-            Div(str(deal_summary.invoices), cls="admin-revenue-value"),
-            cls="admin-revenue-cell",
-        ),
-        cls="admin-revenue-strip",
+    # Pipeline revenue strip — MetricCard row from live deal data
+    revenue_strip = Row(
+        Col(MetricCard("Active Deals", str(deal_summary.total), cls="admin-surface-card h-100"), span=6, md=3),
+        Col(MetricCard("Documents Issued", str(deal_summary.proposals + deal_summary.quotes + deal_summary.invoices), cls="admin-surface-card h-100"), span=6, md=3),
+        Col(MetricCard("Proposals", str(deal_summary.proposals), cls="admin-surface-card h-100"), span=6, md=3),
+        Col(MetricCard("Invoices", str(deal_summary.invoices), cls="admin-surface-card h-100"), span=6, md=3),
+        cls="g-4",
     )
 
     modules = Row(*[_module_card(item) for item in MODULES], cls="g-4")
-    workspace_status = _workspace_status_card(
-        project_summary, blog_summary, submission_summary, deal_summary, cv_summary
-    )
 
     return (
         *SEO(
@@ -131,7 +131,14 @@ def overview_page() -> tuple:
             metrics,
             revenue_strip,
             SectionWrap("Content Modules", modules),
-            Div(workspace_status, cls="admin-section-block"),
+            LazyLoad(
+                endpoint="/dashboard/workspace-status",
+                placeholder=Div(
+                    Div(cls="placeholder-glow"),
+                    cls="admin-surface-card",
+                    style="height:12rem;",
+                ),
+            ),
             current="/",
             title="Overview",
         ),

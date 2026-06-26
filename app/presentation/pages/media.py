@@ -8,7 +8,7 @@ from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 from app.config import settings
 from app.infrastructure.media_repository import get_media_workspace_summary, list_media_assets
 from app.infrastructure.supabase_client import service_role_is_configured
-from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, toggle_pill_group
+from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, live_search_bar, loading_action_button, search_filter_bar, status_alert, summary_card, toggle_pill_group
 from app.presentation.shell import page_frame
 
 
@@ -79,13 +79,13 @@ def _asset_card(asset) -> Card:
                 ),
                 floating_field("Alt Text / Notes", "alt_text", asset.alt_text, placeholder="Describe usage or accessibility text"),
                 Div(
-                    loading_action_button("Save Metadata", endpoint="/media/update", target="body", button_cls="btn admin-install-btn"),
+                    loading_action_button("Save Metadata", endpoint="/media/update", target="#media-workspace-section", button_cls="btn admin-install-btn"),
                     cls="admin-form-actions mt-3",
                 ),
                 action="/media/update",
                 method="post",
                 hx_post="/media/update",
-                hx_target="body",
+                hx_target="#media-workspace-section",
                 hx_swap="innerHTML",
                 cls="admin-settings-form mt-4",
             ),
@@ -94,13 +94,13 @@ def _asset_card(asset) -> Card:
                 Label("Replacement File", cls="admin-form-label"),
                 Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control"),
                 Div(
-                    loading_action_button("Replace File", endpoint="/media/replace", target="body", button_cls="btn admin-install-btn"),
+                    loading_action_button("Replace File", endpoint="/media/replace", target="#media-workspace-section", button_cls="btn admin-install-btn"),
                     cls="admin-form-actions mt-3",
                 ),
                 action="/media/replace",
                 method="post",
                 hx_post="/media/replace",
-                hx_target="body",
+                hx_target="#media-workspace-section",
                 hx_swap="innerHTML",
                 enctype="multipart/form-data",
                 cls="admin-settings-form mt-4",
@@ -108,12 +108,13 @@ def _asset_card(asset) -> Card:
             Form(
                 Input(type="hidden", name="asset_id", value=asset.asset_id),
                 P("Delete removes the asset record and its storage object.", cls="admin-module-copy mt-3 mb-2"),
-                loading_action_button("Delete Asset", endpoint="/media/delete", target="body", button_cls="btn btn-outline-danger"),
+                loading_action_button("Delete Asset", endpoint="/media/delete", target="#media-workspace-section", button_cls="btn btn-outline-danger"),
                 action="/media/delete",
                 method="post",
                 hx_post="/media/delete",
-                hx_target="body",
+                hx_target="#media-workspace-section",
                 hx_swap="innerHTML",
+                hx_confirm="Delete this asset permanently?",
                 cls="admin-settings-form mt-3",
             ),
             cls="admin-project-card-body",
@@ -140,7 +141,7 @@ def _upload_form(*, kind: str, search: str) -> Form:
             cls="admin-form-group mt-3",
         ),
         Div(
-            loading_action_button("Upload Media", endpoint="/media/upload", target="body", button_cls="btn admin-module-btn"),
+            loading_action_button("Upload Media", endpoint="/media/upload", target="#media-workspace-section", button_cls="btn admin-module-btn"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable uploads",
                 cls="admin-save-note",
@@ -150,14 +151,15 @@ def _upload_form(*, kind: str, search: str) -> Form:
         action="/media/upload",
         method="post",
         hx_post="/media/upload",
-        hx_target="body",
+        hx_target="#media-workspace-section",
         hx_swap="innerHTML",
         enctype="multipart/form-data",
         cls="admin-settings-form",
     )
 
 
-def media_workspace_page(*, kind: str = "all", search: str = "", message: str = "", tone: str = "info", public_url: str = "") -> tuple:
+def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, public_url: str) -> Div:
+    """Return just the workspace section content for HTMX partial swaps."""
     assets = list_media_assets(kind=kind, search=search)
     summary = get_media_workspace_summary()
 
@@ -169,8 +171,9 @@ def media_workspace_page(*, kind: str = "all", search: str = "", message: str = 
         _filter_link("Resume", f"/media?kind=resume&search={search}", active=kind == "resume"),
         cls="admin-filter-row",
     )
-    search_form = search_filter_bar(
-        endpoint="/media",
+    search_form = live_search_bar(
+        endpoint="/media/search",
+        target="#media-workspace-section",
         placeholder="Search title, alt text, or storage path",
         search_value=search,
         hidden_fields={"kind": kind},
@@ -214,7 +217,30 @@ def media_workspace_page(*, kind: str = "all", search: str = "", message: str = 
             cls="admin-panel-stack",
         ),
         cls="admin-surface-card h-100",
+        id="media-upload-panel",
     )
+
+    return Div(
+        Row(
+            summary_card("Total Assets", str(summary.total), "Reusable files tracked in Supabase Storage."),
+            summary_card("Images", str(summary.images), "Visual assets for projects, blog posts, and page surfaces."),
+            summary_card("Documents", str(summary.documents), "PDFs, resumes, and other downloadable files."),
+            cls="g-4",
+        ),
+        SectionWrap(
+            "Media Workspace",
+            Row(
+                Col(library_panel, span=12, lg=7),
+                Col(upload_panel, span=12, lg=5, cls="mt-4 mt-lg-0"),
+                cls="g-4",
+            ),
+        ),
+        id="media-workspace-section",
+    )
+
+
+def media_workspace_page(*, kind: str = "all", search: str = "", message: str = "", tone: str = "info", public_url: str = "") -> tuple:
+    summary = get_media_workspace_summary()
 
     return (
         *SEO(
@@ -223,20 +249,7 @@ def media_workspace_page(*, kind: str = "all", search: str = "", message: str = 
             url=f"{settings.base_url}/media",
         ),
         *page_frame(
-            Row(
-                summary_card("Total Assets", str(summary.total), "Reusable files tracked in Supabase Storage."),
-                summary_card("Images", str(summary.images), "Visual assets for projects, blog posts, and page surfaces."),
-                summary_card("Documents", str(summary.documents), "PDFs, resumes, and other downloadable files."),
-                cls="g-4",
-            ),
-            SectionWrap(
-                "Media Workspace",
-                Row(
-                    Col(library_panel, span=12, lg=7),
-                    Col(upload_panel, span=12, lg=5, cls="mt-4 mt-lg-0"),
-                    cls="g-4",
-                ),
-            ),
+            _media_workspace_inner(kind=kind, search=search, message=message, tone=tone, public_url=public_url),
             current="/media",
             title="Media",
         ),

@@ -595,7 +595,9 @@ def _quick_document_form() -> Form:
 
 def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind: str = "all", search: str = "", from_submission: str = "", from_kind: str = "") -> tuple:
     all_items = list_deals()
-    items = list_deals(stage=stage, document_kind=document_kind, search=search)
+    items = all_items
+    if stage != "all" or document_kind != "all" or search:
+        items = list_deals(stage=stage, document_kind=document_kind, search=search)
     selected = get_deal(deal_id)
     if not selected and from_submission:
         selected = _deal_from_submission(from_submission, from_kind)

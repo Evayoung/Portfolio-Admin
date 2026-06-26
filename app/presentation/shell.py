@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Small, Span
 from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavItem, SidebarNavbar
 
@@ -28,8 +30,7 @@ BOTTOM_NAV_ITEMS = (
 )
 
 
-def _brand_profile():
-    return get_site_profile()
+brand_profile = lru_cache(maxsize=1)(get_site_profile)
 
 
 def brand_name(profile) -> str:
@@ -68,7 +69,7 @@ def _brand_initials(profile) -> tuple[str, str]:
 
 
 def admin_logo(profile=None) -> Span:
-    profile = profile or _brand_profile()
+    profile = profile or brand_profile()
     first_letter, second_letter = _brand_initials(profile)
     return Span(
         Span(first_letter, cls="admin-logo-letter"),
@@ -93,7 +94,7 @@ def _nav_link(label: str, href: str, icon: str, current: str, *, compact: bool =
 
 
 def admin_sidebar(current: str = "/", profile=None) -> Aside:
-    profile = profile or _brand_profile()
+    profile = profile or brand_profile()
     sidebar_nav = SidebarNavbar(
         *[
             SidebarNavItem(
@@ -157,7 +158,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
 
 
 def admin_mobile_header(current: str = "/", title: str = "Overview", profile=None) -> Div:
-    profile = profile or _brand_profile()
+    profile = profile or brand_profile()
     active_item = next((label for label, href, _ in NAV_ITEMS if href == current), title)
     return Div(
         Container(
@@ -210,7 +211,7 @@ def admin_bottom_nav(current: str = "/") -> Div:
 
 
 def admin_mobile_drawer(current: str = "/") -> Div:
-    profile = _brand_profile()
+    profile = brand_profile()
     nav_links = Div(
         *[_nav_link(label, href, icon, current) for label, href, icon in NAV_ITEMS],
         cls="admin-sidebar-links mt-0",
@@ -256,7 +257,7 @@ def admin_mobile_drawer(current: str = "/") -> Div:
 
 
 def admin_install_drawer(profile=None) -> Div:
-    profile = profile or _brand_profile()
+    profile = profile or brand_profile()
     return Drawer(
         Div(
             P("On iPhone or iPad, open the browser share menu and choose Add to Home Screen.", cls="admin-module-copy"),
@@ -273,7 +274,7 @@ def admin_install_drawer(profile=None) -> Div:
 
 
 def page_frame(*children, current: str = "/", title: str = "Overview"):
-    profile = _brand_profile()
+    profile = brand_profile()
     return (
         admin_mobile_header(current, title, profile),
         Div(

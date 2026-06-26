@@ -58,8 +58,8 @@ add_pwa(
     cache_name="neo-admin-shell",
     cache_version="v3",
     pre_cache_urls=[
-        "/assets/admin.css?v=20260427f",
-        "/assets/admin.js?v=20260427c",
+        "/assets/css/custom.css",
+        "/assets/js/admin.js?v=20260427c",
         "/assets/icon-192.png",
         "/assets/icon-512.png",
     ],
@@ -79,8 +79,8 @@ app.hdrs = app.hdrs + [
         rel="stylesheet",
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
     ),
-    Link(rel="stylesheet", href="/assets/admin.css?v=20260427f"),
-    Script(src="/assets/admin.js?v=20260427c", defer=True),
+    Link(rel="stylesheet", href="/assets/css/custom.css?v=1"),
+    Script(src="/assets/js/admin.js?v=20260427c", defer=True),
 ]
 
 setup_routes(app)

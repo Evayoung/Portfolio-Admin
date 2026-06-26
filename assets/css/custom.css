@@ -1,0 +1,12 @@
+/* ============================================================
+   custom.css — Neo Admin Design System
+   Imports all partials in cascade order.
+   ============================================================ */
+
+@import url("_brand.css");
+@import url("_typography.css");
+@import url("_layout.css");
+@import url("_surfaces.css");
+@import url("_interactions.css");
+
+/* ── Add any project-specific overrides below this line ── */

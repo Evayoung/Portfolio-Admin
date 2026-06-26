@@ -48,7 +48,7 @@ def _project_card(project, *, selected: bool, category: str, featured_only: bool
                 ),
                 H3(project.title, cls="admin-project-title"),
                 P(project.summary, cls="admin-project-copy"),
-                Div(*[Span(item, cls="admin-tech-pill") for item in project.tech], cls="admin-tech-row"),
+                Div(*[Badge(item, variant="secondary", cls="me-1") for item in project.tech], cls="admin-tech-row"),
                 Div(
                     Span(project.slug, cls="admin-project-meta"),
                     Span(f"Complexity {project.complexity}%", cls="admin-project-meta"),
@@ -57,7 +57,7 @@ def _project_card(project, *, selected: bool, category: str, featured_only: bool
                 cls="admin-project-card-body",
             ),
             href=href,
-            cls=f"admin-project-card-link{' is-selected' if selected else ''}",
+            cls=f"admin-project-card-link{' admin-is-selected' if selected else ''}"
         ),
         cls="admin-surface-card admin-project-card",
     )

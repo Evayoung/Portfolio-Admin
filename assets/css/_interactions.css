@@ -1,0 +1,365 @@
+/* ============================================================
+   _interactions.css — Buttons, Nav Links, Form Controls
+   ============================================================ */
+
+/* ── Sidebar navigation links ──────────────────────────── */
+
+.admin-sidebar-nav .nav-link {
+  color: rgba(238, 246, 255, 0.76);
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-sidebar-nav .nav-link:hover,
+.admin-sidebar-nav .nav-link:focus-visible,
+.admin-sidebar-nav .nav-link.active {
+  color: #fff;
+  background: rgba(45, 184, 232, 0.12);
+  transform: translateX(0.1rem);
+}
+
+.admin-sidebar-nav .nav-link i {
+  font-size: 1rem;
+}
+
+.admin-sidebar-nav .nav-link .admin-nav-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ── Nav link (both sidebar and drawer) ────────────────── */
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: rgba(238, 246, 255, 0.76);
+  padding: 0.85rem 0.95rem;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-nav-link:hover,
+.admin-nav-link.active {
+  color: #fff;
+  background: rgba(45, 184, 232, 0.12);
+  transform: translateX(0.1rem);
+}
+
+.admin-nav-icon {
+  font-size: 1rem;
+}
+
+.admin-nav-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ── Nav/action buttons ────────────────────────────────── */
+
+.admin-nav-btn,
+.admin-install-btn,
+.admin-module-btn {
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-nav-btn,
+.admin-module-btn {
+  background: rgba(45, 184, 232, 0.16);
+  border: 1px solid rgba(45, 184, 232, 0.24);
+  color: #fff;
+}
+
+.admin-nav-btn:hover,
+.admin-install-btn:hover,
+.admin-module-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.admin-install-btn {
+  background: rgba(243, 165, 61, 0.12);
+  border: 1px solid rgba(243, 165, 61, 0.26);
+  color: #fff;
+}
+
+/* ── Filter chips ──────────────────────────────────────── */
+
+.admin-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid rgba(130, 183, 214, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(238, 246, 255, 0.82);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.admin-filter-chip.active {
+  background: rgba(45, 184, 232, 0.14);
+  border-color: rgba(45, 184, 232, 0.26);
+  color: #fff;
+}
+
+/* ── Radio pills ───────────────────────────────────────── */
+
+.admin-radio-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(130, 183, 214, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(238, 246, 255, 0.84);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: none !important;
+}
+
+.admin-radio-pill.active,
+.admin-radio-pill[aria-pressed="true"] {
+  background: rgba(45, 184, 232, 0.14);
+  border-color: rgba(45, 184, 232, 0.28);
+  color: #fff;
+}
+
+.admin-radio-pill:hover,
+.admin-radio-pill:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(130, 183, 214, 0.22);
+}
+
+/* ── Form controls ─────────────────────────────────────── */
+
+.admin-form-control {
+  min-height: 3rem;
+  border-radius: 6px;
+  border: 1px solid rgba(130, 183, 214, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  box-shadow: none !important;
+}
+
+.admin-form-control::placeholder {
+  color: rgba(151, 171, 192, 0.72);
+}
+
+.admin-form-control:focus {
+  border-color: rgba(45, 184, 232, 0.42);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.admin-form-textarea {
+  min-height: 7.5rem;
+  resize: vertical;
+}
+
+/* ── Filter actions ────────────────────────────────────── */
+
+.admin-filter-actions .btn {
+  min-width: 5.25rem;
+  border-radius: 8px;
+}
+
+/* ── Save alert ────────────────────────────────────────── */
+
+.admin-save-alert {
+  border-radius: 8px;
+  border-width: 1px;
+}
+
+/* ── Bottom nav active state ───────────────────────────── */
+
+.admin-bottom-link.active,
+.admin-bottom-nav .nav-link.active {
+  background: rgba(45, 184, 232, 0.14);
+  color: #fff;
+}
+
+/* ── Project card link ─────────────────────────────────── */
+
+.admin-project-card-link {
+  display: block;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.admin-project-card-link:hover {
+  transform: translateY(-0.12rem);
+}
+
+.admin-project-card-link.admin-is-selected {
+  position: relative;
+}
+
+/* ── Mobile action ─────────────────────────────────────── */
+
+.admin-mobile-action {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(45, 184, 232, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--admin-text);
+}
+
+/* ── Project flag (Featured/Draft badge) ───────────────── */
+
+.admin-project-flag {
+  border-radius: 999px;
+}
+
+
+/* ── HTMX loading indicator ────────────────────────────── */
+
+button.htmx-request {
+  pointer-events: none;
+  opacity: 0.7;
+  position: relative;
+}
+
+button.htmx-request::after {
+  content: "";
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: admin-spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes admin-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Tech row ──────────────────────────────────────────── */
+
+.admin-tech-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.95rem;
+}
+
+/* ── Light theme overrides ─────────────────────────────── */
+
+[data-bs-theme="light"] .admin-sidebar-nav .nav-link {
+  color: #475569;
+}
+
+[data-bs-theme="light"] .admin-sidebar-nav .nav-link:hover,
+[data-bs-theme="light"] .admin-sidebar-nav .nav-link:focus-visible,
+[data-bs-theme="light"] .admin-sidebar-nav .nav-link.active {
+  color: #0f172a;
+  background: rgba(2, 132, 199, 0.08);
+}
+
+[data-bs-theme="light"] .admin-nav-link {
+  color: #475569;
+}
+
+[data-bs-theme="light"] .admin-nav-link:hover,
+[data-bs-theme="light"] .admin-nav-link.active {
+  color: #0f172a;
+  background: rgba(2, 132, 199, 0.08);
+}
+
+[data-bs-theme="light"] .admin-nav-btn,
+[data-bs-theme="light"] .admin-module-btn {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+[data-bs-theme="light"] .admin-nav-btn:hover,
+[data-bs-theme="light"] .admin-install-btn:hover,
+[data-bs-theme="light"] .admin-module-btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .admin-install-btn {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+[data-bs-theme="light"] .admin-filter-chip {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+  color: #475569;
+}
+
+[data-bs-theme="light"] .admin-filter-chip.active {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+[data-bs-theme="light"] .admin-radio-pill {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+  color: #475569;
+}
+
+[data-bs-theme="light"] .admin-radio-pill.active,
+[data-bs-theme="light"] .admin-radio-pill[aria-pressed="true"] {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+[data-bs-theme="light"] .admin-radio-pill:hover,
+[data-bs-theme="light"] .admin-radio-pill:focus-visible {
+  color: #0f172a;
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+[data-bs-theme="light"] .admin-form-control {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-form-control::placeholder {
+  color: #94a3b8;
+}
+
+[data-bs-theme="light"] .admin-form-control:focus {
+  border-color: #0284c7;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-mobile-action {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-bs-theme="light"] .admin-tech-pill {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.04);
+  color: #475569;
+}
+
+[data-bs-theme="light"] .admin-bottom-link.active,
+[data-bs-theme="light"] .admin-bottom-nav .nav-link.active {
+  background: #e0f2fe;
+  color: #0369a1;
+}
