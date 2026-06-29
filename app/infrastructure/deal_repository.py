@@ -145,6 +145,24 @@ LOCAL_DEALS = (
 )
 
 
+# ── Document view tracking (in-memory for now) ──────────────────────────────
+
+_document_views: dict[str, str] = {}
+
+
+def record_document_view(document_id: str) -> None:
+    """Record when a client document is viewed via its public link."""
+    _document_views[document_id] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def get_document_view_time(document_id: str) -> str:
+    """Return the last viewed timestamp for a document, or empty string."""
+    return _document_views.get(document_id, "")
+
+
+# ── Repository helpers ──────────────────────────────────────────────────────
+
+
 def _rest_headers(*, prefer: str | None = None) -> dict[str, str]:
     headers = {
         "apikey": settings.supabase_service_role_key,
@@ -649,6 +667,9 @@ def resend_document_link(*, document_id: str, document_kind: str) -> tuple[bool,
         return False, "warning", "Generate a client link before resending this document."
     if not deal.client_email:
         return False, "warning", "Add a client email before resending this document."
+    if not settings.email_enabled:
+        doc_url = f"{settings.base_url.rstrip('/')}/documents/{document.public_token}"
+        return True, "info", f"Email not configured. Copy this link and share it manually: {doc_url}"
     try:
         email_svc.send_document_link_to_client(
             client_name=deal.client_name,

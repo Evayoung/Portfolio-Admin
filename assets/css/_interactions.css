@@ -363,3 +363,71 @@ button.htmx-request::after {
   background: #e0f2fe;
   color: #0369a1;
 }
+
+/* ── Line Items Editor ──────────────────────────────────── */
+
+.line-items-table {
+  margin-bottom: 0;
+}
+
+.line-items-table thead th {
+  border-bottom: 1px solid rgba(130, 183, 214, 0.16);
+  color: rgba(238, 246, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.5rem 0.4rem;
+}
+
+.line-items-table tbody td {
+  padding: 0.25rem 0.2rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(130, 183, 214, 0.08);
+}
+
+.line-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.line-items-table .form-control-sm {
+  min-height: 2.2rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.line-items-table tfoot td {
+  padding: 0.5rem 0.4rem;
+  border-top: 2px solid rgba(45, 184, 232, 0.2);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.line-items-editor .li-add-row {
+  font-size: 0.85rem;
+}
+
+.li-delete {
+  line-height: 1;
+  font-size: 1.1rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.li-total-value {
+  color: var(--admin-accent, #2db8e8);
+}
+
+/* Light theme overrides */
+[data-bs-theme="light"] .line-items-table thead th {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .line-items-table tfoot td {
+  color: #0f172a;
+  border-top-color: rgba(2, 132, 199, 0.2);
+}
+
+[data-bs-theme="light"] .li-total-value {
+  color: #0284c7;
+}

@@ -260,6 +260,28 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
+    groq_card = Card(
+        Div(
+            H3("Groq AI Configuration", cls="admin-subsection-title"),
+            P("AI drafting uses Groq's LLM to help generate proposal, quote, invoice, and payment text from deal context.", cls="admin-module-copy"),
+            Div(
+                Div(Span("Model", cls="admin-field-label"), Strong(settings.groq_model)),
+                Div(Span("API Key", cls="admin-field-label"), Strong("Configured ✓" if settings.groq_enabled else "Not set — add GROQ_API_KEY")),
+                Div(Span("Status", cls="admin-field-label"), Strong("Ready" if settings.groq_enabled else "Unavailable")),
+                Div(Span("Draft types", cls="admin-field-label"), Strong("Proposal, Quote, Invoice, Scope, Payment Terms")),
+                cls="admin-field-grid admin-detail-block mb-4",
+            ),
+            P(
+                "The AI draft feature is available inside the Deal Studio editor. Select a draft type and click Generate AI Draft. "
+                "Each draft is reviewed before saving. Rate-limited to 12 drafts per hour per user." if settings.groq_enabled
+                else "Add GROQ_API_KEY to your environment to enable AI-powered drafting.",
+                cls="admin-module-copy mb-0",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+    )
+
     production_card = Card(
         Div(
             H3("Production Health", cls="admin-subsection-title"),
@@ -297,7 +319,7 @@ def settings_workspace_page() -> tuple:
                     # Identity panel — reference only; hidden on mobile to prioritise the edit forms
                     Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
-                        Div(editor_panel, access_panel, account_panel, production_card, github_card, cls="admin-settings-stack"),
+                        Div(editor_panel, access_panel, account_panel, groq_card, production_card, github_card, cls="admin-settings-stack"),
                         span=12,
                         lg=7,
                     ),

@@ -17,6 +17,7 @@ NAV_ITEMS = (
     ("CV", "/cv", "file-earmark-person"),
     ("Submissions", "/submissions", "inbox"),
     ("Deals", "/deals", "briefcase"),
+    ("AI Assistant", "/ai-assistant", "robot"),
     ("Media", "/media", "images"),
     ("Settings", "/settings", "sliders"),
 )

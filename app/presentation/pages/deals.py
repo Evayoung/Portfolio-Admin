@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong, Textarea
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
 from faststrap import Badge, Button, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
@@ -10,6 +10,7 @@ from app.domain.models import AdminDeal
 from app.infrastructure.deal_repository import (
     get_deal,
     get_deal_workspace_summary,
+    get_document_view_time,
     list_document_responses,
     list_deals,
 )
@@ -25,15 +26,43 @@ def deal_save_status_fragment(title: str, message: str, tone: str = "info") -> D
 
 
 def ai_draft_result_fragment(title: str, message: str, tone: str = "info", draft: str = "") -> Div:
+    apply_panel = Div()
+    if draft:
+        targets = [
+            ("summary", "Summary"),
+            ("background_text", "Background"),
+            ("scope_notes", "Scope"),
+            ("timeline_text", "Timeline"),
+            ("payment_terms", "Payment Terms"),
+            ("exclusions_text", "Exclusions"),
+            ("closing_note", "Closing Note"),
+        ]
+        apply_panel = Div(
+            P("Apply draft to a section field:", cls="admin-module-copy mt-3 mb-2"),
+            Div(
+                *[
+                    Button(
+                        label,
+                        type="button",
+                        cls="btn admin-install-btn",
+                        data_apply_field=field_id,
+                        data_draft_source="ai-draft-content",
+                    )
+                    for field_id, label in targets
+                ],
+                cls="d-flex flex-wrap gap-2",
+            ),
+        )
     return Div(
         status_alert(title, message, tone),
         Div(
-            Textarea(draft, rows=12, readonly=True, cls="form-control admin-form-control admin-form-textarea"),
+            Textarea(draft, rows=12, readonly=True, cls="form-control admin-form-control admin-form-textarea", id="ai-draft-content"),
             Div(
                 Button("Copy Draft", type="button", cls="btn admin-module-btn", data_copy_target=draft, data_copy_label="Copy Draft"),
                 cls="d-flex flex-wrap gap-2 mt-3",
             ),
-            P("Review the draft, copy useful sections, then paste into the right editor fields before saving.", cls="admin-module-copy mt-2 mb-0"),
+            apply_panel,
+            P("Review the draft, apply useful sections to the right fields above, then save.", cls="admin-module-copy mt-2 mb-0"),
             cls="admin-detail-block mt-3",
         )
         if draft
@@ -47,6 +76,64 @@ def _filter_link(label: str, href: str, *, active: bool) -> A:
 
 def _money(value: int) -> str:
     return f"N{value:,.0f}"
+
+
+def _parse_line_items_display(raw: str) -> list[dict]:
+    """Parse pipe-delimited line items into display-friendly dicts."""
+    rows: list[dict] = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        rows.append({
+            "label": parts[0] if len(parts) > 0 else "",
+            "description": parts[1] if len(parts) > 1 else "",
+            "quantity": parts[2] if len(parts) > 2 else "1",
+            "unit_price": parts[3] if len(parts) > 3 else "0",
+        })
+    return rows
+
+
+def _line_items_editor(current_value: str) -> Div:
+    """Table-based line items editor with live totals, add/delete, paste support."""
+    items = _parse_line_items_display(current_value)
+    if not items:
+        items = [{"label": "", "description": "", "quantity": "1", "unit_price": "0"}]
+
+    def _row(item: dict) -> Tr:
+        return Tr(
+            Td(Input(type="text", cls="form-control form-control-sm li-item", placeholder="Item name", value=item["label"])),
+            Td(Input(type="text", cls="form-control form-control-sm li-desc", placeholder="Description", value=item["description"])),
+            Td(Input(type="text", cls="form-control form-control-sm li-qty", placeholder="Qty", value=item["quantity"]), style="width:80px"),
+            Td(Input(type="text", cls="form-control form-control-sm li-amount", placeholder="Amount", value=item["unit_price"]), style="width:120px"),
+            Td(Button("×", type="button", cls="btn btn-outline-danger btn-sm li-delete"), style="width:40px"),
+        )
+
+    return Div(
+        P("Enter line items below. Use Tab to move between cells. Paste spreadsheet rows with Tab as separator.", cls="admin-module-copy mb-2"),
+        Input(type="hidden", name="line_items", id="line_items", value=current_value),
+        Table(
+            Thead(Tr(Th("Item"), Th("Description"), Th("Qty", style="width:80px"), Th("Amount", style="width:120px"), Th(style="width:40px"))),
+            Tbody(*[_row(item) for item in items]),
+            Tfoot(
+                Tr(
+                    Td(Strong("Total"), colspan="3"),
+                    Td(Strong("0", cls="li-total-value"), id="li-total-cell"),
+                    Td(""),
+                )
+            ),
+            cls="table table-sm table-bordered line-items-table mb-2",
+        ),
+        Div(
+            Button("+ Add Row", type="button", cls="btn btn-sm btn-outline-primary li-add-row"),
+            Span("Paste from spreadsheets or copy existing rows", cls="admin-save-note ms-3"),
+            cls="d-flex align-items-center",
+        ),
+        cls="line-items-editor mt-2",
+    )
+
+
 
 
 def _public_document_url(token: str) -> str:
@@ -92,6 +179,19 @@ def _deal_card(item, *, selected: bool, stage: str, document_kind: str, search: 
     latest = item.latest_document
     latest_label = latest.kind.title() if latest else "Draft"
     latest_status = latest.status.replace("_", " ").title() if latest else "No document yet"
+    copy_link_btn = ""
+    if latest and latest.public_token:
+        doc_url = _public_document_url(latest.public_token)
+        copy_link_btn = Div(
+            Button(
+                "Copy Client Link",
+                type="button",
+                cls="btn admin-install-btn w-100",
+                data_copy_target=doc_url,
+                data_copy_label="Copy Client Link",
+            ),
+            cls="px-3 pb-3",
+        )
     return Card(
         A(
             Div(
@@ -114,6 +214,7 @@ def _deal_card(item, *, selected: bool, stage: str, document_kind: str, search: 
             cls="admin-project-card-body",
             href=href,
         ),
+        copy_link_btn,
         cls="admin-surface-card admin-project-card",
     )
 
@@ -225,6 +326,10 @@ def _document_card(selected, document) -> Div:
             Div(
                 Span("Latest Client Action", cls="admin-field-label"),
                 Strong(latest_response.action.replace("_", " ").title() if latest_response else "No response yet"),
+            ),
+            Div(
+                Span("Last Viewed", cls="admin-field-label"),
+                Strong(get_document_view_time(document.document_id) or "Not yet"),
             ),
             cls="admin-field-grid mt-3",
         ),
@@ -349,6 +454,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
     selected_stage = selected.stage if selected else "lead"
     selected_kind = latest.kind if latest else "proposal"
     selected_status = latest.status if latest else "draft"
+    preview_url = _public_document_url(latest.public_token) if latest and latest.public_token else ""
     accounts = list_payment_accounts()
     return Form(
         Input(type="hidden", name="deal_id", value=selected.deal_id if selected else ""),
@@ -442,14 +548,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         _ai_draft_panel(selected_kind),
         Div(
             P("Financials", cls="admin-form-section-title"),
-            textarea_field(
-                "Line Items",
-                "line_items",
-                selected.line_items_text if selected else "",
-                rows=5,
-                placeholder="One per line: Item | Description | Qty | Amount",
-                help_text="Format: Item | Description | Qty | Amount (e.g. Design | Wireframes | 1 | 50000)",
-            ),
+            _line_items_editor(selected.line_items_text if selected else ""),
             textarea_field("Payment Terms", "payment_terms", selected.payment_terms if selected else "", rows=4, placeholder="Deposit expectations, milestone payments, revision rules, and invoice notes."),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", str(selected.amount_ngn) if selected else "", input_type="number", placeholder="850000"), span=12, md=6),
@@ -469,6 +568,14 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         ),
 
         Div(
+            A(
+                "Preview Client View",
+                href=preview_url,
+                target="_blank",
+                cls="btn admin-install-btn",
+            )
+            if preview_url
+            else Span("Save the deal to generate a preview link", cls="admin-save-note"),
             loading_action_button("Save Deal Draft", endpoint="/deals/save", target="#deal-save-result"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
@@ -538,14 +645,7 @@ def _quick_document_form() -> Form:
         ),
         Div(
             P("Money & Dates", cls="admin-form-section-title"),
-            textarea_field(
-                "Line Items",
-                "line_items",
-                "",
-                rows=4,
-                placeholder="One per line: Item | Description | Qty | Amount",
-                help_text="Leave blank and use Amount if this is a simple one-line invoice.",
-            ),
+            _line_items_editor(""),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", "", input_type="number", placeholder="50000"), span=12, md=6),
                 Col(floating_field("Deposit %", "deposit_percent", "100", input_type="number", placeholder="100"), span=12, md=6, cls="mt-3 mt-md-0"),

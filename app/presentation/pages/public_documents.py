@@ -77,16 +77,10 @@ def _doc_logo_mark(profile) -> Span:
     if not name:
         name = getattr(profile, "full_name", "") or "NA"
     words = [w for w in name.replace("-", " ").split() if w]
-    if len(words) >= 2:
-        f, s = words[0][0].upper(), words[1][0].upper()
-    elif words:
-        token = words[0][:2].upper()
-        f, s = token[0], token[1] if len(token) > 1 else token[0]
-    else:
-        f, s = "N", "A"
+    # Use only first initial for a cleaner, more compact brand mark
+    f = (words[0][0].upper()) if words else "N"
     return Span(
         Span(f, cls="doc-logo-letter"),
-        Span(s, cls="doc-logo-letter doc-logo-letter-alt"),
         cls="doc-logo",
     )
 
@@ -100,8 +94,9 @@ def _brand_bar(profile, kind: str) -> Div:
                 _doc_logo_mark(profile),
                 Div(
                     Span(
-                        (getattr(profile, "site_name", "") or "").replace(" Portfolio", "").strip()
-                        or getattr(profile, "full_name", "") or settings.owner_name,
+                        ((getattr(profile, "site_name", "") or "").replace(" Portfolio", "").strip().split(None, 1)[0]
+                         if (getattr(profile, "site_name", "") or "").replace(" Portfolio", "").strip()
+                         else (getattr(profile, "full_name", "") or settings.owner_name).split(None, 1)[0]),
                         cls="doc-brand-name",
                     ),
                     Span(getattr(profile, "role", "") or "Full-Stack Developer", cls="doc-brand-role"),
