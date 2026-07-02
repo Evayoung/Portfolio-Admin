@@ -172,7 +172,7 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
                     cls="btn admin-module-btn",
                 ),
                 A("Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
-                cls="d-flex flex-wrap gap-2 mt-3",
+                cls="d-flex flex-wrap gap-2 mt-3 mb-3",
             ),
             category_links,
             search_form,

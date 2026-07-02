@@ -2,14 +2,47 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
+from starlette.responses import Response
+
 try:
-    from ..infrastructure.cv_repository import save_cv_profile
+    from ..infrastructure.cv_repository import (
+        save_cv_profile,
+        save_cv_section_certifications,
+        save_cv_section_competencies,
+        save_cv_section_core_skills,
+        save_cv_section_education,
+        save_cv_section_languages,
+        save_cv_section_tool_categories,
+        save_cv_section_work_history,
+    )
+    from ..presentation.page_helpers import toast_fragment
     from ..presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
 except ImportError:
-    from infrastructure.cv_repository import save_cv_profile
+    from infrastructure.cv_repository import (
+        save_cv_profile,
+        save_cv_section_certifications,
+        save_cv_section_competencies,
+        save_cv_section_core_skills,
+        save_cv_section_education,
+        save_cv_section_languages,
+        save_cv_section_tool_categories,
+        save_cv_section_work_history,
+    )
+    from presentation.page_helpers import toast_fragment
     from presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
+
+
+def _section_save_response(result) -> Any:
+    """Return HX-Refresh with toast on success, status alert on failure."""
+    if result.success:
+        return (
+            Response("", status_code=200, headers={"HX-Refresh": "true"}),
+            toast_fragment("Section saved", result.message),
+        )
+    return cv_save_status_fragment("Save not completed", result.message, tone=result.tone)
 
 
 def setup_cv_routes(app: Any) -> None:
@@ -54,5 +87,52 @@ def setup_cv_routes(app: Any) -> None:
             tool_categories=tool_categories,
             languages=languages,
         )
-        title_text = "CV profile saved" if result.success else "Save not completed"
+        if result.success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("CV profile saved", result.message),
+            )
+        title_text = "Save not completed"
         return cv_save_status_fragment(title_text, result.message, tone=result.tone)
+
+    @app.post("/cv/section/core_skills/save")
+    def cv_section_core_skills_save(data: str = "") -> Any:
+        labels = json.loads(data) if data else []
+        result = save_cv_section_core_skills(labels)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/competencies/save")
+    def cv_section_competencies_save(data: str = "") -> Any:
+        labels = json.loads(data) if data else []
+        result = save_cv_section_competencies(labels)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/work_history/save")
+    def cv_section_work_history_save(data: str = "") -> Any:
+        items = json.loads(data) if data else []
+        result = save_cv_section_work_history(items)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/education/save")
+    def cv_section_education_save(data: str = "") -> Any:
+        items = json.loads(data) if data else []
+        result = save_cv_section_education(items)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/certifications/save")
+    def cv_section_certifications_save(data: str = "") -> Any:
+        items = json.loads(data) if data else []
+        result = save_cv_section_certifications(items)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/tools/save")
+    def cv_section_tools_save(data: str = "") -> Any:
+        items = json.loads(data) if data else []
+        result = save_cv_section_tool_categories(items)
+        return _section_save_response(result)
+
+    @app.post("/cv/section/languages/save")
+    def cv_section_languages_save(data: str = "") -> Any:
+        items = json.loads(data) if data else []
+        result = save_cv_section_languages(items)
+        return _section_save_response(result)

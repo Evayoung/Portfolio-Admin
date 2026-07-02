@@ -325,3 +325,23 @@ class AdminLoginResult:
     message: str
     login_email: str
     source: str
+
+
+@dataclass(frozen=True)
+class AiProviderConfig:
+    config_id: str
+    label: str
+    provider_type: str
+    base_url: str
+    model: str
+    api_key: str
+    is_default: bool
+    source: str
+
+
+@dataclass(frozen=True)
+class AiProviderSaveResult:
+    success: bool
+    tone: str
+    message: str
+    source: str

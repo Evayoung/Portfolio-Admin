@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from starlette.responses import Response
+
 try:
     from ..infrastructure.blog_repository import save_blog_post
+    from ..presentation.page_helpers import toast_fragment
     from ..presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
 except ImportError:
     from infrastructure.blog_repository import save_blog_post
+    from presentation.page_helpers import toast_fragment
     from presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
 
 
@@ -42,5 +46,10 @@ def setup_blog_routes(app: Any) -> None:
             tags=tags,
             published=bool(published),
         )
-        title_text = "Blog post saved" if result.success else "Save not completed"
+        if result.success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("Blog post saved", result.message),
+            )
+        title_text = "Save not completed"
         return blog_save_status_fragment(title_text, result.message, tone=result.tone, slug=result.slug or "")

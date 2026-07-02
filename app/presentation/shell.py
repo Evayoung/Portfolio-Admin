@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Small, Span
-from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavItem, SidebarNavbar
+from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem, ToastContainer
 
 from app.config import settings
 from app.infrastructure.settings_repository import get_site_profile
@@ -318,4 +318,5 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         admin_bottom_nav(current),
         admin_mobile_drawer(current),
         admin_install_drawer(profile),
+        ToastContainer(id="toast-container"),
     )

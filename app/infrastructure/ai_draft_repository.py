@@ -9,6 +9,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from app.config import settings
+from app.infrastructure.ai_settings_repository import get_active_provider, get_provider_api_key
 from app.infrastructure.audit_repository import record_audit_event
 
 
@@ -36,13 +37,6 @@ def _check_limit(key: str) -> bool:
     return True
 
 
-def _headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {settings.groq_api_key}",
-        "Content-Type": "application/json",
-    }
-
-
 def _system_prompt() -> str:
     return (
         "You are an internal proposal assistant for a senior full-stack and AI systems portfolio admin. "
@@ -68,13 +62,24 @@ def _user_prompt(*, draft_kind: str, context: dict[str, str]) -> str:
 def generate_document_draft(*, draft_kind: str, context: dict[str, str], actor_email: str = "") -> AiDraftResult:
     if draft_kind not in {"proposal", "quote", "invoice", "payment_terms", "scope"}:
         return AiDraftResult(False, "warning", "Choose a valid AI draft type.")
-    if not settings.groq_enabled:
-        return AiDraftResult(False, "info", "Groq is not configured yet. Add GROQ_API_KEY to enable AI drafting.")
+
+    provider = get_active_provider()
+    if not provider or not provider.api_key:
+        return AiDraftResult(False, "info", "No AI provider is configured. Add one in Settings > AI Provider Settings.")
+
+    # Fetch the raw API key (list masks it)
+    api_key = get_provider_api_key(provider.config_id) if provider.source == "supabase" else (
+        settings.groq_api_key if provider.config_id == "env_groq" else settings.openai_api_key or ""
+    )
+    if not api_key:
+        return AiDraftResult(False, "info", f"API key for '{provider.label}' is not available. Check your provider configuration.")
+
     limit_key = actor_email or "admin"
     if not _check_limit(limit_key):
         return AiDraftResult(False, "warning", "AI drafting is temporarily rate limited. Try again later.")
+
     payload = {
-        "model": settings.groq_model,
+        "model": provider.model,
         "messages": [
             {"role": "system", "content": _system_prompt()},
             {"role": "user", "content": _user_prompt(draft_kind=draft_kind, context=context)},
@@ -84,25 +89,30 @@ def generate_document_draft(*, draft_kind: str, context: dict[str, str], actor_e
     }
     try:
         request = Request(
-            "https://api.groq.com/openai/v1/chat/completions",
+            f"{provider.base_url.rstrip('/')}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
             method="POST",
-            headers=_headers(),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
         )
         with urlopen(request, timeout=35) as response:
             raw = json.loads(response.read().decode("utf-8"))
         content = (((raw.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
         if not content:
-            return AiDraftResult(False, "warning", "Groq returned an empty draft. Try again with more deal context.")
+            return AiDraftResult(False, "warning", "AI returned an empty draft. Try again with more deal context.")
         record_audit_event(
             action="ai_document_draft_generated",
             target_type="client_document",
             actor_email=actor_email,
-            detail=f"{draft_kind} via {settings.groq_model}",
+            detail=f"{draft_kind} via {provider.model} on {provider.label}",
         )
         return AiDraftResult(True, "success", "AI draft generated. Review and edit before saving or sending.", content)
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
-        return AiDraftResult(False, "danger", f"Groq rejected the draft request. {details or exc.reason}")
+        return AiDraftResult(False, "danger", f"AI provider rejected the draft request. {details or exc.reason}")
     except (URLError, TimeoutError, ValueError, KeyError) as exc:
         return AiDraftResult(False, "danger", f"Could not generate the AI draft. {exc}")
+
+

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 from fasthtml.common import A, Button, Div
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, Response
 
 try:
     from ..config import settings
@@ -19,6 +19,7 @@ try:
         save_quick_document,
         update_document_status,
     )
+    from ..presentation.page_helpers import toast_fragment
     from ..presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
 except ImportError:
     from config import settings
@@ -33,6 +34,7 @@ except ImportError:
         save_quick_document,
         update_document_status,
     )
+    from presentation.page_helpers import toast_fragment
     from presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
 
 
@@ -117,7 +119,12 @@ def setup_deal_routes(app: Any) -> None:
             valid_until=valid_until,
             due_date=due_date,
         )
-        title_text = "Deal draft saved" if result.success else "Save not completed"
+        if result.success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("Deal draft saved", result.message),
+            )
+        title_text = "Save not completed"
         return deal_save_status_fragment(title_text, result.message, tone=result.tone)
 
     @app.post("/deals/quick")
@@ -157,26 +164,10 @@ def setup_deal_routes(app: Any) -> None:
             valid_until=valid_until,
             due_date=due_date,
         )
-        title_text = "Quick document created" if result.success else "Quick document not created"
-        actions = ""
         if result.success and result.deal_id:
-            deal = get_deal(result.deal_id)
-            document = next((item for item in deal.documents if item.kind == document_kind), deal.latest_document) if deal else None
-            if document:
-                actions = Div(
-                    A("Open Client Link", href=f"/documents/{document.public_token}", target="_blank", cls="btn admin-module-btn mt-3"),
-                    Button(
-                        "Copy Client Link",
-                        type="button",
-                        cls="btn admin-install-btn mt-3",
-                        data_copy_target=f"{settings.base_url.rstrip('/')}/documents/{document.public_token}",
-                        data_copy_label="Copy Client Link",
-                    ),
-                    A("Download PDF", href=f"/deals/{result.deal_id}/documents/{document.kind}/pdf", target="_blank", cls="btn admin-install-btn mt-3"),
-                    A("Open Deal Record", href=f"/deals?deal_id={result.deal_id}", cls="btn admin-install-btn mt-3"),
-                    cls="d-flex flex-wrap gap-2",
-                )
-        return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone), actions)
+            return Response("", status_code=200, headers={"HX-Redirect": f"/deals?deal_id={result.deal_id}"})
+        title_text = "Quick document not created"
+        return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone))
 
     @app.post("/deals/ai-draft")
     def deals_ai_draft(
@@ -247,8 +238,12 @@ def setup_deal_routes(app: Any) -> None:
             document_kind=document_kind,
             status=status,
         )
-        title_text = "Document updated" if success else "Update not completed"
-        return deal_save_status_fragment(title_text, message, tone=tone)
+        if success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("Document updated", message),
+            )
+        return deal_save_status_fragment("Update not completed", message, tone=tone)
 
     @app.post("/deals/documents/link")
     def deal_document_link_action(
@@ -265,5 +260,10 @@ def setup_deal_routes(app: Any) -> None:
             success, tone, message = resend_document_link(document_id=document_id, document_kind=document_kind)
         else:
             success, tone, message = False, "warning", "Choose a valid document link action."
-        title_text = "Document link updated" if success else "Link action not completed"
+        if success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("Document link updated", message),
+            )
+        title_text = "Link action not completed"
         return deal_save_status_fragment(title_text, message, tone=tone)

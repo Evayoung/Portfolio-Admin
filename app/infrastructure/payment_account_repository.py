@@ -89,6 +89,7 @@ def get_default_payment_account() -> PaymentAccount | None:
 
 def save_payment_account(
     *,
+    account_id: str = "",
     label: str,
     bank_name: str,
     account_name: str,
@@ -100,7 +101,7 @@ def save_payment_account(
         return PaymentAccountSaveResult(False, "warning", "Label, bank name, account name, and account number are required.", "Validation")
     if not service_role_is_configured():
         return PaymentAccountSaveResult(False, "info", "Supabase write path is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable account saving.", "Local seed data")
-    payload = {
+    payload: dict[str, object] = {
         "label": label.strip(),
         "bank_name": bank_name.strip(),
         "account_name": account_name.strip(),
@@ -110,11 +111,27 @@ def save_payment_account(
     }
     try:
         if is_default:
-            _rest_request("PATCH", "payment_accounts", payload={"is_default": False}, prefer="return=minimal")
-        _rest_request("POST", "payment_accounts", payload=payload, prefer="return=representation")
+            _rest_request("PATCH", "payment_accounts", params={"is_default": "eq.true"}, payload={"is_default": False}, prefer="return=minimal")
+        if account_id and account_id != "new":
+            _rest_request("PATCH", "payment_accounts", params={"id": f"eq.{account_id}"}, payload=payload, prefer="return=representation")
+        else:
+            _rest_request("POST", "payment_accounts", payload=payload, prefer="return=representation")
         return PaymentAccountSaveResult(True, "success", "Payment account saved to Supabase.", "Supabase")
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
         return PaymentAccountSaveResult(False, "danger", f"Supabase rejected the payment account save request. {details or exc.reason}", "Supabase")
     except (URLError, TimeoutError, ValueError) as exc:
         return PaymentAccountSaveResult(False, "danger", f"Could not reach Supabase to save the payment account. {exc}", "Supabase")
+
+
+def delete_payment_account(account_id: str) -> PaymentAccountSaveResult:
+    if not service_role_is_configured():
+        return PaymentAccountSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _rest_request("DELETE", "payment_accounts", params={"id": f"eq.{account_id}"})
+        return PaymentAccountSaveResult(True, "success", "Payment account deleted.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return PaymentAccountSaveResult(False, "danger", f"Supabase rejected the delete. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return PaymentAccountSaveResult(False, "danger", f"Could not reach Supabase to delete the account. {exc}", "Supabase")

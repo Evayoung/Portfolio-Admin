@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Modal, Row, SEO
 
 from app.config import settings
 from app.infrastructure.submission_repository import (
@@ -191,6 +191,7 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
         cls="admin-surface-card h-100",
     )
 
+    convert_modal_id = f"convert-modal-{selected.entry_id}" if selected else ""
     detail_panel = (
         Card(
             Div(
@@ -198,7 +199,11 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
                     Div(
                         Span("Selected record", cls="admin-kicker"),
                         H2(selected.name or "Inbox record", cls="admin-section-title mb-2"),
-                        P(selected.message, cls="admin-module-copy mb-0 admin-message-block"),
+                        Div(
+                            Span("Message", cls="admin-field-label mb-1"),
+                            Div(selected.message, cls="admin-message-block admin-stack-line"),
+                            cls="admin-detail-block mt-3",
+                        ),
                         cls="admin-detail-copy",
                     ),
                     Div(
@@ -249,16 +254,36 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
                     H3("Inbox Workflow", cls="admin-subsection-title"),
                     P("Use this panel to keep inquiry status, follow-up notes, and response progress in one place.", cls="admin-module-copy"),
                     Div(
-                        A(
-                            "Convert to Deal",
-                            href=f"/deals?from_submission={selected.entry_id}&from_kind={selected.kind}",
-                            cls="btn admin-install-btn",
-                        ),
+                        Button("Convert to Deal", type="button", cls="btn admin-install-btn",
+                               data_bs_toggle="modal", data_bs_target=f"#{convert_modal_id}"),
                         P("Use this when a serious inquiry is ready to move into proposal, quote, or invoice planning.", cls="admin-module-copy mt-2 mb-0"),
                         cls="admin-detail-block mb-4",
                     ),
                     _editor_form(selected, kind=kind, status=status, search=search),
                     cls="admin-detail-block mt-4",
+                ),
+                # Convert-to-Deal confirmation modal
+                Modal(
+                    Div(
+                        P(f"You are about to convert {selected.name or 'this inquiry'} into a deal. This will open the Deals workspace pre-filled with the sender details.", cls="admin-module-copy"),
+                        Div(
+                            Div(Span("Name", cls="admin-field-label"), Strong(selected.name or "Unknown"), cls="d-flex gap-2"),
+                            Div(Span("Email", cls="admin-field-label"), Strong(selected.email or "Unknown"), cls="d-flex gap-2"),
+                            Div(Span("Subject", cls="admin-field-label"), Strong(selected.subject or "General inquiry"), cls="d-flex gap-2"),
+                            Div(Span("Service", cls="admin-field-label"), Strong(selected.service or "Not specified"), cls="d-flex gap-2"),
+                            cls="admin-field-grid mt-3",
+                        ),
+                        Div(
+                            A("Proceed to Deals", href=f"/deals?from_submission={selected.entry_id}&from_kind={selected.kind}",
+                              cls="btn admin-module-btn"),
+                            Button("Cancel", type="button", cls="btn admin-install-btn", data_bs_dismiss="modal"),
+                            cls="d-flex gap-2 mt-4",
+                        ),
+                    ),
+                    modal_id=convert_modal_id,
+                    title="Convert to Deal",
+                    size="md",
+                    centered=True,
                 ),
                 cls="admin-panel-stack",
             ),

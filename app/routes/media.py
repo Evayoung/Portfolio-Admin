@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 from starlette.datastructures import UploadFile
+from starlette.responses import Response
 
 try:
     from ..infrastructure.media_repository import delete_media_asset, replace_media_asset, update_media_asset, upload_media_asset
@@ -11,6 +12,13 @@ try:
 except ImportError:
     from infrastructure.media_repository import delete_media_asset, replace_media_asset, update_media_asset, upload_media_asset
     from presentation.pages.media import _media_workspace_inner, media_workspace_page
+
+
+def _media_action_response(result, inner_kwargs: dict) -> Any:
+    """Return HX-Refresh on success, workspace inner on failure."""
+    if result.success:
+        return Response("", status_code=200, headers={"HX-Refresh": "true"})
+    return _media_workspace_inner(**inner_kwargs, message=result.message, tone=result.tone, public_url=result.public_url or "")
 
 
 def setup_media_routes(app: Any) -> None:
@@ -43,14 +51,14 @@ def setup_media_routes(app: Any) -> None:
     @app.post("/media/update")
     def media_update(asset_id: str = "", title: str = "", kind: str = "image", alt_text: str = "") -> Any:
         result = update_media_asset(asset_id=asset_id, title=title, kind=kind, alt_text=alt_text)
-        return _media_workspace_inner(kind="all", search="", message=result.message, tone=result.tone, public_url=result.public_url or "")
+        return _media_action_response(result, {"kind": "all", "search": ""})
 
     @app.post("/media/replace")
     def media_replace(asset_id: str = "", asset_file: UploadFile | None = None) -> Any:
         result = replace_media_asset(asset_id=asset_id, asset_file=asset_file)
-        return _media_workspace_inner(kind="all", search="", message=result.message, tone=result.tone, public_url=result.public_url or "")
+        return _media_action_response(result, {"kind": "all", "search": ""})
 
     @app.post("/media/delete")
     def media_delete(asset_id: str = "") -> Any:
         result = delete_media_asset(asset_id=asset_id)
-        return _media_workspace_inner(kind="all", search="", message=result.message, tone=result.tone, public_url="")
+        return _media_action_response(result, {"kind": "all", "search": ""})

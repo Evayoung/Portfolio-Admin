@@ -483,3 +483,182 @@ def save_cv_profile(
         return CvSaveResult(False, "danger", f"Supabase rejected the save request. {details or exc.reason}", "Supabase")
     except (URLError, TimeoutError, ValueError) as exc:
         return CvSaveResult(False, "danger", f"Could not reach Supabase to save the CV profile. {exc}", "Supabase")
+
+
+# ── Per-section save functions (used by modal-based CV editors) ──
+
+
+def save_cv_section_core_skills(labels: list[str]) -> CvSaveResult:
+    """Replace all core skills with the given label list."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_core_skills")
+        payload = [{"label": label.strip(), "sort_order": idx} for idx, label in enumerate(labels, start=1) if label.strip()]
+        if payload:
+            _rest_request("POST", "cv_core_skills", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Core skills saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected core skills save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save core skills. {exc}", "Supabase")
+
+
+def save_cv_section_competencies(labels: list[str]) -> CvSaveResult:
+    """Replace all competencies with the given label list."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_competencies")
+        payload = [{"label": label.strip(), "sort_order": idx} for idx, label in enumerate(labels, start=1) if label.strip()]
+        if payload:
+            _rest_request("POST", "cv_competencies", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Competencies saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected competencies save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save competencies. {exc}", "Supabase")
+
+
+def save_cv_section_work_history(items: list[dict]) -> CvSaveResult:
+    """Replace all work history entries. Each dict: title, organisation, period, location, bullets (list[str])."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_work_history")
+        if items:
+            payload = [
+                {
+                    "title": item.get("title", "").strip(),
+                    "organisation": item.get("organisation", "").strip(),
+                    "period": item.get("period", "").strip(),
+                    "location": item.get("location", "").strip(),
+                    "bullets": [b.strip() for b in item.get("bullets", []) if b.strip()],
+                    "sort_order": idx,
+                }
+                for idx, item in enumerate(items, start=1)
+                if item.get("title", "").strip()
+            ]
+            if payload:
+                _rest_request("POST", "cv_work_history", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Work history saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected work history save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save work history. {exc}", "Supabase")
+
+
+def save_cv_section_education(items: list[dict]) -> CvSaveResult:
+    """Replace all education entries. Each dict: degree, institution, period, note."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_education")
+        if items:
+            payload = [
+                {
+                    "degree": item.get("degree", "").strip(),
+                    "institution": item.get("institution", "").strip(),
+                    "period": item.get("period", "").strip(),
+                    "note": item.get("note", "").strip(),
+                    "sort_order": idx,
+                }
+                for idx, item in enumerate(items, start=1)
+                if item.get("degree", "").strip()
+            ]
+            if payload:
+                _rest_request("POST", "cv_education", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Education saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected education save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save education. {exc}", "Supabase")
+
+
+def save_cv_section_certifications(items: list[dict]) -> CvSaveResult:
+    """Replace all certification entries. Each dict: name, issuer, year, credential_url."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_certifications")
+        if items:
+            payload = [
+                {
+                    "name": item.get("name", "").strip(),
+                    "issuer": item.get("issuer", "").strip(),
+                    "year": item.get("year", "").strip(),
+                    "credential_url": item.get("credential_url", "").strip(),
+                    "sort_order": idx,
+                }
+                for idx, item in enumerate(items, start=1)
+                if item.get("name", "").strip()
+            ]
+            if payload:
+                _rest_request("POST", "cv_certifications", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Certifications saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected certifications save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save certifications. {exc}", "Supabase")
+
+
+def save_cv_section_tool_categories(items: list[dict]) -> CvSaveResult:
+    """Replace all tool-category entries. Each dict: label, tools (list[str])."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_tool_categories")
+        if items:
+            payload = [
+                {
+                    "label": item.get("label", "").strip(),
+                    "tools": [t.strip() for t in item.get("tools", []) if t.strip()],
+                    "sort_order": idx,
+                }
+                for idx, item in enumerate(items, start=1)
+                if item.get("label", "").strip()
+            ]
+            if payload:
+                _rest_request("POST", "cv_tool_categories", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Tools & technologies saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected tools save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save tools. {exc}", "Supabase")
+
+
+def save_cv_section_languages(items: list[dict]) -> CvSaveResult:
+    """Replace all language entries. Each dict: label, proficiency_label, proficiency_score."""
+    if not service_role_is_configured():
+        return CvSaveResult(False, "info", "Supabase write path not configured.", "Local seed data")
+    try:
+        _delete_all_rows("cv_languages")
+        payload = []
+        for idx, item in enumerate(items, start=1):
+            label = item.get("label", "").strip()
+            if not label:
+                continue
+            try:
+                score = int(item.get("proficiency_score", 0))
+            except (ValueError, TypeError):
+                score = 0
+            payload.append({
+                "label": label,
+                "proficiency_label": item.get("proficiency_label", "").strip(),
+                "proficiency_score": max(0, min(100, score)),
+                "sort_order": idx,
+            })
+        if payload:
+            _rest_request("POST", "cv_languages", payload=payload, use_service_role=True, prefer="return=minimal")
+        return CvSaveResult(True, "success", "Languages saved.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return CvSaveResult(False, "danger", f"Supabase rejected languages save. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return CvSaveResult(False, "danger", f"Could not save languages. {exc}", "Supabase")

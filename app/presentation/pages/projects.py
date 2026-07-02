@@ -5,7 +5,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
-from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Row, SEO
+from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Modal, Row, SEO
 
 from app.config import settings
 from app.infrastructure.project_repository import (
@@ -53,7 +53,7 @@ def _project_card(project, *, selected: bool, category: str, featured_only: bool
                     Span(project.slug, cls="admin-project-meta"),
                     Span(f"Complexity {project.complexity}%", cls="admin-project-meta"),
                     cls="d-flex justify-content-between flex-wrap gap-2 mt-3",
-                ),
+                ), 
                 cls="admin-project-card-body",
             ),
             href=href,
@@ -103,12 +103,12 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
                 ],
                 name="category",
                 cls="form-select admin-form-control",
+                id="project-category-select",
             ),
-            floating_field(
-                "New Category",
-                "category_custom",
-                "",
-                placeholder="Use this to create or override a category",
+            Div(
+                Button("+ New Category", type="button", cls="btn admin-install-btn",
+                       data_bs_toggle="modal", data_bs_target="#category-create-modal"),
+                cls="mt-2",
             ),
             cls="admin-form-group mt-3",
         ),
@@ -158,6 +158,28 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
         hx_target="#project-save-result",
         hx_swap="innerHTML",
         cls="admin-project-form",
+    )
+
+
+def _category_create_modal() -> Modal:
+    return Modal(
+        Form(
+            floating_field("Category Name", "new_category_name", "", placeholder="e.g. Data Science"),
+            Div(
+                Button("Create Category", type="submit", cls="btn admin-module-btn"),
+                Button("Cancel", type="button", cls="btn admin-install-btn", data_bs_dismiss="modal"),
+                cls="d-flex gap-2 justify-content-end mt-3",
+            ),
+            hx_post="/projects/category/create",
+            hx_target="#project-category-select",
+            hx_swap="outerHTML",
+            cls="admin-settings-form",
+            **{"hx-on::after-request": "if(event.detail.successful){let m=document.getElementById('category-create-modal');let btn=m.querySelector('[data-bs-dismiss=modal]');if(btn)btn.click();}"},
+        ),
+        modal_id="category-create-modal",
+        title="New Category",
+        size="sm",
+        centered=True,
     )
 
 
@@ -214,7 +236,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                     cls="btn admin-module-btn",
                 ),
                 A("Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
-                cls="d-flex flex-wrap gap-2 mt-3",
+                cls="d-flex flex-wrap gap-2 mt-3 mb-3",
             ),
             category_links,
             Div(featured_toggle, cls="mt-3"),
@@ -265,12 +287,14 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                     H3("Project Editor", cls="admin-subsection-title"),
                     P("Fill in the details, then save. The response will give you a direct link back to the saved record.", cls="admin-module-copy"),
                     _editor_form(None, category=category, featured_only=featured_only, search=search),
+                    _category_create_modal(),
                     cls="admin-detail-block mt-4",
                 ),
                 cls="admin-panel-stack",
             ),
             cls="admin-surface-card h-100",
         )
+
     else:
         detail_panel = (
             Card(
@@ -336,6 +360,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                             cls="admin-module-copy",
                         ),
                         _editor_form(selected, category=category, featured_only=featured_only, search=search),
+                        _category_create_modal(),
                         cls="admin-detail-block mt-4",
                     ),
                     cls="admin-panel-stack",

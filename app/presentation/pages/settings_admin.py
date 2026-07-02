@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from fasthtml.common import Div, Form, H2, H3, Input, P, Span, Strong
-from faststrap import Badge, Card, Col, Row, SEO
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
+from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
+from app.infrastructure.ai_settings_repository import PROVIDER_PRESETS, get_active_provider, get_ai_providers, save_ai_provider, delete_ai_provider
 from app.infrastructure.auth_repository import get_admin_access_profile
 from app.infrastructure.github_repository import get_github_stats
-from app.infrastructure.payment_account_repository import list_payment_accounts
+from app.infrastructure.payment_account_repository import delete_payment_account, list_payment_accounts, save_payment_account
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
 from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, summary_card, textarea_field
@@ -31,10 +32,197 @@ def _health_row(label: str, ready: bool, note: str) -> Div:
     )
 
 
+def _ai_settings_card() -> Card:
+    """Return the AI settings card for HTMX partial swaps (set-default / delete)."""
+    ai_providers = get_ai_providers()
+    active_provider = next((p for p in ai_providers if p.is_default), ai_providers[0] if ai_providers else None)
+
+    provider_options_html = [
+        Option(label, value=ptype)
+        for ptype, (label, _) in PROVIDER_PRESETS.items()
+    ]
+
+    provider_rows = []
+    for p in ai_providers:
+        row_actions = []
+        if not p.is_default:
+            row_actions.append(
+                A("Set Default", href=f"/settings/ai-set-default?id={p.config_id}",
+                  cls="btn admin-install-btn btn-sm",
+                  hx_post=f"/settings/ai-set-default?id={p.config_id}",
+                  hx_target="#ai-settings-card", hx_swap="outerHTML"),
+            )
+        if p.source != "env":
+            row_actions.append(
+                A("Delete", href=f"/settings/ai-delete?id={p.config_id}",
+                  cls="btn btn-outline-danger btn-sm",
+                  hx_post=f"/settings/ai-delete?id={p.config_id}",
+                  hx_target="#ai-settings-card", hx_swap="outerHTML",
+                  hx_confirm="Delete this AI provider? This cannot be undone."),
+            )
+        provider_rows.append(
+            Div(
+                Div(
+                    Div(Span("Label", cls="admin-field-label"), Strong(p.label)),
+                    Div(Span("Type", cls="admin-field-label"), Strong(p.provider_type.title())),
+                    Div(Span("Model", cls="admin-field-label"), Strong(p.model)),
+                    Div(Span("Base URL", cls="admin-field-label"), Strong(p.base_url)),
+                    Div(Span("API Key", cls="admin-field-label"), Strong(p.api_key if p.api_key else "Not set")),
+                    Div(Span("Source", cls="admin-field-label"), Strong(p.source.title())),
+                    cls="admin-field-grid",
+                ),
+                Div(
+                    Badge("Default", cls="text-bg-success admin-project-flag me-2") if p.is_default else "",
+                    *row_actions,
+                    cls="mt-2 d-flex gap-2 flex-wrap",
+                ),
+                cls="admin-detail-block mb-3",
+            )
+        )
+
+    ai_provider_form = Form(
+        Input(type="hidden", name="config_id", value="new"),
+        Row(
+            Col(floating_field("Provider Label", "label", "", placeholder="e.g. My Groq Key"), span=12, md=6),
+            Col(
+                Div(
+                    Label("Provider Type", cls="admin-form-label"),
+                    Select(
+                        *provider_options_html,
+                        name="provider_type",
+                        cls="form-select admin-form-control",
+                        id="ai-provider-type",
+                    ),
+                    cls="admin-form-group",
+                ),
+                span=12, md=6, cls="mt-3 mt-md-0",
+            ),
+            cls="g-3",
+        ),
+        Row(
+            Col(floating_field("Base URL", "base_url", "", placeholder="https://api.groq.com/openai/v1"), span=12, md=6),
+            Col(floating_field("Model", "model", "", placeholder="llama-3.3-70b-versatile"), span=12, md=6, cls="mt-3 mt-md-0"),
+            cls="g-3 mt-1",
+        ),
+        floating_field("API Key", "api_key", "", input_type="password", placeholder="sk-..."),
+        Div(
+            Span("Set as default provider", cls="admin-check-label"),
+            Input(type="checkbox", name="set_default", value="1", cls="form-check-input admin-check-input"),
+            cls="admin-check-row mt-2",
+        ),
+        Div(
+            loading_action_button("Save AI Provider", endpoint="/settings/ai-save", target="#ai-save-result"),
+            Span(
+                "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
+                cls="admin-save-note",
+            ),
+            cls="admin-form-actions mt-4",
+        ),
+        Div(id="ai-save-result", cls="mt-3"),
+        action="/settings/ai-save",
+        method="post",
+        hx_post="/settings/ai-save",
+        hx_target="#ai-save-result",
+        hx_swap="innerHTML",
+        cls="admin-settings-form",
+    )
+
+    return Card(
+        Div(
+            H3("AI Provider Settings", cls="admin-subsection-title"),
+            P("Manage AI providers for drafting proposals, quotes, invoices, and more. Add multiple providers and choose the default.", cls="admin-module-copy"),
+            Div(
+                Div(Span("Active Provider", cls="admin-field-label"), Strong(active_provider.label if active_provider else "None configured")),
+                Div(Span("Active Model", cls="admin-field-label"), Strong(active_provider.model if active_provider else "N/A")),
+                Div(Span("Active Endpoint", cls="admin-field-label"), Strong(active_provider.base_url if active_provider else "N/A")),
+                cls="admin-field-grid admin-detail-block mb-4",
+            ) if active_provider else "",
+            Div(H3("Saved Providers", cls="admin-subsection-title h6"), *provider_rows) if provider_rows else EmptyState(icon="cpu", title="No AI providers configured", description="Add your first provider below to enable AI-powered drafting.", cls="py-3"),
+            Div(H3("Add / Edit Provider", cls="admin-subsection-title"), ai_provider_form, cls="mt-4"),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+        id="ai-settings-card",
+    )
+
+
+def _account_form(account=None) -> Form:
+    """Return the payment account form, pre-filled if editing."""
+    aid = account.account_id if account else ""
+    return Form(
+        Input(type="hidden", name="account_id", value=aid),
+        Row(
+            Col(floating_field("Account Label", "label", account.label if account else "", placeholder="Primary business account", required=True), span=12, md=6),
+            Col(floating_field("Bank Name", "bank_name", account.bank_name if account else "", placeholder="Access Bank", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+            cls="g-3",
+        ),
+        Row(
+            Col(floating_field("Account Name", "account_name", account.account_name if account else "", placeholder="Olorundare Micheal", required=True), span=12, md=6),
+            Col(floating_field("Account Number", "account_number", account.account_number if account else "", placeholder="0123456789", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+            cls="g-3 mt-1",
+        ),
+        textarea_field("Internal Note", "note", account.note if account else "", rows=3, placeholder="Use this account for deposits, final invoices, USD transfers, or specific client types."),
+        Div(
+            Span("Mark as default", cls="admin-check-label"),
+            Input(type="checkbox", name="is_default", value="1", cls="form-check-input admin-check-input", checked=(account.is_default if account else False)),
+            cls="admin-check-row mt-2",
+        ),
+        Div(
+            loading_action_button("Save Payment Account", endpoint="/settings/accounts", target="#accounts-section"),
+            Span(
+                "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
+                cls="admin-save-note",
+            ),
+            cls="admin-form-actions mt-4",
+        ),
+        action="/settings/accounts",
+        method="post",
+        hx_post="/settings/accounts",
+        hx_target="#accounts-section",
+        hx_swap="outerHTML",
+        cls="admin-settings-form",
+    )
+
+
+def _accounts_panel(edit_account=None) -> Card:
+    """Return the payment accounts card for HTMX partial swaps."""
+    accounts = list_payment_accounts()
+    account_rows = [
+        Div(
+            Div(Span(account.label, cls="admin-field-label"), Strong(account.bank_name)),
+            Div(Span("Account Name", cls="admin-field-label"), Strong(account.account_name)),
+            Div(Span("Account Number", cls="admin-field-label"), Strong(account.account_number)),
+            Div(Span("Default", cls="admin-field-label"), Strong("Yes" if account.is_default else "No")),
+            Div(
+                Span("Edit", cls="btn admin-install-btn btn-sm",
+                     hx_post=f"/settings/accounts/edit?id={account.account_id}",
+                     hx_target="#accounts-section", hx_swap="outerHTML"),
+                Span("Delete", cls="btn btn-outline-danger btn-sm",
+                     hx_post=f"/settings/accounts/delete?id={account.account_id}",
+                     hx_target="#accounts-section", hx_swap="outerHTML",
+                     hx_confirm="Delete this payment account? This cannot be undone."),
+                cls="d-flex gap-2 mt-2",
+            ),
+            cls="admin-field-grid admin-detail-block mb-3",
+        )
+        for account in accounts
+    ]
+    return Card(
+        Div(
+            H3("Payment Accounts", cls="admin-subsection-title"),
+            P("Saved accounts become available when drafting invoice links and PDF exports, so you can choose the receiving account per client workflow.", cls="admin-module-copy"),
+            Div(*account_rows, cls="mb-4") if account_rows else "",
+            Div(H3("Add / Edit Account", cls="admin-subsection-title"), _account_form(edit_account), cls="mt-4"),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card h-100",
+        id="accounts-section",
+    )
+
+
 def settings_workspace_page() -> tuple:
     profile = get_site_profile()
     access = get_admin_access_profile()
-    accounts = list_payment_accounts()
     github = get_github_stats()
     identity_panel = Card(
         Div(
@@ -182,62 +370,7 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
-    account_form = Form(
-        Row(
-            Col(floating_field("Account Label", "label", "", placeholder="Primary business account", required=True), span=12, md=6),
-            Col(floating_field("Bank Name", "bank_name", "", placeholder="Access Bank", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3",
-        ),
-        Row(
-            Col(floating_field("Account Name", "account_name", "", placeholder="Olorundare Micheal", required=True), span=12, md=6),
-            Col(floating_field("Account Number", "account_number", "", placeholder="0123456789", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3 mt-1",
-        ),
-        textarea_field("Internal Note", "note", "", rows=3, placeholder="Use this account for deposits, final invoices, USD transfers, or specific client types."),
-        Div(
-            Span("Mark as default", cls="admin-check-label"),
-            Input(type="checkbox", name="is_default", value="1", cls="form-check-input admin-check-input"),
-            cls="admin-check-row mt-2",
-        ),
-        Div(
-            loading_action_button("Save Payment Account", endpoint="/settings/accounts", target="#account-save-result"),
-            Span(
-                "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
-                cls="admin-save-note",
-            ),
-            cls="admin-form-actions mt-4",
-        ),
-        Div(id="account-save-result", cls="mt-3"),
-        action="/settings/accounts",
-        method="post",
-        hx_post="/settings/accounts",
-        hx_target="#account-save-result",
-        hx_swap="innerHTML",
-        cls="admin-settings-form",
-    )
-
-    account_panel = Card(
-        Div(
-            H3("Payment Accounts", cls="admin-subsection-title"),
-            P("Saved accounts become available when drafting invoice links and PDF exports, so you can choose the receiving account per client workflow.", cls="admin-module-copy"),
-            Div(
-                *[
-                    Div(
-                        Div(Span(account.label, cls="admin-field-label"), Strong(account.bank_name)),
-                        Div(Span("Account Name", cls="admin-field-label"), Strong(account.account_name)),
-                        Div(Span("Account Number", cls="admin-field-label"), Strong(account.account_number)),
-                        Div(Span("Default", cls="admin-field-label"), Strong("Yes" if account.is_default else "No")),
-                        cls="admin-field-grid admin-detail-block mb-3",
-                    )
-                    for account in accounts
-                ],
-                cls="mb-4",
-            ),
-            account_form,
-            cls="admin-panel-stack",
-        ),
-        cls="admin-surface-card h-100",
-    )
+    account_panel = _accounts_panel()
 
     github_card = Card(
         Div(
@@ -260,27 +393,9 @@ def settings_workspace_page() -> tuple:
         cls="admin-surface-card h-100",
     )
 
-    groq_card = Card(
-        Div(
-            H3("Groq AI Configuration", cls="admin-subsection-title"),
-            P("AI drafting uses Groq's LLM to help generate proposal, quote, invoice, and payment text from deal context.", cls="admin-module-copy"),
-            Div(
-                Div(Span("Model", cls="admin-field-label"), Strong(settings.groq_model)),
-                Div(Span("API Key", cls="admin-field-label"), Strong("Configured ✓" if settings.groq_enabled else "Not set — add GROQ_API_KEY")),
-                Div(Span("Status", cls="admin-field-label"), Strong("Ready" if settings.groq_enabled else "Unavailable")),
-                Div(Span("Draft types", cls="admin-field-label"), Strong("Proposal, Quote, Invoice, Scope, Payment Terms")),
-                cls="admin-field-grid admin-detail-block mb-4",
-            ),
-            P(
-                "The AI draft feature is available inside the Deal Studio editor. Select a draft type and click Generate AI Draft. "
-                "Each draft is reviewed before saving. Rate-limited to 12 drafts per hour per user." if settings.groq_enabled
-                else "Add GROQ_API_KEY to your environment to enable AI-powered drafting.",
-                cls="admin-module-copy mb-0",
-            ),
-            cls="admin-panel-stack",
-        ),
-        cls="admin-surface-card h-100",
-    )
+    ai_card = _ai_settings_card()
+
+    active_provider = get_active_provider()
 
     production_card = Card(
         Div(
@@ -290,7 +405,7 @@ def settings_workspace_page() -> tuple:
                 _health_row("Supabase Read", supabase_is_configured(), "Requires SUPABASE_URL and SUPABASE_ANON_KEY."),
                 _health_row("Supabase Write", service_role_is_configured(), "Requires SUPABASE_SERVICE_ROLE_KEY for admin saves and uploads."),
                 _health_row("Email Sending", settings.email_enabled, "Requires RESEND_API_KEY plus a valid sender domain when email actions are added."),
-                _health_row("Groq Drafting", settings.groq_enabled, "Requires GROQ_API_KEY for internal proposal, quote, and invoice drafts."),
+                _health_row("AI Drafting", bool(active_provider and active_provider.api_key), "Requires an AI provider with a valid API key configured in AI Provider Settings above."),
                 _health_row("Public Base URL", settings.base_url.startswith("https://"), "Use the deployed https admin URL so copied document links are production-safe."),
                 _health_row("GitHub Pulse", bool(settings.github_access_token), "Optional, but improves GitHub stats reliability and rate limits."),
                 cls="admin-settings-stack",
@@ -319,7 +434,7 @@ def settings_workspace_page() -> tuple:
                     # Identity panel — reference only; hidden on mobile to prioritise the edit forms
                     Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
-                        Div(editor_panel, access_panel, account_panel, groq_card, production_card, github_card, cls="admin-settings-stack"),
+                        Div(editor_panel, access_panel, account_panel, ai_card, production_card, github_card, cls="admin-settings-stack"),
                         span=12,
                         lg=7,
                     ),

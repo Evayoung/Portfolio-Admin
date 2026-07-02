@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Modal, Row, SEO
 
 from app.config import settings
 from app.infrastructure.media_repository import get_media_workspace_summary, list_media_assets
@@ -46,9 +46,98 @@ def _kind_options() -> list[tuple[str, str]]:
     ]
 
 
-def _asset_card(asset) -> Card:
+def _asset_edit_modal(asset) -> Modal:
+    mid = f"edit-{asset.asset_id}"
+    return Modal(
+        Form(
+            Input(type="hidden", name="asset_id", value=asset.asset_id),
+            floating_field("Asset Title", "title", asset.title, placeholder="Asset title", required=True),
+            Div(
+                Label("Asset Type", cls="admin-form-label"),
+                toggle_pill_group("kind", _kind_options(), selected_value=asset.kind),
+                cls="admin-form-group mt-3",
+            ),
+            floating_field("Alt Text / Notes", "alt_text", asset.alt_text, placeholder="Describe usage or accessibility text"),
+            Div(
+                loading_action_button("Save Metadata", endpoint="/media/update", target=f"#{mid}-status", button_cls="btn admin-install-btn"),
+                cls="admin-form-actions mt-3",
+            ),
+            Div(id=f"{mid}-status", cls="mt-2"),
+            action="/media/update",
+            method="post",
+            hx_post="/media/update",
+            hx_target=f"#{mid}-status",
+            hx_swap="innerHTML",
+            cls="admin-settings-form",
+        ),
+        modal_id=mid,
+        title=f"Edit: {asset.title}",
+        size="lg",
+        centered=True,
+    )
+
+
+def _asset_replace_modal(asset) -> Modal:
+    mid = f"replace-{asset.asset_id}"
+    return Modal(
+        Form(
+            Input(type="hidden", name="asset_id", value=asset.asset_id),
+            Label("Replacement File", cls="admin-form-label"),
+            Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control"),
+            P("Upload a new file to replace the existing asset. The public URL stays the same.", cls="admin-module-copy mt-2 mb-0"),
+            Div(
+                loading_action_button("Replace File", endpoint="/media/replace", target=f"#{mid}-status", button_cls="btn admin-install-btn"),
+                cls="admin-form-actions mt-3",
+            ),
+            Div(id=f"{mid}-status", cls="mt-2"),
+            action="/media/replace",
+            method="post",
+            hx_post="/media/replace",
+            hx_target=f"#{mid}-status",
+            hx_swap="innerHTML",
+            enctype="multipart/form-data",
+            cls="admin-settings-form",
+        ),
+        modal_id=mid,
+        title=f"Replace: {asset.title}",
+        size="lg",
+        centered=True,
+    )
+
+
+def _asset_delete_modal(asset) -> Modal:
+    mid = f"delete-{asset.asset_id}"
+    return Modal(
+        Form(
+            Input(type="hidden", name="asset_id", value=asset.asset_id),
+            P(f"Are you sure you want to delete \"{asset.title}\"? This removes the asset record and its storage object permanently.", cls="admin-module-copy"),
+            Div(
+                loading_action_button("Delete Asset", endpoint="/media/delete", target=f"#{mid}-status", button_cls="btn btn-outline-danger"),
+                cls="admin-form-actions mt-3",
+            ),
+            Div(id=f"{mid}-status", cls="mt-2"),
+            action="/media/delete",
+            method="post",
+            hx_post="/media/delete",
+            hx_target=f"#{mid}-status",
+            hx_swap="innerHTML",
+            hx_confirm="",
+            cls="admin-settings-form",
+        ),
+        modal_id=mid,
+        title=f"Delete: {asset.title}",
+        size="md",
+        centered=True,
+    )
+
+
+def _asset_card(asset, *, modals: list) -> Card:
     size_kb = max(1, round(asset.size_bytes / 1024))
     is_image = (asset.content_type or "").startswith("image/")
+    # Collect modals for this asset
+    modals.append(_asset_edit_modal(asset))
+    modals.append(_asset_replace_modal(asset))
+    modals.append(_asset_delete_modal(asset))
     return Card(
         Div(
             Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb") if is_image and asset.public_url else "",
@@ -67,55 +156,10 @@ def _asset_card(asset) -> Card:
             Div(
                 A("Open Asset", href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-install-btn"),
                 Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=asset.public_url, data_copy_label="Copy URL"),
+                Button("Edit", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#edit-{asset.asset_id}"),
+                Button("Replace", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#replace-{asset.asset_id}"),
+                Button("Delete", type="button", cls="btn btn-outline-danger", data_bs_toggle="modal", data_bs_target=f"#delete-{asset.asset_id}"),
                 cls="d-flex flex-wrap gap-2 mt-3",
-            ),
-            Form(
-                Input(type="hidden", name="asset_id", value=asset.asset_id),
-                floating_field("Asset Title", "title", asset.title, placeholder="Asset title", required=True),
-                Div(
-                    Label("Asset Type", cls="admin-form-label"),
-                    toggle_pill_group("kind", _kind_options(), selected_value=asset.kind),
-                    cls="admin-form-group mt-3",
-                ),
-                floating_field("Alt Text / Notes", "alt_text", asset.alt_text, placeholder="Describe usage or accessibility text"),
-                Div(
-                    loading_action_button("Save Metadata", endpoint="/media/update", target="#media-workspace-section", button_cls="btn admin-install-btn"),
-                    cls="admin-form-actions mt-3",
-                ),
-                action="/media/update",
-                method="post",
-                hx_post="/media/update",
-                hx_target="#media-workspace-section",
-                hx_swap="innerHTML",
-                cls="admin-settings-form mt-4",
-            ),
-            Form(
-                Input(type="hidden", name="asset_id", value=asset.asset_id),
-                Label("Replacement File", cls="admin-form-label"),
-                Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control"),
-                Div(
-                    loading_action_button("Replace File", endpoint="/media/replace", target="#media-workspace-section", button_cls="btn admin-install-btn"),
-                    cls="admin-form-actions mt-3",
-                ),
-                action="/media/replace",
-                method="post",
-                hx_post="/media/replace",
-                hx_target="#media-workspace-section",
-                hx_swap="innerHTML",
-                enctype="multipart/form-data",
-                cls="admin-settings-form mt-4",
-            ),
-            Form(
-                Input(type="hidden", name="asset_id", value=asset.asset_id),
-                P("Delete removes the asset record and its storage object.", cls="admin-module-copy mt-3 mb-2"),
-                loading_action_button("Delete Asset", endpoint="/media/delete", target="#media-workspace-section", button_cls="btn btn-outline-danger"),
-                action="/media/delete",
-                method="post",
-                hx_post="/media/delete",
-                hx_target="#media-workspace-section",
-                hx_swap="innerHTML",
-                hx_confirm="Delete this asset permanently?",
-                cls="admin-settings-form mt-3",
             ),
             cls="admin-project-card-body",
         ),
@@ -136,7 +180,11 @@ def _upload_form(*, kind: str, search: str) -> Form:
         floating_field("Alt Text / Notes", "alt_text", "", placeholder="Describe the image or how the file should be used"),
         Div(
             Label("Asset File", cls="admin-form-label"),
-            Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control"),
+            Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control", data_preview_target="upload-preview-img"),
+            Div(
+                Img(src="", alt="Upload preview", cls="img-fluid mt-2 d-none rounded", id="upload-preview-img", style="max-height:200px;object-fit:contain;"),
+                cls="text-center",
+            ),
             P("Uploads go to Supabase Storage and return a reusable public URL for projects, blog posts, and documents.", cls="admin-module-copy mt-2 mb-0"),
             cls="admin-form-group mt-3",
         ),
@@ -180,6 +228,8 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
         form_cls="admin-search-form admin-filter-bar mt-3",
     )
 
+    modals: list[Modal] = []  # Collect asset modals
+
     library_panel = Card(
         Div(
             Div(
@@ -191,7 +241,7 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
             search_form,
             Row(
                 *[
-                    Col(_asset_card(asset), span=12, md=6, xl=4)
+                    Col(_asset_card(asset, modals=modals), span=12, md=6, xl=4)
                     for asset in assets
                 ],
                 cls="g-4 mt-1",
@@ -203,6 +253,7 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
                 description="Upload your first reusable media file or adjust the filter.",
                 cls="py-5",
             ),
+            *modals,  # Render modals after the grid
             cls="admin-panel-stack",
         ),
         cls="admin-surface-card h-100",

@@ -271,6 +271,76 @@ function initLineItemsEditor() {
   });
 }
 
+/* ── CV Section modal row management ──────────────────────── */
+
+function addCvItem(containerId, templateId) {
+  const container = document.getElementById(containerId);
+  const template = document.getElementById(templateId);
+  if (!container || !template) return;
+  const clone = template.content.cloneNode(true);
+  container.appendChild(clone);
+}
+
+function removeCvItem(btn) {
+  const row = btn.closest('[data-item-row]');
+  if (row) row.remove();
+}
+
+/* ── HTMX config hook: serialise CV section items before POST ── */
+
+document.addEventListener('htmx:configRequest', function (evt) {
+  const elt = evt.detail.elt;
+  const form = elt.matches('.cv-section-form') ? elt : elt.closest('.cv-section-form');
+  if (!form) return;
+  const container = form.querySelector('[data-items-container]');
+  const dataField = form.querySelector('[name="data"]');
+  if (!container || !dataField) return;
+  const items = [];
+  container.querySelectorAll('[data-item-row]').forEach(function (row) {
+    const item = {};
+    row.querySelectorAll('[data-field]').forEach(function (input) {
+      item[input.dataset.field] = input.value;
+    });
+    items.push(item);
+  });
+  dataField.value = JSON.stringify(items);
+});
+
+/* ── Image upload preview ─────────────────────────────────── */
+
+function initImagePreview() {
+  document.addEventListener('change', function (e) {
+    const input = e.target.closest('[data-preview-target]');
+    if (!input || !input.files || !input.files[0]) return;
+    const previewId = input.dataset.previewTarget;
+    const img = document.getElementById(previewId);
+    if (!img) return;
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      img.src = ev.target.result;
+      img.classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── HTMX OOB Toast auto-init ────────────────────────────── */
+
+function initToasts() {
+  document.addEventListener('htmx:afterSwap', function () {
+    if (!window.bootstrap) return;
+    document.querySelectorAll('.toast:not([data-fs-toast-ready])').forEach(function (el) {
+      el.setAttribute('data-fs-toast-ready', 'true');
+      try {
+        var toast = new bootstrap.Toast(el);
+        toast.show();
+      } catch (_) { /* silently skip */ }
+    });
+  });
+}
+
 /* ── DOMContentLoaded init ───────────────────────────────── */
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -296,4 +366,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Line Items Editor
   initLineItemsEditor();
+
+  // Image upload preview
+  initImagePreview();
+
+  // HTMX OOB toast auto-init
+  initToasts();
 });

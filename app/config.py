@@ -25,7 +25,7 @@ class Settings:
     session_cookie: str = "neo_admin_session"
     secret_key: str = os.getenv("NEO_ADMIN_SECRET_KEY", "neo-admin-local-dev-secret")
     admin_login_email: str = os.getenv("NEO_ADMIN_LOGIN_EMAIL") or "meshelleva@gmail.com"
-    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD") or "Password123!"
+    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD") or "evayoung@33"
     base_url: str = os.getenv("NEO_ADMIN_BASE_URL", "http://127.0.0.1:5063")
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")
@@ -43,6 +43,8 @@ class Settings:
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     groq_enabled: bool = bool(os.getenv("GROQ_API_KEY", ""))
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o")
 
 
 settings = Settings()
