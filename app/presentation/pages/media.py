@@ -86,7 +86,8 @@ def _asset_replace_modal(asset) -> Modal:
             Input(type="file", name="asset_file", required=True, cls="form-control admin-form-control"),
             P("Upload a new file to replace the existing asset. The public URL stays the same.", cls="admin-module-copy mt-2 mb-0"),
             Div(
-                loading_action_button("Replace File", endpoint="/media/replace", target=f"#{mid}-status", button_cls="btn admin-install-btn"),
+                Button("Replace File", type="submit", cls="btn admin-install-btn"),
+                Span(cls="spinner-border spinner-border-sm htmx-indicator ms-2", id=f"{mid}-spinner"),
                 cls="admin-form-actions mt-3",
             ),
             Div(id=f"{mid}-status", cls="mt-2"),
@@ -95,6 +96,7 @@ def _asset_replace_modal(asset) -> Modal:
             hx_post="/media/replace",
             hx_target=f"#{mid}-status",
             hx_swap="innerHTML",
+            hx_indicator=f"#{mid}-spinner",
             enctype="multipart/form-data",
             cls="admin-settings-form",
         ),
@@ -189,7 +191,8 @@ def _upload_form(*, kind: str, search: str) -> Form:
             cls="admin-form-group mt-3",
         ),
         Div(
-            loading_action_button("Upload Media", endpoint="/media/upload", target="#media-workspace-section", button_cls="btn admin-module-btn"),
+            Button("Upload Media", type="submit", cls="btn admin-module-btn"),
+            Span(cls="spinner-border spinner-border-sm htmx-indicator ms-2", id="upload-spinner"),
             Span(
                 "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable uploads",
                 cls="admin-save-note",
@@ -201,6 +204,7 @@ def _upload_form(*, kind: str, search: str) -> Form:
         hx_post="/media/upload",
         hx_target="#media-workspace-section",
         hx_swap="innerHTML",
+        hx_indicator="#upload-spinner",
         enctype="multipart/form-data",
         cls="admin-settings-form",
     )
