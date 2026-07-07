@@ -194,6 +194,7 @@ class AdminDeal:
     line_items_text: str
     exclusions_text: str
     closing_note: str
+    sections_json: str
     amount_ngn: int
     deposit_percent: int
     source: str

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -275,6 +276,30 @@ def _bullet_card(lines: list[str], styles: dict[str, ParagraphStyle], *, width: 
     return _body_card(items, width=width)
 
 
+def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> list:
+    """Build PDF elements from sections_json — each section rendered as banner + body."""
+    try:
+        sections = json.loads(deal.sections_json) if deal.sections_json else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not sections:
+        return []
+    elements = []
+    for section in sorted(sections, key=lambda s: s.get("order", 0)):
+        title = section.get("title", "")
+        content = section.get("content", "")
+        if not title:
+            continue
+        elements.append(_section_banner(title, styles))
+        elements.append(Spacer(1, 6))
+        if content:
+            elements.append(_body_card([Paragraph(content, styles["body"])]))
+        else:
+            elements.append(_body_card([Paragraph("-", styles["body"])]))
+        elements.append(Spacer(1, 12))
+    return elements
+
+
 def _cyan_rule() -> Table:
     """A full-width cyan accent rule — sits directly below the header block."""
     rule = Table([[""]], colWidths=[170 * mm])
@@ -396,6 +421,7 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
     line_item_table, subtotal = _build_line_item_table(deal, styles)
     deposit_amount = round(subtotal * (deal.deposit_percent / 100))
     next_steps = _next_steps_copy(document_kind, deal, subtotal, deposit_amount)
+    has_sections = deal.sections_json and deal.sections_json.strip() not in ("", "[]")
     story = [
         header,
         _cyan_rule(),
@@ -408,20 +434,31 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
         Spacer(1, 12),
         cover_meta,
         Spacer(1, 14),
-        _section_banner("Background & Objective", styles),
-        Spacer(1, 6),
-        _body_card([Paragraph(deal.background_text or deal.summary, styles["body"])]),
-        Spacer(1, 12),
-        _section_banner("Scope of Work", styles),
-        Spacer(1, 6),
-        _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.scope_notes)] or [Paragraph(deal.scope_notes or "-", styles["body"])]),
-        Spacer(1, 12),
     ]
-    if option_table:
+    if has_sections:
+        story.extend(_build_dynamic_sections(deal, styles))
+    else:
         story.extend([
-            _section_banner("Options", styles),
+            _section_banner("Background & Objective", styles),
             Spacer(1, 6),
-            option_table,
+            _body_card([Paragraph(deal.background_text or deal.summary, styles["body"])]),
+            Spacer(1, 12),
+            _section_banner("Scope of Work", styles),
+            Spacer(1, 6),
+            _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.scope_notes)] or [Paragraph(deal.scope_notes or "-", styles["body"])]),
+            Spacer(1, 12),
+        ])
+        if option_table:
+            story.extend([
+                _section_banner("Options", styles),
+                Spacer(1, 6),
+                option_table,
+                Spacer(1, 12),
+            ])
+        story.extend([
+            _section_banner("Timeline", styles),
+            Spacer(1, 6),
+            _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.timeline_text)] or [Paragraph(deal.timeline_text or "-", styles["body"])]),
             Spacer(1, 12),
         ])
     if payment_account:
@@ -433,11 +470,18 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
                 Spacer(1, 12),
             ]
         )
-    story.extend([
-        _section_banner("Timeline", styles),
+    narrative_footer = [] if has_sections else [
+        _section_banner("What Is Not Included", styles),
         Spacer(1, 6),
-        _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.timeline_text)] or [Paragraph(deal.timeline_text or "-", styles["body"])]),
+        _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.exclusions_text)] or [Paragraph(deal.exclusions_text or "Any exclusions can be clarified before acceptance.", styles["body"])]),
         Spacer(1, 12),
+        _section_banner("Closing Note", styles),
+        Spacer(1, 6),
+        _body_card([Paragraph(deal.closing_note or "I look forward to discussing the scope and next steps with you.", styles["body"])]),
+        Spacer(1, 12),
+    ]
+    story.extend(narrative_footer)
+    story.extend([
         _section_banner("Investment & Payment Schedule", styles),
         Spacer(1, 6),
         line_item_table,
@@ -451,14 +495,6 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
                 Paragraph(deal.payment_terms or "Payment schedule to be confirmed before kickoff.", styles["body"]),
             ]
         ),
-        Spacer(1, 12),
-        _section_banner("What Is Not Included", styles),
-        Spacer(1, 6),
-        _body_card([Paragraph(line, styles["body"]) for line in _lines(deal.exclusions_text)] or [Paragraph(deal.exclusions_text or "Any exclusions can be clarified before acceptance.", styles["body"])]),
-        Spacer(1, 12),
-        _section_banner("Closing Note", styles),
-        Spacer(1, 6),
-        _body_card([Paragraph(deal.closing_note or "I look forward to discussing the scope and next steps with you.", styles["body"])]),
         Spacer(1, 12),
         _section_banner("Next Steps", styles),
         Spacer(1, 6),

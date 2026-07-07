@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 
 from fasthtml.common import (
     A, Button, Div, Form, H1, H2, H3, Input, P, Script, Span, Strong,
     Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr,
 )
-from faststrap import Col, Icon, Row, SEO
+from faststrap import Col, Icon, Markdown, Row, SEO
 
 from app.config import settings
 from app.infrastructure.deal_repository import get_document_by_token, list_document_responses
@@ -153,6 +154,37 @@ def _section_card(title: str, lines: list[str], *, fallback: str = "") -> Div:
         ),
         cls="doc-card",
     )
+
+
+def _dynamic_sections(sections_json: str) -> list[Div]:
+    """Render sections from JSON using Faststrap Markdown component."""
+    try:
+        sections = json.loads(sections_json) if sections_json else []
+    except (json.JSONDecodeError, TypeError):
+        sections = []
+    if not sections:
+        return []
+    cards = []
+    for section in sorted(sections, key=lambda s: s.get("order", 0)):
+        title = section.get("title", "")
+        content = section.get("content", "")
+        if not title and not content:
+            continue
+        cards.append(
+            Div(
+                Div(
+                    Div(cls="doc-section-accent"),
+                    H2(title, cls="doc-section-title"),
+                    cls="doc-section-head",
+                ),
+                Div(
+                    Markdown(content),
+                    cls="doc-card-body",
+                ),
+                cls="doc-card",
+            )
+        )
+    return cards
 
 
 # ── Line items table ──────────────────────────────────────────────────────────
@@ -506,22 +538,20 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     responses = list_document_responses(document.document_id)
     expired = _is_expired(document.valid_until)
 
-    # ── Section cards ─────────────────────────────────────────────────────────
-    background_card = _section_card(
-        "Background & Objective",
-        _lines(deal.background_text or deal.summary),
-        fallback=deal.summary,
-    )
-    scope_card = _section_card(
-        "Scope of Work",
-        _lines(deal.scope_notes),
-        fallback=deal.summary,
-    )
-    options_card = _section_card("Options & Delivery Path", _lines(deal.option_notes_text))
-    timeline_card = _section_card("Timeline", _lines(deal.timeline_text))
-    terms_card = _section_card("Payment Terms", _lines(deal.payment_terms))
-    exclusions_card = _section_card("What Is Not Included", _lines(deal.exclusions_text))
-    closing_card = _section_card("Closing Note", _lines(deal.closing_note))
+    # ── Section cards (dynamic or fixed) ──────────────────────────
+    has_sections = deal.sections_json and deal.sections_json.strip() not in ("", "[]")
+    if has_sections:
+        narrative_cards = _dynamic_sections(deal.sections_json)
+    else:
+        narrative_cards = [
+            _section_card("Background & Objective", _lines(deal.background_text or deal.summary), fallback=deal.summary),
+            _section_card("Scope of Work", _lines(deal.scope_notes), fallback=deal.summary),
+            _section_card("Options & Delivery Path", _lines(deal.option_notes_text)),
+            _section_card("Timeline", _lines(deal.timeline_text)),
+            _section_card("Payment Terms", _lines(deal.payment_terms)),
+            _section_card("What Is Not Included", _lines(deal.exclusions_text)),
+            _section_card("Closing Note", _lines(deal.closing_note)),
+        ]
 
     investment_table = _line_items_table(deal, document)
     account_panel = _payment_account_panel(account) if (document.kind == "invoice" and account) else ""
@@ -560,15 +590,9 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
                 # Expiry warning
                 expiry_banner,
                 # Content sections
-                background_card,
-                scope_card,
-                options_card,
-                timeline_card,
-                terms_card,
+                *narrative_cards,
                 investment_table,
                 account_panel,
-                exclusions_card,
-                closing_card,
                 # Response
                 response_zone,
                 history,

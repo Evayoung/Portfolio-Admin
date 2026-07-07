@@ -441,11 +441,60 @@ def _deal_from_submission(entry_id: str, kind: str) -> AdminDeal | None:
         line_items_text="",
         exclusions_text="",
         closing_note="",
+        sections_json="",
         amount_ngn=0,
         deposit_percent=50,
         source="submission",
         documents=(),
         latest_document=None,
+    )
+
+
+def _section_editor(current_sections_json: str) -> Div:
+    """Dynamic section editor — add, reorder, edit, delete document sections."""
+    return Div(
+        P("Document Sections", cls="admin-form-section-title"),
+        P("Add custom sections with markdown content. Arrange them in any order using the up/down buttons.", cls="admin-module-copy"),
+        Input(type="hidden", name="sections_json", id="sections_json", value=current_sections_json),
+        Div(id="deal-sections-container", cls="mt-3"),
+        Div(
+            Button("+ Add Section", type="button", cls="btn admin-install-btn", id="deal-section-add-btn"),
+            cls="mt-3",
+        ),
+        _section_modal(),
+        cls="admin-form-section",
+    )
+
+
+def _section_modal() -> Div:
+    """Bootstrap modal for adding/editing a section."""
+    return Div(
+        Div(
+            Div(
+                Div(
+                    H3("Add Section", cls="modal-title fs-5", id="deal-section-modal-title"),
+                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
+                    cls="modal-header",
+                ),
+                Div(
+                    Input(type="text", cls="form-control admin-form-control mb-3", id="deal-section-title-input", placeholder="Section title (e.g. Executive Summary)"),
+                    Textarea(cls="form-control admin-form-control admin-form-textarea", id="deal-section-content-input", rows=10, placeholder="## Markdown content\n\nWrite your section content here using markdown..."),
+                    P("Supports markdown: headings, lists, tables, code blocks, links.", cls="admin-module-copy mt-2 mb-0"),
+                    cls="modal-body",
+                ),
+                Div(
+                    Button("Cancel", type="button", cls="btn admin-module-btn", data_bs_dismiss="modal"),
+                    Button("Save Section", type="button", cls="btn admin-install-btn", id="deal-section-save-btn"),
+                    cls="modal-footer",
+                ),
+                cls="modal-content",
+            ),
+            cls="modal-dialog modal-lg",
+        ),
+        cls="modal fade",
+        id="deal-section-modal",
+        tabindex="-1",
+        aria_hidden="true",
     )
 
 
@@ -533,16 +582,16 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
             cls="admin-form-section",
         ),
 
-        # ── Group 4: Narrative ────────────────────────────────────
-        Div(
-            P("Narrative", cls="admin-form-section-title"),
-            textarea_field("Professional Summary", "summary", selected.summary if selected else "", rows=4, required=True, placeholder="Client-facing summary of the outcome, scope, and why this engagement matters."),
-            textarea_field("Background & Objective", "background_text", selected.background_text if selected else "", rows=5, placeholder="Explain the client context, business need, and why this work matters right now."),
-            textarea_field("Scope & Deliverables", "scope_notes", selected.scope_notes if selected else "", rows=5, required=True, placeholder="Describe scope, deliverables, milestones, and assumptions."),
-            textarea_field("Options / Pricing Paths", "option_notes_text", selected.option_notes_text if selected else "", rows=5, placeholder="One per line: Option Title | Summary | Cost or note"),
-            textarea_field("Timeline", "timeline_text", selected.timeline_text if selected else "", rows=4, placeholder="Outline phases, durations, and review windows."),
-            cls="admin-form-section",
-        ),
+        # ── Group 4: Document Sections (dynamic editor) ──────────
+        _section_editor(selected.sections_json if selected else ""),
+        # Hidden backward-compat fields for existing deals with fixed narratives
+        Input(type="hidden", name="summary", value=selected.summary if selected else ""),
+        Input(type="hidden", name="background_text", value=selected.background_text if selected else ""),
+        Input(type="hidden", name="scope_notes", value=selected.scope_notes if selected else ""),
+        Input(type="hidden", name="option_notes_text", value=selected.option_notes_text if selected else ""),
+        Input(type="hidden", name="timeline_text", value=selected.timeline_text if selected else ""),
+        Input(type="hidden", name="exclusions_text", value=selected.exclusions_text if selected else ""),
+        Input(type="hidden", name="closing_note", value=selected.closing_note if selected else ""),
 
         # ── Group 5: Financials ───────────────────────────────────
         _ai_draft_panel(selected_kind),
@@ -558,11 +607,9 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
             cls="admin-form-section",
         ),
 
-        # ── Group 6: Closing ──────────────────────────────────────
+        # ── Group 6: Tech Stack ──────────────────────────────────
         Div(
-            P("Closing", cls="admin-form-section-title"),
-            textarea_field("Exclusions / Out of Scope", "exclusions_text", selected.exclusions_text if selected else "", rows=4, placeholder="List items that are not included in this engagement."),
-            textarea_field("Closing Note", "closing_note", selected.closing_note if selected else "", rows=4, placeholder="Final closing paragraph, reassurance, or next-step note."),
+            P("Tech Stack", cls="admin-form-section-title"),
             floating_field("Tech Stack", "tech_stack", ", ".join(selected.tech_stack) if selected else "", placeholder="FastHTML, Supabase, HTMX"),
             cls="admin-form-section",
         ),

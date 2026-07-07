@@ -43,6 +43,7 @@ LOCAL_DEALS = (
         ),
         exclusions_text="ERP integrations, advanced analytics warehousing, native mobile apps, and multilingual rollout are outside this first engagement and can be scoped separately.",
         closing_note="This proposal is designed to give FarmTech Africa a strong operational foundation first, with a delivery path that stays practical and easy to extend after launch.",
+        sections_json="",
         amount_ngn=850000,
         deposit_percent=50,
         source="local",
@@ -97,6 +98,7 @@ LOCAL_DEALS = (
         ),
         exclusions_text="Long-form CMS migration, ecommerce, and deeper backend integrations were not part of this fixed-scope refresh.",
         closing_note="This quote keeps the work intentionally lean so the launch can move quickly while preserving a clear path for future enhancements.",
+        sections_json="",
         amount_ngn=150000,
         deposit_percent=70,
         source="local",
@@ -251,6 +253,7 @@ def _deal_from_supabase(row: dict[str, object]) -> AdminDeal:
         line_items_text=_line_items_to_text(list(row.get("client_documents")[0].get("line_items") if row.get("client_documents") else [])),
         exclusions_text=str(row.get("exclusions_text") or ""),
         closing_note=str(row.get("closing_note") or ""),
+        sections_json=str(row.get("sections_json") or ""),
         amount_ngn=int(row.get("amount_ngn") or 0),
         deposit_percent=int(row.get("deposit_percent") or 50),
         source="supabase",
@@ -267,6 +270,7 @@ def _load_supabase_deals() -> tuple[AdminDeal, ...]:
             "select": (
                 "id,client_name,client_email,client_phone,company,project_title,service_type,stage,summary,"
                 "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
+                "sections_json,"
                 "amount_ngn,deposit_percent,updated_at,"
                 "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id)"
             ),
@@ -715,6 +719,7 @@ def save_deal_document(
     line_items: str,
     exclusions_text: str,
     closing_note: str,
+    sections_json: str,
     payment_account_id: str,
     amount_ngn: str,
     deposit_percent: str,
@@ -771,6 +776,7 @@ def save_deal_document(
         "payment_terms": payment_terms.strip(),
         "exclusions_text": exclusions_text.strip(),
         "closing_note": closing_note.strip(),
+        "sections_json": sections_json,
         "amount_ngn": amount_value,
         "deposit_percent": deposit_value,
         "updated_at": datetime.now(timezone.utc).isoformat(),

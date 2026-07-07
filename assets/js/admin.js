@@ -286,24 +286,178 @@ function removeCvItem(btn) {
   if (row) row.remove();
 }
 
-/* ── HTMX config hook: serialise CV section items before POST ── */
+/* ── Deal Sections Editor ──────────────────────── */
+
+function initDealSections() {
+  const container = document.getElementById('deal-sections-container');
+  const hiddenInput = document.getElementById('sections_json');
+  const addBtn = document.getElementById('deal-section-add-btn');
+  const modal = document.getElementById('deal-section-modal');
+  const saveBtn = document.getElementById('deal-section-save-btn');
+  const titleInput = document.getElementById('deal-section-title-input');
+  const contentInput = document.getElementById('deal-section-content-input');
+  const modalTitle = document.getElementById('deal-section-modal-title');
+  if (!container || !hiddenInput) return;
+
+  let sections = [];
+  let editingIndex = -1;
+
+  try {
+    const parsed = JSON.parse(hiddenInput.value || '[]');
+    sections = Array.isArray(parsed) ? parsed : [];
+  } catch (_) { sections = []; }
+
+  function serialize() {
+    hiddenInput.value = JSON.stringify(sections);
+    render();
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function stripMd(str) {
+    return str.replace(/[#*`\[\]>_~|]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  function render() {
+    if (sections.length === 0) {
+      container.innerHTML = '<p class="admin-save-note" style="margin-bottom:0;">No sections yet. Click "Add Section" to build the document content.</p>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      var preview = stripMd(s.content || '').substring(0, 120);
+      if (s.content && s.content.length > 120) preview += '...';
+      html +=
+        '<div class="deal-section-item" data-index="' + i + '">' +
+          '<div class="deal-section-header">' +
+            '<span class="deal-section-title">' + escapeHtml(s.title || 'Untitled') + '</span>' +
+            '<div class="deal-section-actions">' +
+              '<button type="button" class="btn btn-sm btn-outline-secondary section-move-up" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+              '<button type="button" class="btn btn-sm btn-outline-secondary section-move-down" title="Move down"' + (i === sections.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+              '<button type="button" class="btn btn-sm btn-outline-primary section-edit" title="Edit">&#9998;</button>' +
+              '<button type="button" class="btn btn-sm btn-outline-danger section-delete" title="Delete">&times;</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="deal-section-preview">' + escapeHtml(preview) + '</div>' +
+        '</div>';
+    }
+    container.innerHTML = html;
+
+    // Bind events
+    container.querySelectorAll('.section-move-up').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(this.closest('.deal-section-item').dataset.index);
+        if (idx > 0) {
+          var tmp = sections[idx - 1];
+          sections[idx - 1] = sections[idx];
+          sections[idx] = tmp;
+          serialize();
+        }
+      });
+    });
+    container.querySelectorAll('.section-move-down').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(this.closest('.deal-section-item').dataset.index);
+        if (idx < sections.length - 1) {
+          var tmp = sections[idx + 1];
+          sections[idx + 1] = sections[idx];
+          sections[idx] = tmp;
+          serialize();
+        }
+      });
+    });
+    container.querySelectorAll('.section-edit').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(this.closest('.deal-section-item').dataset.index);
+        openModal(idx);
+      });
+    });
+    container.querySelectorAll('.section-delete').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(this.closest('.deal-section-item').dataset.index);
+        if (confirm('Delete section "' + (sections[idx].title || 'Untitled') + '"?')) {
+          sections.splice(idx, 1);
+          serialize();
+        }
+      });
+    });
+  }
+
+  function openModal(idx) {
+    editingIndex = idx;
+    if (idx >= 0 && idx < sections.length) {
+      modalTitle.textContent = 'Edit Section';
+      titleInput.value = sections[idx].title || '';
+      contentInput.value = sections[idx].content || '';
+    } else {
+      modalTitle.textContent = 'Add Section';
+      titleInput.value = '';
+      contentInput.value = '';
+    }
+    if (window.bootstrap) {
+      var bsModal = window.bootstrap.Modal.getOrCreateInstance(modal);
+      bsModal.show();
+    }
+  }
+
+  if (addBtn) {
+    addBtn.addEventListener('click', function () { openModal(-1); });
+  }
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function () {
+      var title = titleInput.value.trim();
+      var content = contentInput.value.trim();
+      if (!title) { titleInput.focus(); return; }
+      if (editingIndex >= 0 && editingIndex < sections.length) {
+        sections[editingIndex].title = title;
+        sections[editingIndex].content = content;
+      } else {
+        sections.push({ title: title, content: content });
+      }
+      serialize();
+      if (window.bootstrap) {
+        window.bootstrap.Modal.getInstance(modal).hide();
+      }
+    });
+  }
+
+  render();
+}
+
+/* ── HTMX config hook: serialise deal sections before POST ── */
 
 document.addEventListener('htmx:configRequest', function (evt) {
   const elt = evt.detail.elt;
-  const form = elt.matches('.cv-section-form') ? elt : elt.closest('.cv-section-form');
-  if (!form) return;
-  const container = form.querySelector('[data-items-container]');
-  const dataField = form.querySelector('[name="data"]');
-  if (!container || !dataField) return;
-  const items = [];
-  container.querySelectorAll('[data-item-row]').forEach(function (row) {
-    const item = {};
-    row.querySelectorAll('[data-field]').forEach(function (input) {
-      item[input.dataset.field] = input.value;
-    });
-    items.push(item);
-  });
-  dataField.value = JSON.stringify(items);
+  // CV sections
+  const cvForm = elt.matches('.cv-section-form') ? elt : elt.closest('.cv-section-form');
+  if (cvForm) {
+    const container = cvForm.querySelector('[data-items-container]');
+    const dataField = cvForm.querySelector('[name="data"]');
+    if (container && dataField) {
+      const items = [];
+      container.querySelectorAll('[data-item-row]').forEach(function (row) {
+        const item = {};
+        row.querySelectorAll('[data-field]').forEach(function (input) {
+          item[input.dataset.field] = input.value;
+        });
+        items.push(item);
+      });
+      dataField.value = JSON.stringify(items);
+    }
+  }
+  // Deal sections
+  const dealForm = elt.matches('.admin-settings-form') ? elt : elt.closest('.admin-settings-form');
+  if (dealForm) {
+    const hiddenInput = document.getElementById('sections_json');
+    if (hiddenInput) {
+      // sections_json is already maintained by initDealSections()
+    }
+  }
 });
 
 /* ── Image upload preview ─────────────────────────────────── */
@@ -366,6 +520,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Line Items Editor
   initLineItemsEditor();
+
+  // Deal Sections Editor
+  initDealSections();
 
   // Image upload preview
   initImagePreview();
