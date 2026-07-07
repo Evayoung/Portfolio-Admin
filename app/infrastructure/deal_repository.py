@@ -868,6 +868,23 @@ def save_deal_document(
         return DealSaveResult(False, "danger", f"Could not reach Supabase to save the client pipeline record. {exc}", "Supabase", deal_id=deal_id or None)
 
 
+def delete_deal(deal_id: str) -> tuple[bool, str, str]:
+    """Permanently delete a deal and its documents from Supabase."""
+    if not deal_id.strip():
+        return False, "warning", "Choose a valid deal before deleting."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so deals cannot be deleted."
+    try:
+        _rest_request("DELETE", "client_deals", params={"id": f"eq.{deal_id}"})
+        record_audit_event(action="deal_deleted", target_type="client_deal", target_id=deal_id)
+        return True, "success", "The deal has been permanently deleted."
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the delete request. {details or exc.reason}"
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to delete the deal. {exc}"
+
+
 def save_quick_document(
     *,
     client_name: str,

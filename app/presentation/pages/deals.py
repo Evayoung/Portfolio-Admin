@@ -630,6 +630,22 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
             ),
             cls="admin-form-actions mt-4",
         ),
+        Form(
+            Input(type="hidden", name="deal_id", value=selected.deal_id if selected else ""),
+            Button(
+                "Delete Deal",
+                type="submit",
+                cls="btn btn-outline-danger mt-2",
+                onclick="return confirm('Are you sure you want to permanently delete this deal and all its documents? This cannot be undone.')",
+            ),
+            action="/deals/delete",
+            method="post",
+            hx_post="/deals/delete",
+            hx_target="#deal-save-result",
+            hx_swap="innerHTML",
+        )
+        if selected and selected.deal_id
+        else "",
         Div(id="deal-save-result", cls="mt-3"),
         action="/deals/save",
         method="post",
@@ -819,11 +835,7 @@ def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind
                     P(selected.background_text if selected and selected.background_text else (selected.summary if selected else "Use this workspace to manage proposals, quick quotes, and invoices as stages of the same deal."), cls="admin-module-copy mb-0"),
                     cls="admin-detail-copy",
                 ),
-                Div(
-                    Badge(summary.source, cls="text-bg-secondary admin-metric-delta"),
-                    Badge("Write enabled" if service_role_is_configured() else "Read-only for now", cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta"),
-                    cls="d-flex flex-wrap gap-2 mt-3 mt-lg-0",
-                ),
+
                 cls="d-flex flex-column flex-lg-row justify-content-between gap-3",
             ),
             Div(

@@ -12,6 +12,7 @@ try:
     from ..infrastructure.deal_pdf import build_deal_document_pdf
     from ..infrastructure.deal_repository import (
         get_deal,
+        delete_deal,
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
@@ -27,6 +28,7 @@ except ImportError:
     from infrastructure.deal_pdf import build_deal_document_pdf
     from infrastructure.deal_repository import (
         get_deal,
+        delete_deal,
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
@@ -128,6 +130,17 @@ def setup_deal_routes(app: Any) -> None:
             )
         title_text = "Save not completed"
         return deal_save_status_fragment(title_text, result.message, tone=result.tone)
+
+    @app.post("/deals/delete")
+    def deals_delete(deal_id: str = "") -> Any:
+        success, tone, message = delete_deal(deal_id=deal_id)
+        if success:
+            return (
+                toast_fragment("Deal deleted", message),
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+            )
+        title_text = "Delete not completed"
+        return deal_save_status_fragment(title_text, message, tone=tone)
 
     @app.post("/deals/quick")
     def deals_quick_document_save(
