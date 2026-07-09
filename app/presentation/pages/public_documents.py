@@ -6,10 +6,10 @@ import json
 from datetime import date, datetime
 
 from fasthtml.common import (
-    A, Button, Div, Form, H1, H2, H3, Input, P, Script, Span, Strong,
+    A, Button, Div, Form, H1, H2, H3, Input, Label, P, Script, Span, Strong,
     Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr,
 )
-from faststrap import Col, Icon, Markdown, Row, SEO
+from faststrap import Col, Icon, Markdown, Row, SEO, ToastContainer
 
 from app.config import settings
 from app.infrastructure.deal_repository import get_document_by_token, list_document_responses
@@ -434,19 +434,15 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     package_selector = ""
     if has_packages and is_proposal_or_quote and not expired:
         radio_items = [
-            Div(
+            Label(
                 Input(
                     type="radio",
                     id=f"pkg_{i}",
                     name="selected_package",
                     value=name,
                     cls="doc-pkg-radio",
-                    required=True if i == 0 else False,
                 ),
-                Div(
-                    Span(name, cls="doc-pkg-label"),
-                    cls="doc-pkg-radio-content",
-                ),
+                Span(name, cls="doc-pkg-label"),
                 cls="doc-pkg-option",
             )
             for i, name in enumerate(package_names)
@@ -515,6 +511,58 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         if message else ""
     )
 
+    js_script = Script("""
+        (function() {
+            const form = document.querySelector('.doc-response-zone');
+            if (!form) return;
+            form.onsubmit = function(event) {
+                const action = event.submitter ? event.submitter.value : '';
+                if (action === 'accepted') {
+                    const radios = document.getElementsByName('selected_package');
+                    if (radios.length > 0) {
+                        let checked = false;
+                        for (let r of radios) {
+                            if (r.checked) { checked = true; break; }
+                        }
+                        if (!checked) {
+                            event.preventDefault();
+                            const selector = document.querySelector('.doc-pkg-selector');
+                            if (selector) {
+                                selector.style.borderColor = 'var(--doc-danger)';
+                                selector.style.background = 'rgba(192, 57, 43, 0.05)';
+                                let errorMsg = selector.querySelector('.doc-pkg-error');
+                                if (!errorMsg) {
+                                    errorMsg = document.createElement('div');
+                                    errorMsg.className = 'doc-pkg-error';
+                                    errorMsg.style.color = 'var(--doc-danger)';
+                                    errorMsg.style.fontSize = '0.85rem';
+                                    errorMsg.style.fontWeight = '600';
+                                    errorMsg.style.marginTop = '0.5rem';
+                                    errorMsg.style.fontFamily = '"Space Grotesk", sans-serif';
+                                    errorMsg.innerText = '⚠️ Please select a package option before accepting.';
+                                    selector.appendChild(errorMsg);
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                }
+            };
+            
+            document.querySelectorAll('.doc-pkg-radio').forEach(radio => {
+                radio.onchange = function() {
+                    const selector = document.querySelector('.doc-pkg-selector');
+                    if (selector) {
+                        selector.style.borderColor = 'var(--doc-cyan-border)';
+                        selector.style.background = 'rgba(70, 200, 238, 0.06)';
+                        const errorMsg = selector.querySelector('.doc-pkg-error');
+                        if (errorMsg) errorMsg.remove();
+                    }
+                };
+            });
+        })();
+    """)
+
     return Form(
         Div(
             H3("Your Response", cls="doc-response-title"),
@@ -568,8 +616,10 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             ),
             cls="doc-response-body",
         ),
-        action=f"/documents/{token}/respond",
-        method="post",
+        js_script,
+        hx_post=f"/documents/{token}/respond",
+        hx_target="body",
+        hx_swap="innerHTML",
         cls="doc-response-zone",
     )
 
@@ -725,6 +775,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             url=f"{settings.base_url}/documents/{token}",
         ),
         _doc_stylesheet_link(),
+        ToastContainer(id="toast-container"),
         Div(
             _brand_bar(profile, document.kind),
             Div(
@@ -768,4 +819,6 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
 def _doc_stylesheet_link():
     """Return a Link tag injecting doc-portal.css — separate from admin.css."""
     from fasthtml.common import Link
-    return Link(rel="stylesheet", href="/assets/css/doc-portal.css")
+    import time
+    # Bust browser cache by adding version query param
+    return Link(rel="stylesheet", href=f"/assets/css/doc-portal.css?v={int(time.time())}")

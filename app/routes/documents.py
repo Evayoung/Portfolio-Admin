@@ -39,4 +39,10 @@ def setup_document_routes(app: Any) -> None:
             comment=comment,
             selected_package=selected_package,
         )
-        return document_portal_page(token=token, message=message, tone=tone if success else tone)
+        page = document_portal_page(token=token, message=message, tone=tone)
+        from faststrap.presets import toast_response
+        return toast_response(
+            content=page,
+            message=message,
+            variant=tone,
+        )

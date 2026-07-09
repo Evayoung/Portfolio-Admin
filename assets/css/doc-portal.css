@@ -285,19 +285,19 @@
 }
 
 /* Markdown content rendered inside section cards (Faststrap Markdown) */
-.doc-card-body table {
+/* Faststrap Markdown wraps output in <div class="faststrap-markdown"> */
+.faststrap-markdown table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
   margin: 0.5rem 0 0.75rem;
-  border-radius: 0.5rem;
   overflow: hidden;
 }
-.doc-card-body table thead tr {
+.faststrap-markdown table thead tr {
   background: var(--doc-navy);
   color: #fff;
 }
-.doc-card-body table thead th {
+.faststrap-markdown table thead th {
   padding: 0.6rem 0.9rem;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
   font-size: 0.75rem;
@@ -306,15 +306,15 @@
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
 }
-.doc-card-body table tbody tr {
+.faststrap-markdown table tbody tr {
   border-bottom: 1px solid var(--doc-line-soft);
 }
-.doc-card-body table tbody tr:nth-child(even) {
+.faststrap-markdown table tbody tr:nth-child(even) {
   background: var(--doc-surface-soft);
 }
-.doc-card-body table tbody td {
+.faststrap-markdown table tbody td {
   padding: 0.65rem 0.9rem;
   color: var(--doc-text);
   vertical-align: top;
@@ -322,25 +322,25 @@
   border: 1px solid var(--doc-line-soft);
   font-size: 0.88rem;
 }
-.doc-card-body table tbody td:first-child {
+.faststrap-markdown table tbody td:first-child {
   font-weight: 600;
   color: var(--doc-navy-soft);
   white-space: nowrap;
 }
-.doc-card-body p       { margin: 0 0 0.65rem; line-height: 1.7; color: var(--doc-text); }
-.doc-card-body p:last-child { margin-bottom: 0; }
-.doc-card-body h2,
-.doc-card-body h3,
-.doc-card-body h4 {
+.faststrap-markdown p        { margin: 0 0 0.65rem; line-height: 1.7; color: var(--doc-text); }
+.faststrap-markdown p:last-child { margin-bottom: 0; }
+.faststrap-markdown h2,
+.faststrap-markdown h3,
+.faststrap-markdown h4 {
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
   color: var(--doc-navy);
   margin: 0.8rem 0 0.35rem;
   font-weight: 700;
 }
-.doc-card-body ul,
-.doc-card-body ol   { padding-left: 1.4rem; margin: 0.35rem 0 0.65rem; line-height: 1.7; }
-.doc-card-body li   { margin-bottom: 0.25rem; color: var(--doc-text); }
-.doc-card-body blockquote {
+.faststrap-markdown ul,
+.faststrap-markdown ol   { padding-left: 1.4rem; margin: 0.35rem 0 0.65rem; line-height: 1.7; }
+.faststrap-markdown li   { margin-bottom: 0.25rem; color: var(--doc-text); }
+.faststrap-markdown blockquote {
   border-left: 3px solid var(--doc-cyan-border);
   margin: 0.5rem 0;
   padding: 0.4rem 0.85rem;
@@ -350,7 +350,7 @@
   background: var(--doc-surface-soft);
   border-radius: 0 0.4rem 0.4rem 0;
 }
-.doc-card-body strong { font-weight: 700; color: var(--doc-navy-soft); }
+.faststrap-markdown strong { font-weight: 700; color: var(--doc-navy-soft); }
 
 
 
@@ -579,7 +579,7 @@
 }
 
 .doc-pkg-question {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff !important;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
@@ -631,7 +631,7 @@
 }
 
 .doc-pkg-label {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff !important;
   font-size: 0.9rem;
   font-weight: 600;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
