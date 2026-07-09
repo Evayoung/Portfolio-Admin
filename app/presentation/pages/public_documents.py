@@ -192,11 +192,97 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
 # ── Line items table ──────────────────────────────────────────────────────────
 
 def _line_items_table(deal, document) -> Div:
-    items = _line_items(deal.line_items_text)
+    import re
+    raw_items = _line_items(deal.line_items_text)
     total = document.total_amount
 
+    # Group line items by package prefix
+    groups = {}
+    for title, detail, qty, amount in raw_items:
+        group_key = None
+        for prefix in ["Package", "Option"]:
+            match = re.match(r"^(" + prefix + r"\s+\w+)\s*[-:]\s*(.*)$", title, re.IGNORECASE)
+            if match:
+                group_key = match.group(1).strip()
+                title = match.group(2).strip()
+                break
+        if not group_key:
+            for prefix in ["Package", "Option"]:
+                match = re.match(r"^(" + prefix + r"\s+\w+)\s+(.*)$", title, re.IGNORECASE)
+                if match:
+                    group_key = match.group(1).strip()
+                    title = match.group(2).strip()
+                    break
+        if not group_key:
+            group_key = "Standard"
+        groups.setdefault(group_key, []).append((title, detail, qty, amount))
+
+    # If there are no items, show default deal info
+    if not raw_items:
+        groups["Standard"] = [(deal.project_title, deal.summary, "1", str(total))]
+
+    # If multiple packages/options exist, render them as separate options tables
+    if len(groups) > 1 or "Standard" not in groups:
+        package_cards = []
+        for pkg_name, pkg_items in groups.items():
+            rows = []
+            pkg_total = 0
+            for title, detail, qty, amount in pkg_items:
+                try:
+                    amt_int = int(float(amount or "0"))
+                except ValueError:
+                    amt_int = 0
+                pkg_total += amt_int * int(qty or "1")
+                rows.append(
+                    Tr(
+                        Td(
+                            Div(title),
+                            Div(detail, cls="doc-table-detail") if detail else "",
+                        ),
+                        Td(qty),
+                        Td(_money(amt_int)),
+                    )
+                )
+            package_cards.append(
+                Div(
+                    H3(pkg_name, cls="doc-table-group-header mt-3 mb-2", style="font-size: 1rem; font-weight: 700; color: var(--navy);"),
+                    Div(
+                        Table(
+                            Thead(
+                                Tr(
+                                    Th("Component / Service"),
+                                    Th("Qty"),
+                                    Th("Amount"),
+                                )
+                            ),
+                            Tbody(*rows),
+                            Tfoot(
+                                Tr(
+                                    Td(Strong("Option Total"), colspan="2"),
+                                    Td(Strong(_money(pkg_total))),
+                                )
+                            ),
+                            cls="doc-table mb-3",
+                        ),
+                        cls="doc-table-wrap",
+                    ),
+                    cls="doc-investment-option",
+                )
+            )
+        return Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Investment Options", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(*package_cards, style="padding: 0 1.25rem 1.25rem 1.25rem;"),
+            cls="doc-card",
+            style="overflow:hidden;",
+        )
+
+    # Standard single total layout
     rows = []
-    for title, detail, qty, amount in items:
+    for title, detail, qty, amount in groups.get("Standard", []):
         try:
             amt_int = int(float(amount or "0"))
         except ValueError:
@@ -209,15 +295,6 @@ def _line_items_table(deal, document) -> Div:
                 ),
                 Td(qty),
                 Td(_money(amt_int)),
-            )
-        )
-
-    if not rows:
-        rows.append(
-            Tr(
-                Td(Div(deal.project_title), Div(deal.summary, cls="doc-table-detail")),
-                Td("1"),
-                Td(_money(total)),
             )
         )
 

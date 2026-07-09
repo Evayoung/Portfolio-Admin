@@ -158,61 +158,155 @@ def _build_option_table(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> T
     return table
 
 
-def _build_line_item_table(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> tuple[Table, int]:
+def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> tuple[list, int, bool]:
+    import re
     items = _line_items(deal.line_items_text)
-    subtotal = sum(amount for *_rest, amount in items) or deal.amount_ngn
-    data = [
-        [
-            Paragraph("Component", styles["table_head"]),
-            Paragraph("Description", styles["table_head"]),
-            Paragraph("Qty", styles["table_head"]),
-            Paragraph("Amount", styles["table_head"]),
-        ]
-    ]
+
+    # Group line items by package prefix
+    groups = {}
     for title, detail, qty, amount in items:
-        data.append(
+        group_key = None
+        for prefix in ["Package", "Option"]:
+            match = re.match(r"^(" + prefix + r"\s+\w+)\s*[-:]\s*(.*)$", title, re.IGNORECASE)
+            if match:
+                group_key = match.group(1).strip()
+                title = match.group(2).strip()
+                break
+        if not group_key:
+            for prefix in ["Package", "Option"]:
+                match = re.match(r"^(" + prefix + r"\s+\w+)\s+(.*)$", title, re.IGNORECASE)
+                if match:
+                    group_key = match.group(1).strip()
+                    title = match.group(2).strip()
+                    break
+        if not group_key:
+            group_key = "Standard"
+        groups.setdefault(group_key, []).append((title, detail, qty, amount))
+
+    # Standard single total layout
+    if len(groups) <= 1 and "Standard" in groups:
+        subtotal = sum(amount for *_rest, amount in items) or deal.amount_ngn
+        data = [
             [
-                Paragraph(title, styles["table_cell"]),
-                Paragraph(detail or "-", styles["table_cell"]),
-                Paragraph(qty, styles["table_cell"]),
-                Paragraph(_money(amount), styles["table_cell"]),
+                Paragraph("Component", styles["table_head"]),
+                Paragraph("Description", styles["table_head"]),
+                Paragraph("Qty", styles["table_head"]),
+                Paragraph("Amount", styles["table_head"]),
             ]
-        )
-    if len(data) == 1:
-        data.append(
-            [
-                Paragraph(deal.project_title, styles["table_cell"]),
-                Paragraph(deal.summary or "-", styles["table_cell"]),
-                Paragraph("1", styles["table_cell"]),
-                Paragraph(_money(deal.amount_ngn), styles["table_cell"]),
-            ]
-        )
-    data.append(
-        [
-            Paragraph("Total", styles["table_cell"]),
-            Paragraph("", styles["table_cell"]),
-            Paragraph("", styles["table_cell"]),
-            Paragraph(_money(subtotal), styles["table_cell"]),
         ]
-    )
-    table = Table(data, colWidths=[46 * mm, 74 * mm, 16 * mm, 34 * mm])
-    table.setStyle(
-        TableStyle(
+        for title, detail, qty, amount in items:
+            data.append(
+                [
+                    Paragraph(title, styles["table_cell"]),
+                    Paragraph(detail or "-", styles["table_cell"]),
+                    Paragraph(str(qty), styles["table_cell"]),
+                    Paragraph(_money(amount), styles["table_cell"]),
+                ]
+            )
+        if len(data) == 1:
+            data.append(
+                [
+                    Paragraph(deal.project_title, styles["table_cell"]),
+                    Paragraph(deal.summary or "-", styles["table_cell"]),
+                    Paragraph("1", styles["table_cell"]),
+                    Paragraph(_money(deal.amount_ngn), styles["table_cell"]),
+                ]
+            )
+        data.append(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), NAVY_SOFT),
-                ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
-                ("BACKGROUND", (0, -1), (-1, -1), CYAN_SOFT),
-                ("BOX", (0, 0), (-1, -1), 0.6, LINE),
-                ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                Paragraph("Total", styles["table_cell"]),
+                Paragraph("", styles["table_cell"]),
+                Paragraph("", styles["table_cell"]),
+                Paragraph(_money(subtotal), styles["table_cell"]),
             ]
         )
-    )
-    return table, subtotal
+        table = Table(data, colWidths=[46 * mm, 74 * mm, 16 * mm, 34 * mm])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), NAVY_SOFT),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+                    ("BACKGROUND", (0, -1), (-1, -1), CYAN_SOFT),
+                    ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        return [table], subtotal, False
+
+    # Render multiple package tables
+    flowables = []
+    highest_package_total = 0
+
+    for pkg_name, pkg_items in groups.items():
+        subtotal = sum(amount * int(qty or "1") for *_rest, qty, amount in pkg_items)
+        if subtotal > highest_package_total:
+            highest_package_total = subtotal
+
+        data = [
+            [
+                Paragraph("Component", styles["table_head"]),
+                Paragraph("Description", styles["table_head"]),
+                Paragraph("Qty", styles["table_head"]),
+                Paragraph("Amount", styles["table_head"]),
+            ]
+        ]
+        for title, detail, qty, amount in pkg_items:
+            data.append(
+                [
+                    Paragraph(title, styles["table_cell"]),
+                    Paragraph(detail or "-", styles["table_cell"]),
+                    Paragraph(str(qty), styles["table_cell"]),
+                    Paragraph(_money(amount), styles["table_cell"]),
+                ]
+            )
+        data.append(
+            [
+                Paragraph("Option Total", styles["table_cell"]),
+                Paragraph("", styles["table_cell"]),
+                Paragraph("", styles["table_cell"]),
+                Paragraph(_money(subtotal), styles["table_cell"]),
+            ]
+        )
+
+        pkg_hdr_style = ParagraphStyle(
+            f"PkgHeader_{pkg_name}",
+            parent=styles["body"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            leading=12,
+            textColor=NAVY,
+            spaceBefore=8,
+            spaceAfter=4,
+        )
+        flowables.append(Paragraph(pkg_name, pkg_hdr_style))
+
+        table = Table(data, colWidths=[46 * mm, 74 * mm, 16 * mm, 34 * mm])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), NAVY_SOFT),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+                    ("BACKGROUND", (0, -1), (-1, -1), CYAN_SOFT),
+                    ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        flowables.append(table)
+        flowables.append(Spacer(1, 8))
+
+    return flowables, highest_package_total, True
 
 
 def _payment_account_table(account, styles: dict[str, ParagraphStyle]) -> Table:
@@ -276,6 +370,166 @@ def _bullet_card(lines: list[str], styles: dict[str, ParagraphStyle], *, width: 
     return _body_card(items, width=width)
 
 
+def parse_markdown_to_flowables(text: str, styles: dict[str, ParagraphStyle]) -> list:
+    """Helper to convert Markdown structures into ReportLab flowable elements."""
+    if not text:
+        return []
+
+    import re
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+
+    def clean_inline(s: str) -> str:
+        # Escape HTML special characters for ReportLab XML parser safety, then restore formatting tags
+        s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        s = re.sub(r"\*\*\*([^*]+)\*\*\*", r"<b><i>\1</i></b>", s)
+        s = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", s)
+        s = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", s)
+        s = s.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+        s = s.replace("&lt;i&gt;", "<i>").replace("&lt;/i&gt;", "</i>")
+        return s
+
+    flowables = []
+    lines = text.splitlines()
+
+    in_table = False
+    table_data = []
+
+    in_list = False
+    list_items = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # 1. Markdown Tables
+        if stripped.startswith("|"):
+            in_table = True
+            row_parts = [p.strip() for p in stripped.split("|")[1:-1]]
+            # Skip delimiter rows (e.g. |---|---|)
+            if all(re.match(r"^:-*:-*$", p) or re.match(r"^-+$", p) for p in row_parts):
+                continue
+            table_data.append(row_parts)
+            continue
+        elif in_table:
+            if table_data:
+                max_cols = max(len(row) for row in table_data)
+                formatted_data = []
+                for r_idx, row in enumerate(table_data):
+                    padded_row = row + [""] * (max_cols - len(row))
+                    formatted_row = []
+                    for cell in padded_row:
+                        cell_style = styles["table_head"] if r_idx == 0 else styles["table_cell"]
+                        formatted_row.append(Paragraph(clean_inline(cell), cell_style))
+                    formatted_data.append(formatted_row)
+
+                col_width = (146 * mm) / max_cols if max_cols else 146 * mm
+                t = Table(formatted_data, colWidths=[col_width] * max_cols)
+                t.setStyle(
+                    TableStyle(
+                        [
+                            ("BACKGROUND", (0, 0), (-1, 0), NAVY_SOFT),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+                            ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+                            ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("TOPPADDING", (0, 0), (-1, -1), 4),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                        ]
+                    )
+                )
+                flowables.append(t)
+                flowables.append(Spacer(1, 6))
+            table_data = []
+            in_table = False
+
+        # 2. Markdown Headings
+        if stripped.startswith("#"):
+            lvl = len(stripped) - len(stripped.lstrip("#"))
+            title_text = stripped.lstrip("#").strip()
+            h_style = ParagraphStyle(
+                f"Heading_Lvl_{lvl}",
+                parent=styles["body"],
+                fontName="Helvetica-Bold",
+                fontSize=max(9, 13 - lvl),
+                leading=max(11, 15 - lvl),
+                textColor=NAVY,
+                spaceBefore=8,
+                spaceAfter=4,
+            )
+            flowables.append(Paragraph(clean_inline(title_text), h_style))
+            continue
+
+        # 3. Markdown Blockquotes
+        if stripped.startswith(">"):
+            quote_text = stripped.lstrip(">").strip()
+            q_style = ParagraphStyle(
+                "QuoteStyle",
+                parent=styles["body"],
+                fontName="Helvetica-Oblique",
+                textColor=MUTED,
+                leftIndent=12,
+                spaceBefore=4,
+                spaceAfter=4,
+            )
+            flowables.append(Paragraph(clean_inline(quote_text), q_style))
+            continue
+
+        # 4. Bullet lists and Ordered lists
+        is_bullet = stripped.startswith("- ") or stripped.startswith("* ") or stripped.startswith("+ ")
+        is_numbered = re.match(r"^\d+\.\s+", stripped) is not None
+
+        if is_bullet or is_numbered:
+            in_list = True
+            item_text = stripped.split(" ", 1)[1].strip()
+            bullet_prefix = "• " if is_bullet else f"{stripped.split('.', 1)[0]}. "
+            list_items.append(Paragraph(f"{bullet_prefix}{clean_inline(item_text)}", styles["body"]))
+            continue
+        elif in_list:
+            for item in list_items:
+                flowables.append(item)
+                flowables.append(Spacer(1, 3))
+            flowables.append(Spacer(1, 3))
+            list_items = []
+            in_list = False
+
+        # 5. Horizontal rules
+        if stripped in ("---", "***"):
+            flowables.append(Spacer(1, 4))
+            rule = Table([[""]], colWidths=[146 * mm])
+            rule.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), LINE), ("TOPPADDING", (0, 0), (-1, -1), 0.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5)]))
+            flowables.append(rule)
+            flowables.append(Spacer(1, 4))
+            continue
+
+        # 6. Plain text paragraph
+        if stripped:
+            flowables.append(Paragraph(clean_inline(stripped), styles["body"]))
+            flowables.append(Spacer(1, 4))
+
+    # Output leftovers
+    if in_table and table_data:
+        max_cols = max(len(row) for row in table_data)
+        formatted_data = []
+        for r_idx, row in enumerate(table_data):
+            padded_row = row + [""] * (max_cols - len(row))
+            formatted_row = []
+            for cell in padded_row:
+                cell_style = styles["table_head"] if r_idx == 0 else styles["table_cell"]
+                formatted_row.append(Paragraph(clean_inline(cell), cell_style))
+            formatted_data.append(formatted_row)
+        col_width = (146 * mm) / max_cols if max_cols else 146 * mm
+        t = Table(formatted_data, colWidths=[col_width] * max_cols)
+        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), NAVY_SOFT), ("TEXTCOLOR", (0, 0), (-1, 0), WHITE), ("BOX", (0, 0), (-1, -1), 0.5, LINE), ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE)]))
+        flowables.append(t)
+    elif in_list and list_items:
+        for item in list_items:
+            flowables.append(item)
+            flowables.append(Spacer(1, 3))
+
+    return flowables
+
+
 def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> list:
     """Build PDF elements from sections_json — each section rendered as banner + body."""
     try:
@@ -295,7 +549,9 @@ def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) 
         elements.append(_section_banner(title, styles))
         elements.append(Spacer(1, 6))
         if content:
-            elements.append(_body_card([Paragraph(content, styles["body"])]))
+            # Parse markdown content into ReportLab flowables directly!
+            flowables = parse_markdown_to_flowables(content, styles)
+            elements.append(_body_card(flowables))
         else:
             elements.append(_body_card([Paragraph("-", styles["body"])]))
         elements.append(Spacer(1, 12))
@@ -420,7 +676,7 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
     )
 
     option_table = _build_option_table(deal, styles)
-    line_item_table, subtotal = _build_line_item_table(deal, styles)
+    line_item_flowables, subtotal, has_multiple_packages = _build_line_item_flowables(deal, styles)
     deposit_amount = round(subtotal * (deal.deposit_percent / 100))
     next_steps = _next_steps_copy(document_kind, deal, subtotal, deposit_amount)
     has_sections = deal.sections_json and deal.sections_json.strip() not in ("", "[]")
@@ -483,16 +739,26 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
         Spacer(1, 12),
     ]
     story.extend(narrative_footer)
+
+    if has_multiple_packages:
+        val_text = "Select preferred package option from the list above."
+        dep_text = f"Suggested deposit: <b>{deal.deposit_percent}% of selected option</b>"
+    else:
+        val_text = f"Total engagement value: <b>{_money(subtotal)}</b>"
+        dep_text = f"Suggested deposit to start: <b>{deal.deposit_percent}% ({_money(deposit_amount)})</b>"
+
     story.extend([
         _section_banner("Investment & Payment Schedule", styles),
         Spacer(1, 6),
-        line_item_table,
+    ])
+    story.extend(line_item_flowables)
+    story.extend([
         Spacer(1, 8),
         _body_card(
             [
-                Paragraph(f"Total engagement value: <b>{_money(subtotal)}</b>", styles["body"]),
+                Paragraph(val_text, styles["body"]),
                 Spacer(1, 5),
-                Paragraph(f"Suggested deposit to start: <b>{deal.deposit_percent}% ({_money(deposit_amount)})</b>", styles["body"]),
+                Paragraph(dep_text, styles["body"]),
                 Spacer(1, 5),
                 Paragraph(deal.payment_terms or "Payment schedule to be confirmed before kickoff.", styles["body"]),
             ]
