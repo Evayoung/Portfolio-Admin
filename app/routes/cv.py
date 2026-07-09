@@ -45,6 +45,18 @@ def _section_save_response(result) -> Any:
     return cv_save_status_fragment("Save not completed", result.message, tone=result.tone)
 
 
+def _safe_parse_json(data: str) -> list | None:
+    if not data:
+        return []
+    try:
+        parsed = json.loads(data)
+        if isinstance(parsed, list):
+            return parsed
+        return None
+    except json.JSONDecodeError:
+        return None
+
+
 def setup_cv_routes(app: Any) -> None:
     @app.get("/cv")
     def cv() -> Any:
@@ -97,42 +109,56 @@ def setup_cv_routes(app: Any) -> None:
 
     @app.post("/cv/section/core_skills/save")
     def cv_section_core_skills_save(data: str = "") -> Any:
-        labels = json.loads(data) if data else []
+        labels = _safe_parse_json(data)
+        if labels is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_core_skills(labels)
         return _section_save_response(result)
 
     @app.post("/cv/section/competencies/save")
     def cv_section_competencies_save(data: str = "") -> Any:
-        labels = json.loads(data) if data else []
+        labels = _safe_parse_json(data)
+        if labels is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_competencies(labels)
         return _section_save_response(result)
 
     @app.post("/cv/section/work_history/save")
     def cv_section_work_history_save(data: str = "") -> Any:
-        items = json.loads(data) if data else []
+        items = _safe_parse_json(data)
+        if items is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_work_history(items)
         return _section_save_response(result)
 
     @app.post("/cv/section/education/save")
     def cv_section_education_save(data: str = "") -> Any:
-        items = json.loads(data) if data else []
+        items = _safe_parse_json(data)
+        if items is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_education(items)
         return _section_save_response(result)
 
     @app.post("/cv/section/certifications/save")
     def cv_section_certifications_save(data: str = "") -> Any:
-        items = json.loads(data) if data else []
+        items = _safe_parse_json(data)
+        if items is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_certifications(items)
         return _section_save_response(result)
 
     @app.post("/cv/section/tools/save")
     def cv_section_tools_save(data: str = "") -> Any:
-        items = json.loads(data) if data else []
+        items = _safe_parse_json(data)
+        if items is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_tool_categories(items)
         return _section_save_response(result)
 
     @app.post("/cv/section/languages/save")
     def cv_section_languages_save(data: str = "") -> Any:
-        items = json.loads(data) if data else []
+        items = _safe_parse_json(data)
+        if items is None:
+            return cv_save_status_fragment("Validation Error", "The section data is malformed. Please reload the page and try again.", tone="danger")
         result = save_cv_section_languages(items)
         return _section_save_response(result)

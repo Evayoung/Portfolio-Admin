@@ -165,7 +165,9 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
     if not sections:
         return []
     cards = []
-    for section in sorted(sections, key=lambda s: s.get("order", 0)):
+    for section in sorted(sections, key=lambda s: s.get("order", 0) if isinstance(s, dict) else 0):
+        if not isinstance(section, dict):
+            continue
         title = section.get("title", "")
         content = section.get("content", "")
         if not title and not content:

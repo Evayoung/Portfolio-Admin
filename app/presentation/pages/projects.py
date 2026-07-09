@@ -123,11 +123,22 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
         ),
         Div(
             Div(
-                A("Open Media Library", href="/media?kind=image", cls="btn admin-install-btn"),
-                A("Upload Project Image", href="/media?kind=image", cls="btn admin-install-btn"),
-                cls="d-flex flex-wrap gap-2",
+                A("Open Media Library", href="/media?kind=image", target="_blank", cls="btn admin-install-btn"),
+                Input(
+                    type="file",
+                    id="project-image-file-input",
+                    name="image_file",
+                    accept="image/*",
+                    hx_post="/projects/upload-image",
+                    hx_encoding="multipart/form-data",
+                    hx_target="#project-image-upload-result",
+                    hx_swap="innerHTML",
+                    cls="form-control admin-form-control d-inline-block w-auto",
+                ),
+                cls="d-flex flex-wrap align-items-center gap-2",
             ),
-            P("Use the media page to upload or copy an existing public URL, then place it in Image URL.", cls="admin-module-copy mt-2 mb-0"),
+            Div(id="project-image-upload-result", cls="mt-2"),
+            P("Use the selector to upload directly, or open the media library. The Image URL field will auto-fill.", cls="admin-module-copy mt-2 mb-0"),
             cls="admin-detail-block mt-3",
         ),
         Div(

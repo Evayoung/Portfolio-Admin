@@ -285,7 +285,9 @@ def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) 
     if not sections:
         return []
     elements = []
-    for section in sorted(sections, key=lambda s: s.get("order", 0)):
+    for section in sorted(sections, key=lambda s: s.get("order", 0) if isinstance(s, dict) else 0):
+        if not isinstance(section, dict):
+            continue
         title = section.get("title", "")
         content = section.get("content", "")
         if not title:

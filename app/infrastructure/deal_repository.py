@@ -400,6 +400,27 @@ def _parse_tech_stack(raw: str) -> list[str]:
     return [part.strip() for part in raw.replace("\n", ",").split(",") if part.strip()]
 
 
+def _validate_sections_json(raw: str) -> str:
+    """Return the raw JSON string if it is valid, else empty string.
+
+    Prevents malformed JSON from being persisted and breaking the portal
+    render later when it tries json.loads().
+    """
+    if not raw or not raw.strip():
+        return ""
+    try:
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            import logging
+            logging.getLogger(__name__).warning("sections_json is not a JSON array; ignoring. Got: %s", type(parsed).__name__)
+            return ""
+        return raw
+    except json.JSONDecodeError as exc:
+        import logging
+        logging.getLogger(__name__).warning("sections_json contains invalid JSON and will not be persisted: %s", exc)
+        return ""
+
+
 def _parse_line_items(raw: str) -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
     for line in raw.splitlines():
@@ -642,15 +663,26 @@ def regenerate_document_link(*, deal_id: str, document_id: str, document_kind: s
         return False, "info", "Supabase write path is not configured yet, so document links cannot be regenerated."
     token = _generate_public_token(document_kind, deal_id)
     try:
+        # Read the current version_number so we can increment it correctly
+        current_rows = _rest_request(
+            "GET",
+            "client_documents",
+            params={"select": "version_number", "id": f"eq.{document_id}", "limit": "1"},
+        )
+        current_version = 1
+        if isinstance(current_rows, list) and current_rows:
+            current_version = int(current_rows[0].get("version_number") or 1)
+        new_version = current_version + 1
+
         _rest_request(
             "PATCH",
             "client_documents",
             params={"id": f"eq.{document_id}"},
-            payload={"public_token": token, "status": "draft", "version_number": 2, "revoked_at": None},
+            payload={"public_token": token, "status": "draft", "version_number": new_version, "revoked_at": None},
             prefer="return=minimal",
         )
         record_audit_event(action="document_link_regenerated", target_type="client_document", target_id=document_id, detail=token)
-        return True, "success", "A fresh client link has been generated. Mark sent when you are ready to email or share it."
+        return True, "success", f"A fresh client link has been generated (v{new_version}). Mark sent when you are ready to email or share it."
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="ignore")
         return False, "danger", f"Supabase rejected the link regeneration. {details or exc.reason}"
@@ -776,7 +808,7 @@ def save_deal_document(
         "payment_terms": payment_terms.strip(),
         "exclusions_text": exclusions_text.strip(),
         "closing_note": closing_note.strip(),
-        "sections_json": sections_json,
+        "sections_json": _validate_sections_json(sections_json),
         "amount_ngn": amount_value,
         "deposit_percent": deposit_value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -938,6 +970,7 @@ def save_quick_document(
         line_items=clean_line_items,
         exclusions_text="",
         closing_note="Thank you for reviewing this document. Please use the client link to respond or confirm next steps.",
+        sections_json="",
         payment_account_id=payment_account_id,
         amount_ngn=amount_ngn,
         deposit_percent=deposit_percent,

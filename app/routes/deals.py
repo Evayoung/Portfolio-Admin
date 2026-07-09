@@ -238,7 +238,7 @@ def setup_deal_routes(app: Any) -> None:
             },
         )
         title_text = "AI draft ready" if result.success else "AI draft not generated"
-        return ai_draft_result_fragment(title_text, result.message, tone=result.tone, draft=result.draft)
+        return ai_draft_result_fragment(title_text, result.message, tone=result.tone, draft=result.draft, draft_kind=ai_draft_kind)
 
     @app.post("/deals/documents/update")
     def deal_document_update(

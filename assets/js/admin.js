@@ -121,18 +121,56 @@ function initKeyboardShortcuts() {
 function initApplyDraft() {
   document.addEventListener("click", function (e) {
     const btn = e.target.closest("[data-apply-field]");
-    if (!btn) return;
-    const fieldId = btn.dataset.applyField;
-    const sourceId = btn.dataset.draftSource;
-    const source = document.getElementById(sourceId);
-    const target = document.getElementById(fieldId);
-    if (source && target) {
-      target.value = source.value;
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-      // Visual feedback
-      const orig = btn.textContent;
-      btn.textContent = "Applied!";
-      setTimeout(() => { btn.textContent = orig; }, 1200);
+    if (btn) {
+      const fieldId = btn.dataset.applyField;
+      const sourceId = btn.dataset.draftSource;
+      const source = document.getElementById(sourceId);
+      const target = document.getElementById(fieldId);
+      if (source && target) {
+        target.value = source.value;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        // Visual feedback
+        const orig = btn.textContent;
+        btn.textContent = "Applied!";
+        setTimeout(() => { btn.textContent = orig; }, 1200);
+      }
+      return;
+    }
+
+    const addToSectionsBtn = e.target.closest("[data-add-to-sections]");
+    if (addToSectionsBtn) {
+      const sourceId = addToSectionsBtn.dataset.draftSource;
+      const source = document.getElementById(sourceId);
+      const draftKind = addToSectionsBtn.dataset.draftKind || 'AI Section';
+      if (source && source.value) {
+        const sectionsInput = document.getElementById('sections_json');
+        if (sectionsInput) {
+          let sections = [];
+          try {
+            sections = JSON.parse(sectionsInput.value || '[]');
+          } catch (_) { sections = []; }
+          
+          const titleMap = {
+            "proposal": "Proposal Plan",
+            "quote": "Quotation Details",
+            "invoice": "Invoice Wording",
+            "scope": "Project Scope",
+            "payment_terms": "Payment Terms"
+          };
+          const title = titleMap[draftKind] || "AI Draft Section";
+          
+          sections.push({ title: title, content: source.value });
+          sectionsInput.value = JSON.stringify(sections);
+          
+          // Dispatch custom event to notify initDealSections to reload and render
+          sectionsInput.dispatchEvent(new CustomEvent('sections:update'));
+          
+          // Visual feedback
+          const orig = addToSectionsBtn.textContent;
+          addToSectionsBtn.textContent = "Added to Sections!";
+          setTimeout(() => { addToSectionsBtn.textContent = orig; }, 1500);
+        }
+      }
     }
   });
 }
@@ -142,7 +180,7 @@ function initApplyDraft() {
 function initLineItemsEditor() {
   document.querySelectorAll('.line-items-editor').forEach((container) => {
     const table = container.querySelector('.line-items-table');
-    const hiddenInput = document.getElementById('line_items');
+    const hiddenInput = container.querySelector('[data-li-hidden]');
     if (!table || !hiddenInput) return;
 
     function serialize() {
@@ -425,6 +463,14 @@ function initDealSections() {
       }
     });
   }
+
+  hiddenInput.addEventListener('sections:update', function () {
+    try {
+      const parsed = JSON.parse(hiddenInput.value || '[]');
+      sections = Array.isArray(parsed) ? parsed : [];
+    } catch (_) { sections = []; }
+    render();
+  });
 
   render();
 }

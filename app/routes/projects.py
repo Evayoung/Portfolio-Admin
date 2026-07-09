@@ -17,6 +17,9 @@ except ImportError:
     from presentation.pages.projects import project_save_status_fragment, projects_page
 
 
+from starlette.datastructures import UploadFile
+
+
 def setup_project_routes(app: Any) -> None:
     @app.get("/projects")
     def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:
@@ -38,6 +41,26 @@ def setup_project_routes(app: Any) -> None:
             cls="form-select admin-form-control",
             id="project-category-select",
         )
+
+    @app.post("/projects/upload-image")
+    def projects_upload_image(image_file: UploadFile | None = None) -> Any:
+        try:
+            from ..infrastructure.media_repository import upload_media_asset
+        except ImportError:
+            from infrastructure.media_repository import upload_media_asset
+        from fasthtml.common import Div, Span, Script
+
+        if image_file is None or not getattr(image_file, "filename", ""):
+            return Div("Please select a file first.", cls="text-danger mt-1")
+        title = f"Project Image - {image_file.filename}"
+        result = upload_media_asset(title=title, kind="image", alt_text="", asset_file=image_file)
+        if result.success and result.public_url:
+            return Div(
+                Span("✓ Uploaded successfully!", cls="text-success me-2"),
+                Script(f"document.getElementById('image_url').value = '{result.public_url}';"),
+                cls="mt-1"
+            )
+        return Div(f"Upload failed: {result.message}", cls="text-danger mt-1")
 
     @app.post("/projects/save")
     def project_save(

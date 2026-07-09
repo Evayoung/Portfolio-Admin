@@ -25,7 +25,7 @@ def deal_save_status_fragment(title: str, message: str, tone: str = "info") -> D
     return status_alert(title, message, tone)
 
 
-def ai_draft_result_fragment(title: str, message: str, tone: str = "info", draft: str = "") -> Div:
+def ai_draft_result_fragment(title: str, message: str, tone: str = "info", draft: str = "", draft_kind: str = "proposal") -> Div:
     apply_panel = Div()
     if draft:
         targets = [
@@ -50,6 +50,14 @@ def ai_draft_result_fragment(title: str, message: str, tone: str = "info", draft
                     )
                     for field_id, label in targets
                 ],
+                Button(
+                    "Add as New Document Section",
+                    type="button",
+                    cls="btn admin-module-btn",
+                    data_add_to_sections="true",
+                    data_draft_source="ai-draft-content",
+                    data_draft_kind=draft_kind,
+                ),
                 cls="d-flex flex-wrap gap-2",
             ),
         )
@@ -95,8 +103,12 @@ def _parse_line_items_display(raw: str) -> list[dict]:
     return rows
 
 
-def _line_items_editor(current_value: str) -> Div:
-    """Table-based line items editor with live totals, add/delete, paste support."""
+def _line_items_editor(current_value: str, form_id: str = "main") -> Div:
+    """Table-based line items editor with live totals, add/delete, paste support.
+
+    form_id must be unique per page so that the scoped JS does not cross-wire
+    two editors that appear simultaneously (e.g. main deal form + quick form).
+    """
     items = _parse_line_items_display(current_value)
     if not items:
         items = [{"label": "", "description": "", "quantity": "1", "unit_price": "0"}]
@@ -112,14 +124,15 @@ def _line_items_editor(current_value: str) -> Div:
 
     return Div(
         P("Enter line items below. Use Tab to move between cells. Paste spreadsheet rows with Tab as separator.", cls="admin-module-copy mb-2"),
-        Input(type="hidden", name="line_items", id="line_items", value=current_value),
+        # data-li-hidden lets the scoped JS find this input without using a global id
+        Input(type="hidden", name="line_items", data_li_hidden=form_id, value=current_value),
         Table(
             Thead(Tr(Th("Item"), Th("Description"), Th("Qty", style="width:80px"), Th("Amount", style="width:120px"), Th(style="width:40px"))),
             Tbody(*[_row(item) for item in items]),
             Tfoot(
                 Tr(
                     Td(Strong("Total"), colspan="3"),
-                    Td(Strong("0", cls="li-total-value"), id="li-total-cell"),
+                    Td(Strong("0", cls="li-total-value"), id=f"li-total-cell-{form_id}"),
                     Td(""),
                 )
             ),
@@ -597,7 +610,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         _ai_draft_panel(selected_kind),
         Div(
             P("Financials", cls="admin-form-section-title"),
-            _line_items_editor(selected.line_items_text if selected else ""),
+            _line_items_editor(selected.line_items_text if selected else "", form_id="main"),
             textarea_field("Payment Terms", "payment_terms", selected.payment_terms if selected else "", rows=4, placeholder="Deposit expectations, milestone payments, revision rules, and invoice notes."),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", str(selected.amount_ngn) if selected else "", input_type="number", placeholder="850000"), span=12, md=6),
@@ -708,7 +721,7 @@ def _quick_document_form() -> Form:
         ),
         Div(
             P("Money & Dates", cls="admin-form-section-title"),
-            _line_items_editor(""),
+            _line_items_editor("", form_id="quick"),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", "", input_type="number", placeholder="50000"), span=12, md=6),
                 Col(floating_field("Deposit %", "deposit_percent", "100", input_type="number", placeholder="100"), span=12, md=6, cls="mt-3 mt-md-0"),
