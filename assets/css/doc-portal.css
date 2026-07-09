@@ -1015,3 +1015,34 @@
     max-width: 100%;
   }
 }
+
+/* ── HTMX Button Loading States ────────────────────────────── */
+
+.doc-btn-primary.htmx-request,
+.doc-btn-ghost.htmx-request,
+.doc-download-btn.htmx-request {
+  position: relative !important;
+  color: transparent !important;
+  pointer-events: none !important;
+}
+
+.doc-btn-primary.htmx-request::after,
+.doc-btn-ghost.htmx-request::after,
+.doc-download-btn.htmx-request::after {
+  content: "" !important;
+  position: absolute !important;
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid currentColor !important;
+  border-right-color: transparent !important;
+  border-radius: 50% !important;
+  animation: doc-btn-spinner .75s linear infinite !important;
+}
+
+@keyframes doc-btn-spinner {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
