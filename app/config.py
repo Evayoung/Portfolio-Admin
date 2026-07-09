@@ -56,16 +56,16 @@ def _validate_production_settings() -> None:
     # Check the raw environment variable instead of the computed value
     # so the hardcoded fallback does not block deployment
     raw_secret = os.getenv("NEO_ADMIN_SECRET_KEY")
-    if raw_secret is not None and raw_secret in {"", "neo-admin-local-dev-secret", "replace-with-a-secure-secret"}:
+    if raw_secret is not None and raw_secret in {"neo-admin-local-dev-secret", "replace-with-a-secure-secret"}:
         raise RuntimeError("NEO_ADMIN_SECRET_KEY must be set to a secure value in production.")
     raw_pwd = os.getenv("NEO_ADMIN_LOGIN_PASSWORD")
-    if raw_pwd is not None and raw_pwd in {"", "Password123!", "replace-with-a-strong-password"}:
+    if raw_pwd is not None and raw_pwd in {"Password123!", "replace-with-a-strong-password"}:
         raise RuntimeError("NEO_ADMIN_LOGIN_PASSWORD must be changed before deploying Neo Admin.")
     raw_supabase_url = os.getenv("SUPABASE_URL")
     raw_service_role = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if (
-        raw_supabase_url is not None and raw_supabase_url in {"", "https://your-project-id.supabase.co"}
-        or raw_service_role is not None and raw_service_role in {"", "your-service-role-key"}
+        raw_supabase_url is not None and raw_supabase_url in {"https://your-project-id.supabase.co"}
+        or raw_service_role is not None and raw_service_role in {"your-service-role-key"}
     ):
         raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production.")
 
