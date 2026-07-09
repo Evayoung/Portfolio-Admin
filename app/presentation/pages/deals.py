@@ -896,7 +896,7 @@ def deals_workspace_page(*, deal_id: str = "", stage: str = "all", document_kind
             ),
             Div(
                 H3("Deal Studio", cls="admin-subsection-title"),
-                P("This first version gives you the structured pipeline foundation. PDF styling, public acceptance links, staged invoice splitting, and media attachments can layer on top of this model cleanly.", cls="admin-module-copy"),
+                P("Configure proposal, quotation, and invoice details. Add custom sections, manage line items, and generate client portal links dynamically.", cls="admin-module-copy"),
                 _editor_form(selected, stage=stage, document_kind=document_kind, search=search),
                 cls="admin-detail-block mt-4",
             ),
