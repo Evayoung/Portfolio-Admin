@@ -29,6 +29,7 @@ def setup_document_routes(app: Any) -> None:
         responder_name: str = "",
         responder_email: str = "",
         comment: str = "",
+        selected_package: str = "",
     ) -> Any:
         success, tone, message = save_document_response(
             token=token,
@@ -36,5 +37,6 @@ def setup_document_routes(app: Any) -> None:
             responder_name=responder_name,
             responder_email=responder_email,
             comment=comment,
+            selected_package=selected_package,
         )
         return document_portal_page(token=token, message=message, tone=tone if success else tone)

@@ -399,11 +399,67 @@ def _expiry_banner(valid_until: str) -> Div:
     )
 
 
+# ── Package selector (shown in response zone when there are multiple options) ──
+
+def _extract_package_names(line_items_text: str) -> list[str]:
+    """Extract distinct Package/Option group names from line items text."""
+    import re
+    names = []
+    seen = set()
+    for line in _lines(line_items_text or ""):
+        parts = [p.strip() for p in line.split("|")]
+        title = parts[0] if parts else ""
+        group_key = None
+        for prefix in ["Package", "Option"]:
+            match = re.match(r"^(" + prefix + r"\s+\w+)\s*[-:\s]", title, re.IGNORECASE)
+            if match:
+                group_key = match.group(1).strip()
+                break
+        if group_key and group_key not in seen:
+            seen.add(group_key)
+            names.append(group_key)
+    return names
+
+
 # ── Response zone ─────────────────────────────────────────────────────────────
 
-def _response_zone(document, token: str, message: str = "", tone: str = "info", *, expired: bool = False) -> Div:
+def _response_zone(document, token: str, message: str = "", tone: str = "info", *, expired: bool = False, deal=None) -> Div:
     is_proposal_or_quote = document.kind in {"proposal", "quote"}
     is_invoice = document.kind == "invoice"
+
+    # Detect multiple packages so we can show a selector
+    package_names = _extract_package_names(getattr(deal, "line_items_text", "") or "") if deal else []
+    has_packages = len(package_names) > 1
+
+    package_selector = ""
+    if has_packages and is_proposal_or_quote and not expired:
+        radio_items = [
+            Div(
+                Input(
+                    type="radio",
+                    id=f"pkg_{i}",
+                    name="selected_package",
+                    value=name,
+                    cls="doc-pkg-radio",
+                    required=True if i == 0 else False,
+                ),
+                Div(
+                    Span(name, cls="doc-pkg-label"),
+                    cls="doc-pkg-radio-content",
+                ),
+                cls="doc-pkg-option",
+            )
+            for i, name in enumerate(package_names)
+        ]
+        package_selector = Div(
+            Div(
+                Icon("layers", cls="me-2 doc-pkg-icon"),
+                Span("Which package are you interested in?", cls="doc-pkg-question"),
+                cls="doc-pkg-head",
+            ),
+            Div(*radio_items, cls="doc-pkg-list"),
+            cls="doc-pkg-selector",
+        )
 
     accept_btn = (
         Button(
@@ -471,6 +527,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         ),
         Div(
             feedback,
+            package_selector,
             Row(
                 Col(
                     Input(
@@ -658,7 +715,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             cls="doc-card",
         )
 
-    response_zone = _response_zone(document, token, message, tone, expired=expired)
+    response_zone = _response_zone(document, token, message, tone, expired=expired, deal=deal)
     history = _response_history(responses)
 
     return (

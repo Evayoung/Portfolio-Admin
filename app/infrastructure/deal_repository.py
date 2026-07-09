@@ -477,6 +477,7 @@ def save_document_response(
     responder_name: str,
     responder_email: str,
     comment: str,
+    selected_package: str = "",
 ) -> tuple[bool, str, str]:
     deal, document = get_document_by_token(token)
     if not deal or not document:
@@ -493,12 +494,19 @@ def save_document_response(
         return False, "info", "This invoice is already marked as paid."
     if not service_role_is_configured():
         return False, "info", "Supabase write path is not configured yet, so client responses cannot be recorded from this environment."
+
+    # Prepend selected package to comment so it's clearly visible in response history
+    comment_body = comment.strip()
+    if selected_package and selected_package.strip():
+        pkg_prefix = f"✅ Selected: {selected_package.strip()}"
+        comment_body = f"{pkg_prefix}\n\n{comment_body}" if comment_body else pkg_prefix
+
     payload = {
         "document_id": document.document_id,
         "action": action,
         "responder_name": responder_name.strip(),
         "responder_email": responder_email.strip(),
-        "comment": comment.strip(),
+        "comment": comment_body,
     }
     try:
         _rest_request("POST", "client_document_responses", payload=payload, prefer="return=representation")
