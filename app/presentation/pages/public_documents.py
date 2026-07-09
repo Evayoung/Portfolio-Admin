@@ -457,6 +457,17 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             cls="doc-pkg-selector",
         )
 
+    is_open = document.status in {"sent", "draft"}
+    is_decision_disabled = expired or not is_open
+
+    status_msg = "Your response is sent directly to me. I'll follow up within 24 hours."
+    if expired:
+        status_msg = "Acceptance has been disabled — this document has expired."
+    elif document.status == "accepted":
+        status_msg = "This document has been accepted. You can still send a comment below."
+    elif document.status == "rejected":
+        status_msg = "This document has been declined. You can still send a comment below."
+
     accept_btn = (
         Button(
             Icon("check-circle-fill", cls="me-2"),
@@ -465,8 +476,8 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             name="action",
             value="accepted",
             cls="doc-btn-primary",
-            disabled=expired,
-            style="opacity:0.45; cursor:not-allowed;" if expired else "",
+            disabled=is_decision_disabled,
+            style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
@@ -479,8 +490,8 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             name="action",
             value="rejected",
             cls="doc-btn-ghost",
-            disabled=expired,
-            style="opacity:0.45; cursor:not-allowed;" if expired else "",
+            disabled=is_decision_disabled,
+            style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
@@ -515,8 +526,18 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         (function() {
             const form = document.querySelector('.doc-response-zone');
             if (!form) return;
+            
+            // Track the clicked button's value, since HTMX requests programmatically
+            // dispatch the submit event and don't populate event.submitter.
+            let clickedButtonValue = '';
+            document.querySelectorAll('.doc-response-zone button[type="submit"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    clickedButtonValue = this.value;
+                });
+            });
+
             form.onsubmit = function(event) {
-                const action = event.submitter ? event.submitter.value : '';
+                const action = event.submitter ? event.submitter.value : clickedButtonValue;
                 if (action === 'accepted') {
                     const radios = document.getElementsByName('selected_package');
                     if (radios.length > 0) {
@@ -567,8 +588,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         Div(
             H3("Your Response", cls="doc-response-title"),
             P(
-                "Acceptance has been disabled — this document has expired." if expired
-                else "Your response is sent directly to me. I'll follow up within 24 hours.",
+                status_msg,
                 cls="doc-response-copy",
             ),
             cls="doc-response-head",

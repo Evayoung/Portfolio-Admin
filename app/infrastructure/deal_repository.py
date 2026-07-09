@@ -486,8 +486,8 @@ def save_document_response(
         return False, "warning", "Choose a valid response action."
     if action == "accepted" and document.kind in {"proposal", "quote"} and _document_is_expired(document):
         return False, "warning", "This document has expired, so acceptance is no longer available. Please request a refreshed copy."
-    if action == "accepted" and document.kind in {"proposal", "quote"} and document.status not in {"sent", "draft"}:
-        return False, "warning", "This document is no longer open for acceptance."
+    if action in {"accepted", "rejected"} and document.kind in {"proposal", "quote"} and document.status not in {"sent", "draft"}:
+        return False, "warning", f"This document is already {document.status} and no longer open for decision."
     if action == "payment_submitted" and document.kind != "invoice":
         return False, "warning", "Payment confirmation is only available for invoices."
     if action == "payment_submitted" and document.status == "paid":
@@ -510,12 +510,12 @@ def save_document_response(
     }
     try:
         _rest_request("POST", "client_document_responses", payload=payload, prefer="return=representation")
-        if action == "accepted" and document.kind in {"proposal", "quote"}:
+        if action in {"accepted", "rejected"} and document.kind in {"proposal", "quote"}:
             _rest_request(
                 "PATCH",
                 "client_documents",
                 params={"id": f"eq.{document.document_id}"},
-                payload={"status": "accepted"},
+                payload={"status": action},
                 prefer="return=minimal",
             )
         if action == "payment_submitted" and document.kind == "invoice":
