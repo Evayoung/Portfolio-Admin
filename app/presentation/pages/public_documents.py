@@ -703,7 +703,7 @@ def _doc_footer(profile, deal, document) -> Div:
         A(
             Icon("download", cls="me-2"),
             "Download PDF",
-            href=f"/documents/{token}/pdf",
+            href=f"/documents/{document.public_token}/pdf",
             cls="doc-download-btn",
         ),
         cls="doc-footer",
