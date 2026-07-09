@@ -742,19 +742,15 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
             ),
             cls="admin-form-actions mt-4",
         ),
-        Form(
-            Input(type="hidden", name="deal_id", value=selected.deal_id if selected else ""),
-            Button(
-                "Delete Deal",
-                type="submit",
-                cls="btn btn-outline-danger mt-2",
-                onclick="return confirm('Are you sure you want to permanently delete this deal and all its documents? This cannot be undone.')",
-            ),
-            action="/deals/delete",
-            method="post",
+        Button(
+            "Delete Deal",
+            type="button",
+            cls="btn btn-outline-danger mt-2",
             hx_post="/deals/delete",
+            hx_vals=f'{{"deal_id": "{selected.deal_id if selected else ""}"}}',
             hx_target="#deal-save-result",
             hx_swap="innerHTML",
+            onclick="return confirm('Are you sure you want to permanently delete this deal and all its documents? This cannot be undone.')",
         )
         if selected and selected.deal_id
         else "",

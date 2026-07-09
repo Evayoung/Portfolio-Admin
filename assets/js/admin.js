@@ -474,16 +474,51 @@ function initDealSections() {
         sections.push({ title: title, content: content });
       }
       serialize();
-      if (window.bootstrap) {
-        window.bootstrap.Modal.getInstance(modal).hide();
-      }
-      // Auto-save the deal form so section edits are persisted immediately
+      
+      // Disable save button and show spinner
+      saveBtn.disabled = true;
+      const originalHtml = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
+      
       var dealForm = hiddenInput.closest('.admin-settings-form');
       if (dealForm && window.htmx) {
-        // Small delay to let the modal finish closing
-        setTimeout(function () {
-          htmx.trigger(dealForm, 'submit');
-        }, 200);
+        const onHtmxRequest = function (evt) {
+          // Verify it's the save request
+          if (evt.detail.pathInfo.requestPath.indexOf('/deals/save') !== -1) {
+            dealForm.removeEventListener('htmx:afterRequest', onHtmxRequest);
+            if (evt.detail.successful) {
+              saveBtn.innerHTML = '✓ Saved!';
+              saveBtn.classList.remove('btn-primary', 'admin-install-btn');
+              saveBtn.classList.add('btn-success');
+              
+              // Brief delay for user feedback, then close modal
+              setTimeout(function () {
+                if (window.bootstrap) {
+                  var bsModal = bootstrap.Modal.getInstance(modal);
+                  if (bsModal) bsModal.hide();
+                }
+                // Reset button state
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalHtml;
+                saveBtn.classList.remove('btn-success');
+                saveBtn.classList.add('btn-primary', 'admin-install-btn');
+              }, 600);
+            } else {
+              // Reset state on error
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = originalHtml;
+              alert('Failed to save section changes to the database. Please try again.');
+            }
+          }
+        };
+        dealForm.addEventListener('htmx:afterRequest', onHtmxRequest);
+        htmx.trigger(dealForm, 'submit');
+      } else {
+        // Fallback if no HTMX
+        if (window.bootstrap) {
+          window.bootstrap.Modal.getInstance(modal).hide();
+        }
+        saveBtn.disabled = false;
       }
     });
   }
@@ -565,6 +600,64 @@ function initToasts() {
   });
 }
 
+/* ── Modal Auto-Save Graceful Reload Interceptor ────────────────── */
+
+function initModalSaveFeedback() {
+  document.addEventListener('htmx:beforeProcessResponse', function (evt) {
+    const xhr = evt.detail.xhr;
+    if (!xhr) return;
+    
+    // Check if there is an active open modal
+    const openModal = document.querySelector('.modal.show');
+    if (openModal && xhr.getResponseHeader('HX-Refresh') === 'true') {
+      // Mock getResponseHeader to hide HX-Refresh from HTMX response processing
+      const originalGetHeader = xhr.getResponseHeader;
+      xhr.getResponseHeader = function (name) {
+        if (name && name.toLowerCase() === 'hx-refresh') return null;
+        return originalGetHeader.apply(this, arguments);
+      };
+      // Store flag and reference to the modal on the xhr object
+      xhr.shouldManualReload = true;
+      xhr.associatedModal = openModal;
+    }
+  });
+
+  document.addEventListener('htmx:afterRequest', function (evt) {
+    const xhr = evt.detail.xhr;
+    if (!xhr || !xhr.shouldManualReload || !xhr.associatedModal) return;
+    
+    const modal = xhr.associatedModal;
+    const saveBtn = modal.querySelector('#deal-section-save-btn, button[type="submit"], button.htmx-request');
+    
+    if (saveBtn) {
+      if (evt.detail.successful) {
+        saveBtn.disabled = true;
+        const originalHtml = saveBtn.innerHTML;
+        saveBtn.innerHTML = '✓ Saved!';
+        saveBtn.classList.remove('btn-primary', 'admin-install-btn');
+        saveBtn.classList.add('btn-success');
+        
+        setTimeout(function () {
+          if (window.bootstrap) {
+            var bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+          }
+          setTimeout(function () {
+            window.location.reload();
+          }, 350); // wait for bootstrap hide transition
+        }, 600);
+      } else {
+        // Reset saveBtn state on failure so they can try again
+        saveBtn.disabled = false;
+        alert('Save failed. Please try again.');
+      }
+    } else {
+      // Fallback if no button
+      window.location.reload();
+    }
+  });
+}
+
 /* ── DOMContentLoaded init ───────────────────────────────── */
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -599,4 +692,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // HTMX OOB toast auto-init
   initToasts();
+
+  // Modal auto-save graceful reload interceptor
+  initModalSaveFeedback();
 });
