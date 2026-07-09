@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from starlette.responses import FileResponse, JSONResponse
+
 try:
     from ..config import settings
+    from ..infrastructure.deal_pdf import build_deal_document_pdf
     from ..infrastructure.deal_repository import get_document_by_token, record_document_view, save_document_response
     from ..presentation.pages.public_documents import document_portal_page
 except ImportError:
     from config import settings
+    from infrastructure.deal_pdf import build_deal_document_pdf
     from infrastructure.deal_repository import get_document_by_token, record_document_view, save_document_response
     from presentation.pages.public_documents import document_portal_page
 
@@ -46,3 +50,13 @@ def setup_document_routes(app: Any) -> None:
             message=message,
             variant=tone,
         )
+
+    @app.get("/documents/{token}/pdf")
+    def public_document_pdf(token: str) -> Any:
+        deal, doc = get_document_by_token(token)
+        if not deal or not doc:
+            return JSONResponse({"error": "Document not found"}, status_code=404)
+        pdf_path = build_deal_document_pdf(deal, doc.kind)
+        safe_title = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in deal.project_title.strip().replace(" ", "-")).strip("-") or "deal-document"
+        filename = f"{safe_title}-{doc.kind}.pdf"
+        return FileResponse(pdf_path, filename=filename, media_type="application/pdf")
