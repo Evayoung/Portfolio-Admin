@@ -549,9 +549,12 @@ def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) 
         elements.append(_section_banner(title, styles))
         elements.append(Spacer(1, 6))
         if content:
-            # Parse markdown content into ReportLab flowables directly!
+            # Emit parsed markdown flowables directly into the story.
+            # DO NOT wrap in _body_card (single-cell Table) — long content exceeds page height
+            # and ReportLab cannot split a table cell across pages (LayoutError).
             flowables = parse_markdown_to_flowables(content, styles)
-            elements.append(_body_card(flowables))
+            for fl in flowables:
+                elements.append(fl)
         else:
             elements.append(_body_card([Paragraph("-", styles["body"])]))
         elements.append(Spacer(1, 12))

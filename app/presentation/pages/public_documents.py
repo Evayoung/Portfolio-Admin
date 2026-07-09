@@ -158,6 +158,9 @@ def _section_card(title: str, lines: list[str], *, fallback: str = "") -> Div:
 
 def _dynamic_sections(sections_json: str) -> list[Div]:
     """Render sections from JSON using Faststrap Markdown component."""
+    # Section titles that belong in PDF/print only — not on the interactive web portal
+    _PDF_ONLY_TITLES = {"acceptance", "your response", "signature", "sign off", "sign-off"}
+
     try:
         sections = json.loads(sections_json) if sections_json else []
     except (json.JSONDecodeError, TypeError):
@@ -171,6 +174,9 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
         title = section.get("title", "")
         content = section.get("content", "")
         if not title and not content:
+            continue
+        # Skip sections that are only meaningful in a printed/PDF context
+        if title.strip().lower() in _PDF_ONLY_TITLES:
             continue
         cards.append(
             Div(
@@ -635,6 +641,23 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     investment_table = _line_items_table(deal, document)
     account_panel = _payment_account_panel(account) if (document.kind == "invoice" and account) else ""
     expiry_banner = _expiry_banner(document.valid_until) if expired else ""
+
+    # Payment terms bridge card — shown between investment and response form
+    payment_terms_card = ""
+    if deal.payment_terms and deal.payment_terms.strip():
+        payment_terms_card = Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Payment Terms", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                *[P(line, cls="doc-body-text") for line in _lines(deal.payment_terms)],
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        )
+
     response_zone = _response_zone(document, token, message, tone, expired=expired)
     history = _response_history(responses)
 
@@ -671,6 +694,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
                 # Content sections
                 *narrative_cards,
                 investment_table,
+                payment_terms_card,
                 account_panel,
                 # Response
                 response_zone,

@@ -410,6 +410,22 @@
   font-size: 1.05rem;
 }
 
+/* ── Investment options (multi-package layout) ────────────── */
+
+.doc-investment-option {
+  margin-bottom: 0.25rem;
+}
+
+.doc-table-group-header {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--doc-navy);
+  padding: 0.5rem 0 0.35rem;
+  border-bottom: 2px solid var(--doc-cyan-border);
+  margin-bottom: 0.5rem;
+}
+
 /* ── Payment account ──────────────────────────────────────── */
 
 .doc-account-grid {
