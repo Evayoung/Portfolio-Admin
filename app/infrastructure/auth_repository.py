@@ -15,9 +15,11 @@ from app.domain.models import AdminAccessProfile, AdminAccessSaveResult, AdminLo
 from app.infrastructure.audit_repository import record_audit_event
 from app.infrastructure.supabase_client import service_role_is_configured
 
-_LOGIN_FAILURES: dict[str, tuple[int, float]] = {}
-_MAX_LOGIN_FAILURES = 5
-_LOCKOUT_SECONDS = 15 * 60
+_LOGIN_FAILURES: dict[str, tuple[int, float]] = {}  # keyed by email
+_IP_FAILURES: dict[str, tuple[int, float]] = {}       # keyed by IP address
+_MAX_LOGIN_FAILURES = 4          # attempts before lockout (per email)
+_MAX_IP_FAILURES = 8             # attempts before IP lockout
+_LOCKOUT_SECONDS = 30 * 60      # 30-minute lockout
 
 
 def _rest_headers(*, prefer: str | None = None) -> dict[str, str]:
@@ -88,13 +90,21 @@ def get_admin_access_profile() -> AdminAccessProfile:
     return seed_profile
 
 
-def authenticate_admin(login_email: str, password: str) -> AdminLoginResult:
+def authenticate_admin(login_email: str, password: str, *, ip: str = "") -> AdminLoginResult:
     email = login_email.strip().lower()
     if not email or not password:
         return AdminLoginResult(False, "warning", "Enter both your login email and password.", "", "Validation")
+
+    # --- IP-level lockout (blocks rotating-email attacks) ---
+    if ip:
+        ip_failures, ip_locked_until = _IP_FAILURES.get(ip, (0, 0.0))
+        if ip_failures >= _MAX_IP_FAILURES and ip_locked_until > time.time():
+            return AdminLoginResult(False, "danger", "Too many failed attempts from your location. Please wait before trying again.", email, "Rate Limit")
+
+    # --- Email-level lockout ---
     failures, locked_until = _LOGIN_FAILURES.get(email, (0, 0.0))
     if failures >= _MAX_LOGIN_FAILURES and locked_until > time.time():
-        return AdminLoginResult(False, "danger", "Too many failed attempts. Try again in a few minutes.", email, "Rate Limit")
+        return AdminLoginResult(False, "danger", "Too many failed attempts. Try again in 30 minutes.", email, "Rate Limit")
 
     seed_profile, seed_hash = _seed_profile()
     stored_email = seed_profile.login_email.lower()
@@ -119,9 +129,16 @@ def authenticate_admin(login_email: str, password: str) -> AdminLoginResult:
         current_failures = failures + 1
         lock_until = time.time() + _LOCKOUT_SECONDS if current_failures >= _MAX_LOGIN_FAILURES else 0.0
         _LOGIN_FAILURES[email] = (current_failures, lock_until)
+        # Track IP failures too
+        if ip:
+            ip_current = _IP_FAILURES.get(ip, (0, 0.0))[0] + 1
+            ip_lock = time.time() + _LOCKOUT_SECONDS if ip_current >= _MAX_IP_FAILURES else 0.0
+            _IP_FAILURES[ip] = (ip_current, ip_lock)
         return AdminLoginResult(False, "danger", "The login credentials did not match this admin workspace.", email, source.title())
 
     _LOGIN_FAILURES.pop(email, None)
+    if ip:
+        _IP_FAILURES.pop(ip, None)
     return AdminLoginResult(True, "success", "Signed in successfully.", stored_email, source.title())
 
 

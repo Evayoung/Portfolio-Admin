@@ -282,16 +282,28 @@
 
 .doc-card-body {
   padding: 1.4rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 /* Markdown content rendered inside section cards (Faststrap Markdown) */
 /* Faststrap Markdown wraps output in <div class="faststrap-markdown"> */
+
+/* Scroll container so wide tables don't overflow on mobile */
+.faststrap-markdown {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
 .faststrap-markdown table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
   margin: 0.5rem 0 0.75rem;
   overflow: hidden;
+  min-width: 420px; /* ensures table is scrollable before content collapses */
 }
 .faststrap-markdown table thead tr {
   background: var(--doc-navy);
@@ -965,6 +977,39 @@
   .doc-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+/* ── Mobile table scroll override ────────────────────────── */
+
+@media (max-width: 640px) {
+  /* Ensure doc-card-body tables don't clip at card boundary */
+  .doc-card {
+    overflow: visible;
+  }
+  .doc-card-body {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  /* Engagement summary and all markdown section tables */
+  .faststrap-markdown table,
+  .doc-card-body table {
+    min-width: 360px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  /* Investment table already uses doc-table-wrap; ensure it too */
+  .doc-table {
+    min-width: 360px;
+  }
+
+  /* Meta strip stacks gracefully on very small screens */
+  .doc-meta-strip {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

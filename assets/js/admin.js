@@ -324,6 +324,19 @@ function removeCvItem(btn) {
   if (row) row.remove();
 }
 
+/* ── Deal auto-save helper (used by sections editor) ──────── */
+
+function _autoSaveDeal() {
+  var dealForm = document.querySelector('.admin-settings-form[hx-post="/deals/save"], .admin-settings-form[hx\\:post="/deals/save"]');
+  if (!dealForm) {
+    // Try finding by action attribute
+    dealForm = document.querySelector('.admin-settings-form');
+  }
+  if (dealForm && window.htmx) {
+    htmx.trigger(dealForm, 'submit');
+  }
+}
+
 /* ── Deal Sections Editor ──────────────────────── */
 
 function initDealSections() {
@@ -395,6 +408,7 @@ function initDealSections() {
           sections[idx - 1] = sections[idx];
           sections[idx] = tmp;
           serialize();
+          _autoSaveDeal();
         }
       });
     });
@@ -406,6 +420,7 @@ function initDealSections() {
           sections[idx + 1] = sections[idx];
           sections[idx] = tmp;
           serialize();
+          _autoSaveDeal();
         }
       });
     });
@@ -421,6 +436,7 @@ function initDealSections() {
         if (confirm('Delete section "' + (sections[idx].title || 'Untitled') + '"?')) {
           sections.splice(idx, 1);
           serialize();
+          _autoSaveDeal();
         }
       });
     });
@@ -460,6 +476,14 @@ function initDealSections() {
       serialize();
       if (window.bootstrap) {
         window.bootstrap.Modal.getInstance(modal).hide();
+      }
+      // Auto-save the deal form so section edits are persisted immediately
+      var dealForm = hiddenInput.closest('.admin-settings-form');
+      if (dealForm && window.htmx) {
+        // Small delay to let the modal finish closing
+        setTimeout(function () {
+          htmx.trigger(dealForm, 'submit');
+        }, 200);
       }
     });
   }

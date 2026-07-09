@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, Input, P
+from fasthtml.common import A, Div, Form, H2, Input, P, Style
 from faststrap import Card, Col, Container, Row, SEO
 
 from app.config import settings
@@ -36,6 +36,10 @@ def login_page(*, next_path: str = "/", message: str = "", tone: str = "info", l
             required=True,
             autocomplete="current-password",
         ),
+        # Anti-bot honeypot — hidden from real users, bots fill it
+        Input(type="text", name="_trap", tabindex="-1", autocomplete="off",
+              style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;",
+              aria_hidden="true"),
         Input(type="hidden", name="next_path", value=next_path or "/"),
         alert if alert else "",
         Div(

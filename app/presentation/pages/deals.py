@@ -146,6 +146,104 @@ def _line_items_editor(current_value: str, form_id: str = "main") -> Div:
         cls="line-items-editor mt-2",
     )
 
+def _financials_package_preview(raw: str) -> Div:
+    """Admin-side package-aware financials preview matching what the client sees.
+
+    When line items are prefixed with 'Package X' or 'Option X', renders
+    separate mini-tables per package so the admin can verify the split.
+    Falls back to a single totals row for standard (non-package) deals.
+    """
+    import re
+
+    items = _parse_line_items_display(raw)
+    if not items or all(not it["label"] for it in items):
+        return ""
+
+    # Group by package prefix (same logic as client portal)
+    groups: dict[str, list[dict]] = {}
+    for it in items:
+        label = it["label"]
+        group_key = None
+        for prefix in ["Package", "Option"]:
+            m = re.match(r"^(" + prefix + r"\s+\w+)\s*[-:]\s*(.*)$", label, re.IGNORECASE)
+            if m:
+                group_key = m.group(1).strip()
+                label = m.group(2).strip()
+                break
+        if not group_key:
+            for prefix in ["Package", "Option"]:
+                m = re.match(r"^(" + prefix + r"\s+\w+)\s+(.*)$", label, re.IGNORECASE)
+                if m:
+                    group_key = m.group(1).strip()
+                    label = m.group(2).strip()
+                    break
+        if not group_key:
+            group_key = "Standard"
+        groups.setdefault(group_key, []).append({**it, "label": label})
+
+    is_multi_package = len(groups) > 1 or "Standard" not in groups
+
+    def _pkg_table(pkg_name: str, pkg_items: list[dict]) -> Div:
+        pkg_total = 0
+        rows = []
+        for it in pkg_items:
+            try:
+                amt = int(float(it["unit_price"] or "0"))
+                qty = int(it["quantity"] or "1")
+            except (ValueError, TypeError):
+                amt, qty = 0, 1
+            pkg_total += amt * qty
+            rows.append(
+                Tr(
+                    Td(Strong(it["label"]) if is_multi_package else it["label"]),
+                    Td(it["description"], style="color:#8a9bb0;font-size:0.82rem;"),
+                    Td(it["quantity"], style="text-align:center;"),
+                    Td(_money(amt), style="text-align:right;font-weight:600;"),
+                )
+            )
+        rows.append(
+            Tr(
+                Td(Strong("Total" if not is_multi_package else f"{pkg_name} Total"), colspan="3",
+                   style="text-align:right;font-weight:700;background:rgba(70,200,238,0.08);"),
+                Td(Strong(_money(pkg_total)),
+                   style="text-align:right;font-weight:700;color:#2db8e8;background:rgba(70,200,238,0.08);"),
+            )
+        )
+        return Div(
+            P(pkg_name, cls="admin-form-label mt-3 mb-1") if is_multi_package else "",
+            Div(
+                Table(
+                    Thead(
+                        Tr(
+                            Th("Item"), Th("Description"),
+                            Th("Qty", style="width:50px;text-align:center;"),
+                            Th("Amount", style="width:110px;text-align:right;"),
+                        )
+                    ),
+                    Tbody(*rows),
+                    cls="table table-sm table-bordered mb-0",
+                    style="font-size:0.83rem;",
+                ),
+                style="overflow-x:auto;",
+            ),
+        )
+
+    heading = "Package Preview" if is_multi_package else "Totals Preview"
+    pkg_tables = [_pkg_table(name, items_) for name, items_ in groups.items()]
+
+    return Div(
+        P(heading, cls="admin-form-section-title mt-4 mb-1"),
+        P(
+            "Read-only preview — mirrors what the client sees on their portal."
+            if is_multi_package else
+            "Calculated from line items above.",
+            cls="admin-module-copy mb-2",
+        ),
+        *pkg_tables,
+        cls="admin-detail-block mt-2 mb-3",
+        style="border-left:3px solid rgba(70,200,238,0.4);padding-left:0.75rem;",
+    )
+
 
 
 
@@ -611,6 +709,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
         Div(
             P("Financials", cls="admin-form-section-title"),
             _line_items_editor(selected.line_items_text if selected else "", form_id="main"),
+            _financials_package_preview(selected.line_items_text if selected else ""),
             textarea_field("Payment Terms", "payment_terms", selected.payment_terms if selected else "", rows=4, placeholder="Deposit expectations, milestone payments, revision rules, and invoice notes."),
             Row(
                 Col(floating_field("Amount (NGN)", "amount_ngn", str(selected.amount_ngn) if selected else "", input_type="number", placeholder="850000"), span=12, md=6),

@@ -20,7 +20,14 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+import time as _session_time
+
+
 def _require_admin_login(req, session):
+    # Expire stale sessions automatically (8-hour rolling TTL)
+    expires_at = session.get("expires_at", 0)
+    if expires_at and _session_time.time() > expires_at:
+        session.clear()
     if session.get("admin_authenticated"):
         return None
     next_path = req.url.path

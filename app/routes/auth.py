@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from fasthtml.common import Redirect
+from fasthtml.common import Request, Redirect
 
 try:
     from ..config import settings
@@ -25,8 +25,18 @@ def setup_auth_routes(app: Any) -> None:
         return login_page(next_path=_safe_next_path(next_path))
 
     @app.post("/login")
-    def login_submit(session, login_email: str = "", password: str = "", next_path: str = "/") -> Any:
-        result = authenticate_admin(login_email, password)
+    def login_submit(req: Request, session, login_email: str = "", password: str = "", next_path: str = "/", _trap: str = "") -> Any:
+        # Check session expiry (8-hour rolling window)
+        import time as _time
+        expires_at = session.get("expires_at", 0)
+        if expires_at and _time.time() > expires_at:
+            session.clear()
+        # Honeypot: real browsers never fill the hidden _trap field
+        if _trap:
+            return login_page(next_path=_safe_next_path(next_path))
+        # Extract client IP for rate limiting
+        client_ip = req.headers.get("x-forwarded-for", req.headers.get("x-real-ip", "")).split(",")[0].strip()
+        result = authenticate_admin(login_email, password, ip=client_ip)
         if not result.success:
             return login_page(
                 next_path=_safe_next_path(next_path),
@@ -36,6 +46,7 @@ def setup_auth_routes(app: Any) -> None:
             )
         session["admin_authenticated"] = True
         session["admin_login_email"] = result.login_email
+        session["expires_at"] = _time.time() + (8 * 3600)  # 8-hour session
         return Redirect(_safe_next_path(next_path))
 
     @app.get("/logout")
