@@ -6,7 +6,8 @@ import secrets as _secrets
 import time as _time
 
 from fasthtml.common import A, Aside, Button, Div, Footer, H1, Main, Meta, P, Small, Span
-from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem, ToastContainer
+from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem
+from faststrap.components.feedback.modern_toast import ModernToastStack
 
 from app.config import settings
 from app.infrastructure.settings_repository import get_site_profile
@@ -399,5 +400,5 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         admin_mobile_drawer(current),
         admin_install_drawer(profile),
         admin_shortcuts_modal(),
-        ToastContainer(id="toast-container"),
+        ModernToastStack(position="top-end", gap=2, id="toast-container"),
     )

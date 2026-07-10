@@ -7,7 +7,7 @@ import secrets
 from fasthtml.common import A, Div, H2, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
 
-from faststrap.components.feedback.toast import Toast
+from faststrap.components.feedback.modern_toast import ModernToast
 from faststrap.presets import LoadingButton
 
 
@@ -308,16 +308,19 @@ def section_wrap(title: str, content) -> Div:
 SectionWrap = section_wrap
 
 
-def toast_fragment(title: str, message: str, variant: str = "success") -> Toast:
-    """Return a Bootstrap Toast with OOB swap for the toast container.
+def toast_fragment(title: str, message: str, variant: str = "success") -> ModernToast:
+    """Return a ModernToast with OOB swap for the toast container.
 
     Use alongside HTMX responses to show a toast notification:
         return (panel_content, toast_fragment("Saved!", "Your changes were saved."))
     """
-    return Toast(
-        message,
-        title=title,
+    return ModernToast(
+        title,
+        message=message,
         variant=variant,
+        style="glass",
+        position="top-end",
+        duration=5000,
         hx_swap_oob="afterbegin:#toast-container",
     )
 

@@ -9,7 +9,8 @@ from fasthtml.common import (
     A, Button, Div, Form, H1, H2, H3, Input, Label, P, Script, Span, Strong,
     Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr,
 )
-from faststrap import Col, Icon, Markdown, Row, SEO, ToastContainer
+from faststrap import Col, Icon, Markdown, Row, SEO
+from faststrap.components.feedback.modern_toast import ModernToastStack
 
 from app.config import settings
 from app.infrastructure.deal_repository import get_document_by_token, list_document_responses
@@ -421,6 +422,170 @@ def _extract_package_names(line_items_text: str) -> list[str]:
     return names
 
 
+# ── Confirmation modals ──────────────────────────────────────────────────────
+
+def _accept_confirmation_modal(document, token: str) -> Div:
+    """Modal that confirms before accepting a proposal or quote."""
+    action_label = "Accept" if document.kind == "proposal" else "Confirm Quote"
+    return Div(
+        Div(
+            Div(
+                Div(
+                    H3(f"{action_label}?", cls="modal-title"),
+                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
+                    cls="modal-header",
+                ),
+                Div(
+                    P(
+                        f"You are about to {action_label.lower()} this {document.kind}. "
+                        "This action will be recorded and cannot be undone from this portal.",
+                        cls="mb-3",
+                    ),
+                    P("Add a note (optional):", cls="fw-semibold mb-2"),
+                    Textarea(
+                        name="confirm_comment",
+                        id="accept-confirm-comment",
+                        placeholder="e.g. Approved, looks good, proceed...",
+                        rows=3,
+                        cls="form-control doc-response-input",
+                    ),
+                    cls="modal-body",
+                ),
+                Div(
+                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+                    Button(
+                        Icon("check-circle-fill", cls="me-2"),
+                        f"Confirm {action_label}",
+                        type="button",
+                        cls="btn doc-btn-primary",
+                        id="accept-confirm-btn",
+                    ),
+                    cls="modal-footer d-flex gap-2 justify-content-end",
+                ),
+                cls="modal-content doc-modal",
+            ),
+            cls="modal-dialog modal-dialog-centered",
+        ),
+        cls="modal fade",
+        id="acceptConfirmModal",
+        tabindex="-1",
+        aria_hidden="true",
+    )
+
+
+def _decline_confirmation_modal(document, token: str) -> Div:
+    """Modal that requires a reason before declining a proposal or quote."""
+    return Div(
+        Div(
+            Div(
+                Div(
+                    H3("Decline Proposal?", cls="modal-title"),
+                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
+                    cls="modal-header",
+                ),
+                Div(
+                    P(
+                        "Please share a brief reason for declining. "
+                        "This helps me improve future proposals.",
+                        cls="mb-3",
+                    ),
+                    P("Reason for declining (required):", cls="fw-semibold mb-2"),
+                    Textarea(
+                        name="confirm_comment",
+                        id="decline-confirm-comment",
+                        placeholder="e.g. Budget is too high, timeline doesn't work, chose another vendor...",
+                        rows=4,
+                        cls="form-control doc-response-input",
+                        required=True,
+                    ),
+                    Div(
+                        Icon("exclamation-circle", cls="me-2"),
+                        Span("A reason is required to complete this action.", cls="small text-muted"),
+                        cls="mt-2",
+                    ),
+                    cls="modal-body",
+                ),
+                Div(
+                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+                    Button(
+                        Icon("x-circle", cls="me-2"),
+                        "Confirm Decline",
+                        type="button",
+                        cls="btn doc-btn-danger",
+                        id="decline-confirm-btn",
+                    ),
+                    cls="modal-footer d-flex gap-2 justify-content-end",
+                ),
+                cls="modal-content doc-modal",
+            ),
+            cls="modal-dialog modal-dialog-centered",
+        ),
+        cls="modal fade",
+        id="declineConfirmModal",
+        tabindex="-1",
+        aria_hidden="true",
+    )
+
+
+def _payment_confirmation_modal(document, token: str, account=None) -> Div:
+    """Modal that confirms payment submission."""
+    account_info = ""
+    if account:
+        account_info = Div(
+            Div(
+                Span("Bank", cls="doc-account-label"),
+                Span(f"{account.bank_name} — {account.account_number}", cls="doc-account-value"),
+                cls="doc-account-field mb-2",
+            ),
+            cls="doc-card-body py-2",
+        )
+    return Div(
+        Div(
+            Div(
+                Div(
+                    H3("Confirm Payment?", cls="modal-title"),
+                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
+                    cls="modal-header",
+                ),
+                Div(
+                    P(
+                        "Confirm that you have completed the payment. "
+                        "The admin will verify and update the invoice status.",
+                        cls="mb-3",
+                    ),
+                    account_info,
+                    P("Add a note (optional):", cls="fw-semibold mb-2 mt-3"),
+                    Textarea(
+                        name="confirm_comment",
+                        id="payment-confirm-comment",
+                        placeholder="e.g. Paid via bank transfer, ref: ABC123...",
+                        rows=3,
+                        cls="form-control doc-response-input",
+                    ),
+                    cls="modal-body",
+                ),
+                Div(
+                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+                    Button(
+                        Icon("check2-circle", cls="me-2"),
+                        "Confirm Payment Sent",
+                        type="button",
+                        cls="btn doc-btn-primary",
+                        id="payment-confirm-btn",
+                    ),
+                    cls="modal-footer d-flex gap-2 justify-content-end",
+                ),
+                cls="modal-content doc-modal",
+            ),
+            cls="modal-dialog modal-dialog-centered",
+        ),
+        cls="modal fade",
+        id="paymentConfirmModal",
+        tabindex="-1",
+        aria_hidden="true",
+    )
+
+
 # ── Response zone ─────────────────────────────────────────────────────────────
 
 def _response_zone(document, token: str, message: str = "", tone: str = "info", *, expired: bool = False, deal=None) -> Div:
@@ -468,42 +633,45 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     elif document.status == "rejected":
         status_msg = "This document has been declined. You can still send a comment below."
 
+    # Accept button — opens confirmation modal instead of submitting directly
     accept_btn = (
         Button(
             Icon("check-circle-fill", cls="me-2"),
             "Accept" if document.kind == "proposal" else "Confirm Quote",
-            type="submit",
-            name="action",
-            value="accepted",
+            type="button",
             cls="doc-btn-primary",
+            data_bs_toggle="modal",
+            data_bs_target="#acceptConfirmModal",
             disabled=is_decision_disabled,
             style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
 
+    # Decline button — opens confirmation modal
     reject_btn = (
         Button(
             Icon("x-circle", cls="me-2"),
             "Decline",
-            type="submit",
-            name="action",
-            value="rejected",
+            type="button",
             cls="doc-btn-ghost",
+            data_bs_toggle="modal",
+            data_bs_target="#declineConfirmModal",
             disabled=is_decision_disabled,
             style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
 
+    # Payment button — opens confirmation modal
     pay_btn = (
         Button(
             Icon("check2-circle", cls="me-2"),
             "I Have Paid",
-            type="submit",
-            name="action",
-            value="payment_submitted",
+            type="button",
             cls="doc-btn-primary doc-btn-pay",
+            data_bs_toggle="modal",
+            data_bs_target="#paymentConfirmModal",
         )
         if is_invoice else ""
     )
@@ -522,54 +690,40 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
         if message else ""
     )
 
+    # Hidden fields for modal-driven submissions
+    hidden_action = Input(type="hidden", name="action", id="hidden-action-field", value="")
+    hidden_comment = Input(type="hidden", name="comment", id="hidden-comment-field", value="")
+
     js_script = Script("""
         (function() {
             const form = document.querySelector('.doc-response-zone');
             if (!form) return;
-            
-            // Track the clicked button's value, since HTMX requests programmatically
-            // dispatch the submit event and don't populate event.submitter.
-            let clickedButtonValue = '';
-            document.querySelectorAll('.doc-response-zone button[type="submit"]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    clickedButtonValue = this.value;
-                });
-            });
 
-            form.onsubmit = function(event) {
-                const action = event.submitter ? event.submitter.value : clickedButtonValue;
-                if (action === 'accepted') {
-                    const radios = document.getElementsByName('selected_package');
-                    if (radios.length > 0) {
-                        let checked = false;
-                        for (let r of radios) {
-                            if (r.checked) { checked = true; break; }
-                        }
-                        if (!checked) {
-                            event.preventDefault();
-                            const selector = document.querySelector('.doc-pkg-selector');
-                            if (selector) {
-                                selector.style.borderColor = 'var(--doc-danger)';
-                                selector.style.background = 'rgba(192, 57, 43, 0.05)';
-                                let errorMsg = selector.querySelector('.doc-pkg-error');
-                                if (!errorMsg) {
-                                    errorMsg = document.createElement('div');
-                                    errorMsg.className = 'doc-pkg-error';
-                                    errorMsg.style.color = 'var(--doc-danger)';
-                                    errorMsg.style.fontSize = '0.85rem';
-                                    errorMsg.style.fontWeight = '600';
-                                    errorMsg.style.marginTop = '0.5rem';
-                                    errorMsg.style.fontFamily = '"Space Grotesk", sans-serif';
-                                    errorMsg.innerText = '⚠️ Please select a package option before accepting.';
-                                    selector.appendChild(errorMsg);
-                                }
-                            }
-                            return false;
-                        }
+            // ── Package validation for accept ──
+            function validatePackageSelected() {
+                const radios = document.getElementsByName('selected_package');
+                if (radios.length === 0) return true;
+                for (let r of radios) { if (r.checked) return true; }
+                const selector = document.querySelector('.doc-pkg-selector');
+                if (selector) {
+                    selector.style.borderColor = 'var(--doc-danger)';
+                    selector.style.background = 'rgba(192, 57, 43, 0.05)';
+                    let errorMsg = selector.querySelector('.doc-pkg-error');
+                    if (!errorMsg) {
+                        errorMsg = document.createElement('div');
+                        errorMsg.className = 'doc-pkg-error';
+                        errorMsg.style.color = 'var(--doc-danger)';
+                        errorMsg.style.fontSize = '0.85rem';
+                        errorMsg.style.fontWeight = '600';
+                        errorMsg.style.marginTop = '0.5rem';
+                        errorMsg.style.fontFamily = '"Space Grotesk", sans-serif';
+                        errorMsg.innerText = 'Please select a package option before accepting.';
+                        selector.appendChild(errorMsg);
                     }
                 }
-            };
-            
+                return false;
+            }
+
             document.querySelectorAll('.doc-pkg-radio').forEach(radio => {
                 radio.onchange = function() {
                     const selector = document.querySelector('.doc-pkg-selector');
@@ -581,6 +735,60 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     }
                 };
             });
+
+            // ── Accept modal confirm ──
+            const acceptBtn = document.getElementById('accept-confirm-btn');
+            if (acceptBtn) {
+                acceptBtn.addEventListener('click', function() {
+                    if (!validatePackageSelected()) return;
+                    const comment = document.getElementById('accept-confirm-comment');
+                    document.getElementById('hidden-action-field').value = 'accepted';
+                    document.getElementById('hidden-comment-field').value = comment ? comment.value : '';
+                    // Close modal and submit form
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('acceptConfirmModal'));
+                    if (modal) modal.hide();
+                    form.submit();
+                });
+            }
+
+            // ── Decline modal confirm ──
+            const declineBtn = document.getElementById('decline-confirm-btn');
+            if (declineBtn) {
+                declineBtn.addEventListener('click', function() {
+                    const comment = document.getElementById('decline-confirm-comment');
+                    if (!comment || !comment.value.trim()) {
+                        comment.style.borderColor = 'var(--doc-danger)';
+                        comment.focus();
+                        return;
+                    }
+                    document.getElementById('hidden-action-field').value = 'rejected';
+                    document.getElementById('hidden-comment-field').value = comment.value;
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('declineConfirmModal'));
+                    if (modal) modal.hide();
+                    form.submit();
+                });
+            }
+
+            // ── Payment modal confirm ──
+            const paymentBtn = document.getElementById('payment-confirm-btn');
+            if (paymentBtn) {
+                paymentBtn.addEventListener('click', function() {
+                    const comment = document.getElementById('payment-confirm-comment');
+                    document.getElementById('hidden-action-field').value = 'payment_submitted';
+                    document.getElementById('hidden-comment-field').value = comment ? comment.value : '';
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentConfirmModal'));
+                    if (modal) modal.hide();
+                    form.submit();
+                });
+            }
+
+            // ── Reset decline comment border on input ──
+            const declineComment = document.getElementById('decline-confirm-comment');
+            if (declineComment) {
+                declineComment.addEventListener('input', function() {
+                    this.style.borderColor = '';
+                });
+            }
         })();
     """)
 
@@ -623,10 +831,13 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             ),
             Textarea(
                 name="comment",
-                placeholder="Add your questions, approval note, or payment confirmation here…",
+                id="main-comment-field",
+                placeholder="Add your questions, approval note, or payment confirmation here...",
                 rows=5,
                 cls="doc-response-input doc-response-textarea",
             ),
+            hidden_action,
+            hidden_comment,
             Div(
                 accept_btn,
                 pay_btn,
@@ -788,6 +999,11 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     response_zone = _response_zone(document, token, message, tone, expired=expired, deal=deal)
     history = _response_history(responses)
 
+    # Confirmation modals for irreversible actions
+    accept_modal = _accept_confirmation_modal(document, token)
+    decline_modal = _decline_confirmation_modal(document, token)
+    payment_modal = _payment_confirmation_modal(document, token, account)
+
     return (
         *SEO(
             title=f"{document.title} — {_doc_type_label(document.kind)}",
@@ -795,7 +1011,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             url=f"{settings.base_url}/documents/{token}",
         ),
         _doc_stylesheet_link(),
-        ToastContainer(id="toast-container"),
+        ModernToastStack(position="top-end", gap=2, id="toast-container"),
         Div(
             _brand_bar(profile, document.kind),
             Div(
@@ -831,6 +1047,10 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
                 _doc_footer(profile, deal, document),
                 cls="doc-page",
             ),
+            # Confirmation modals
+            accept_modal,
+            decline_modal,
+            payment_modal,
             cls="doc-shell",
         ),
     )
