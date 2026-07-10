@@ -9,7 +9,7 @@ from fasthtml.common import (
     A, Button, Div, Form, H1, H2, H3, Input, Label, P, Script, Span, Strong,
     Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr,
 )
-from faststrap import Col, Icon, Markdown, Row, SEO
+from faststrap import Col, Icon, Markdown, Modal, Row, SEO
 from faststrap.components.feedback.modern_toast import ModernToastStack
 
 from app.config import settings
@@ -424,165 +424,126 @@ def _extract_package_names(line_items_text: str) -> list[str]:
 
 # ── Confirmation modals ──────────────────────────────────────────────────────
 
-def _accept_confirmation_modal(document, token: str) -> Div:
+def _accept_confirmation_modal(document, token: str) -> Modal:
     """Modal that confirms before accepting a proposal or quote."""
     action_label = "Accept" if document.kind == "proposal" else "Confirm Quote"
-    return Div(
-        Div(
-            Div(
-                Div(
-                    H3(f"{action_label}?", cls="modal-title"),
-                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
-                    cls="modal-header",
-                ),
-                Div(
-                    P(
-                        f"You are about to {action_label.lower()} this {document.kind}. "
-                        "This action will be recorded and cannot be undone from this portal.",
-                        cls="mb-3",
-                    ),
-                    P("Add a note (optional):", cls="fw-semibold mb-2"),
-                    Textarea(
-                        name="confirm_comment",
-                        id="accept-confirm-comment",
-                        placeholder="e.g. Approved, looks good, proceed...",
-                        rows=3,
-                        cls="form-control doc-response-input",
-                    ),
-                    cls="modal-body",
-                ),
-                Div(
-                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
-                    Button(
-                        Icon("check-circle-fill", cls="me-2"),
-                        f"Confirm {action_label}",
-                        type="button",
-                        cls="btn doc-btn-primary",
-                        id="accept-confirm-btn",
-                    ),
-                    cls="modal-footer d-flex gap-2 justify-content-end",
-                ),
-                cls="modal-content doc-modal",
-            ),
-            cls="modal-dialog modal-dialog-centered",
+    return Modal(
+        P(
+            f"You are about to {action_label.lower()} this {document.kind}. "
+            "This action will be recorded and cannot be undone from this portal.",
+            cls="mb-3 doc-modal-text",
         ),
-        cls="modal fade",
-        id="acceptConfirmModal",
-        tabindex="-1",
-        aria_hidden="true",
+        P("Add a note (optional):", cls="fw-semibold mb-2 doc-modal-label"),
+        Textarea(
+            name="confirm_comment",
+            id="accept-confirm-comment",
+            placeholder="e.g. Approved, looks good, proceed...",
+            rows=3,
+            cls="form-control doc-modal-input",
+        ),
+        footer=Div(
+            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button(
+                Icon("check-circle-fill", cls="me-2"),
+                f"Confirm {action_label}",
+                type="button",
+                cls="btn doc-btn-primary",
+                id="accept-confirm-btn",
+            ),
+            cls="d-flex gap-2 justify-content-end",
+        ),
+        modal_id="acceptConfirmModal",
+        title=f"{action_label}?",
+        centered=True,
+        size="sm",
+        cls="doc-modal",
     )
 
 
-def _decline_confirmation_modal(document, token: str) -> Div:
+def _decline_confirmation_modal(document, token: str) -> Modal:
     """Modal that requires a reason before declining a proposal or quote."""
-    return Div(
-        Div(
-            Div(
-                Div(
-                    H3("Decline Proposal?", cls="modal-title"),
-                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
-                    cls="modal-header",
-                ),
-                Div(
-                    P(
-                        "Please share a brief reason for declining. "
-                        "This helps me improve future proposals.",
-                        cls="mb-3",
-                    ),
-                    P("Reason for declining (required):", cls="fw-semibold mb-2"),
-                    Textarea(
-                        name="confirm_comment",
-                        id="decline-confirm-comment",
-                        placeholder="e.g. Budget is too high, timeline doesn't work, chose another vendor...",
-                        rows=4,
-                        cls="form-control doc-response-input",
-                        required=True,
-                    ),
-                    Div(
-                        Icon("exclamation-circle", cls="me-2"),
-                        Span("A reason is required to complete this action.", cls="small text-muted"),
-                        cls="mt-2",
-                    ),
-                    cls="modal-body",
-                ),
-                Div(
-                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
-                    Button(
-                        Icon("x-circle", cls="me-2"),
-                        "Confirm Decline",
-                        type="button",
-                        cls="btn doc-btn-danger",
-                        id="decline-confirm-btn",
-                    ),
-                    cls="modal-footer d-flex gap-2 justify-content-end",
-                ),
-                cls="modal-content doc-modal",
-            ),
-            cls="modal-dialog modal-dialog-centered",
+    return Modal(
+        P(
+            "Please share a brief reason for declining. "
+            "This helps me improve future proposals.",
+            cls="mb-3 doc-modal-text",
         ),
-        cls="modal fade",
-        id="declineConfirmModal",
-        tabindex="-1",
-        aria_hidden="true",
+        P("Reason for declining (required):", cls="fw-semibold mb-2 doc-modal-label"),
+        Textarea(
+            name="confirm_comment",
+            id="decline-confirm-comment",
+            placeholder="e.g. Budget is too high, timeline doesn't work, chose another vendor...",
+            rows=4,
+            cls="form-control doc-modal-input",
+            required=True,
+        ),
+        Div(
+            Icon("exclamation-circle", cls="me-2 text-warning"),
+            Span("A reason is required to complete this action.", cls="small doc-modal-hint"),
+            cls="mt-2",
+        ),
+        footer=Div(
+            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button(
+                Icon("x-circle", cls="me-2"),
+                "Confirm Decline",
+                type="button",
+                cls="btn doc-btn-danger",
+                id="decline-confirm-btn",
+            ),
+            cls="d-flex gap-2 justify-content-end",
+        ),
+        modal_id="declineConfirmModal",
+        title="Decline Proposal?",
+        centered=True,
+        size="sm",
+        cls="doc-modal",
     )
 
 
-def _payment_confirmation_modal(document, token: str, account=None) -> Div:
+def _payment_confirmation_modal(document, token: str, account=None) -> Modal:
     """Modal that confirms payment submission."""
     account_info = ""
     if account:
         account_info = Div(
             Div(
-                Span("Bank", cls="doc-account-label"),
-                Span(f"{account.bank_name} — {account.account_number}", cls="doc-account-value"),
-                cls="doc-account-field mb-2",
+                Span("Bank", cls="doc-modal-label"),
+                Span(f"{account.bank_name} — {account.account_number}", cls="doc-modal-value"),
+                cls="mb-2",
             ),
-            cls="doc-card-body py-2",
+            cls="doc-modal-account p-3 rounded mb-3",
         )
-    return Div(
-        Div(
-            Div(
-                Div(
-                    H3("Confirm Payment?", cls="modal-title"),
-                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
-                    cls="modal-header",
-                ),
-                Div(
-                    P(
-                        "Confirm that you have completed the payment. "
-                        "The admin will verify and update the invoice status.",
-                        cls="mb-3",
-                    ),
-                    account_info,
-                    P("Add a note (optional):", cls="fw-semibold mb-2 mt-3"),
-                    Textarea(
-                        name="confirm_comment",
-                        id="payment-confirm-comment",
-                        placeholder="e.g. Paid via bank transfer, ref: ABC123...",
-                        rows=3,
-                        cls="form-control doc-response-input",
-                    ),
-                    cls="modal-body",
-                ),
-                Div(
-                    Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
-                    Button(
-                        Icon("check2-circle", cls="me-2"),
-                        "Confirm Payment Sent",
-                        type="button",
-                        cls="btn doc-btn-primary",
-                        id="payment-confirm-btn",
-                    ),
-                    cls="modal-footer d-flex gap-2 justify-content-end",
-                ),
-                cls="modal-content doc-modal",
-            ),
-            cls="modal-dialog modal-dialog-centered",
+    return Modal(
+        P(
+            "Confirm that you have completed the payment. "
+            "The admin will verify and update the invoice status.",
+            cls="mb-3 doc-modal-text",
         ),
-        cls="modal fade",
-        id="paymentConfirmModal",
-        tabindex="-1",
-        aria_hidden="true",
+        account_info,
+        P("Add a note (optional):", cls="fw-semibold mb-2 doc-modal-label"),
+        Textarea(
+            name="confirm_comment",
+            id="payment-confirm-comment",
+            placeholder="e.g. Paid via bank transfer, ref: ABC123...",
+            rows=3,
+            cls="form-control doc-modal-input",
+        ),
+        footer=Div(
+            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button(
+                Icon("check2-circle", cls="me-2"),
+                "Confirm Payment Sent",
+                type="button",
+                cls="btn doc-btn-primary",
+                id="payment-confirm-btn",
+            ),
+            cls="d-flex gap-2 justify-content-end",
+        ),
+        modal_id="paymentConfirmModal",
+        title="Confirm Payment?",
+        centered=True,
+        size="sm",
+        cls="doc-modal",
     )
 
 

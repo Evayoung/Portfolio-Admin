@@ -1093,14 +1093,15 @@
 
 /* ── Confirmation Modal Styles ─────────────────────────────── */
 
-.doc-modal {
+.doc-modal .modal-content {
   background: var(--doc-surface);
   border: 1px solid var(--doc-border);
-  border-radius: 12px;
+  border-radius: var(--doc-radius);
+  box-shadow: var(--doc-shadow);
 }
 
 .doc-modal .modal-header {
-  border-bottom-color: var(--doc-border);
+  border-bottom-color: var(--doc-line);
   padding: 1rem 1.25rem;
 }
 
@@ -1116,29 +1117,65 @@
 }
 
 .doc-modal .modal-footer {
-  border-top-color: var(--doc-border);
+  border-top-color: var(--doc-line);
   padding: 0.75rem 1.25rem;
+  background: var(--doc-surface-soft);
+  border-radius: 0 0 var(--doc-radius) var(--doc-radius);
 }
 
-.doc-modal .form-control {
-  border: 1px solid var(--doc-border);
-  border-radius: 8px;
+/* Modal text classes for proper contrast */
+.doc-modal-text {
+  color: var(--doc-text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.doc-modal-label {
+  color: var(--doc-navy);
+  font-size: 0.88rem;
+}
+
+.doc-modal-value {
+  color: var(--doc-text);
+  font-weight: 600;
+}
+
+.doc-modal-hint {
+  color: var(--doc-muted);
+}
+
+.doc-modal-account {
+  background: var(--doc-cyan-tint);
+  border: 1px solid var(--doc-cyan-border);
+}
+
+/* Modal form inputs */
+.doc-modal-input {
+  border: 1px solid var(--doc-line);
+  border-radius: var(--doc-radius-sm);
   font-size: 0.9rem;
+  color: var(--doc-text);
+  background: var(--doc-surface);
 }
 
-.doc-modal .form-control:focus {
-  border-color: var(--doc-cyan-border);
+.doc-modal-input:focus {
+  border-color: var(--doc-cyan-strong);
   box-shadow: 0 0 0 3px rgba(70, 200, 238, 0.15);
+  outline: none;
+}
+
+.doc-modal-input::placeholder {
+  color: var(--doc-dim);
 }
 
 /* ── Danger Button (for decline confirm) ───────────────────── */
 
 .doc-btn-danger {
-  background: #dc3545;
-  border: 1px solid #dc3545;
+  background: var(--doc-danger);
+  border: 1px solid var(--doc-danger);
   color: #fff;
   padding: 0.6rem 1.1rem;
-  border-radius: 8px;
+  border-radius: var(--doc-radius-sm);
   font-weight: 600;
   font-size: 0.88rem;
   min-height: 2.6rem;
@@ -1147,13 +1184,13 @@
 }
 
 .doc-btn-danger:hover {
-  background: #c82333;
-  border-color: #bd2130;
+  background: #a93226;
+  border-color: #922a20;
   color: #fff;
 }
 
 .doc-btn-danger:focus-visible {
-  outline: 2px solid #dc3545;
+  outline: 2px solid var(--doc-danger);
   outline-offset: 2px;
 }
 

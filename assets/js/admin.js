@@ -585,10 +585,27 @@ function initImagePreview() {
   });
 }
 
-/* ── HTMX OOB Toast auto-init ────────────────────────────── */
+/* ── ModernToast auto-dismiss + OOB Toast auto-init ──────────── */
 
 function initToasts() {
-  document.addEventListener('htmx:afterSwap', function () {
+  // Handle ModernToast auto-dismiss based on data_duration
+  function initModernToasts() {
+    document.querySelectorAll('[data-fs-modern-toast]:not([data-fs-toast-ready])').forEach(function (el) {
+      el.setAttribute('data-fs-toast-ready', 'true');
+      const duration = parseInt(el.dataset.duration || '4000', 10);
+      if (duration > 0) {
+        setTimeout(function () {
+          el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          el.style.opacity = '0';
+          el.style.transform = 'translateX(100%)';
+          setTimeout(function () { el.remove(); }, 300);
+        }, duration);
+      }
+    });
+  }
+
+  // Handle standard Bootstrap toasts
+  function initBootstrapToasts() {
     if (!window.bootstrap) return;
     document.querySelectorAll('.toast:not([data-fs-toast-ready])').forEach(function (el) {
       el.setAttribute('data-fs-toast-ready', 'true');
@@ -597,6 +614,14 @@ function initToasts() {
         toast.show();
       } catch (_) { /* silently skip */ }
     });
+  }
+
+  // Run on initial load and after HTMX swaps
+  initModernToasts();
+  initBootstrapToasts();
+  document.addEventListener('htmx:afterSwap', function () {
+    initModernToasts();
+    initBootstrapToasts();
   });
 }
 
