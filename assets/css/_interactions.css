@@ -347,6 +347,58 @@ button.htmx-request::after {
   color: #1e293b;
 }
 
+[data-bs-theme="light"] .admin-form-textarea {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-save-alert {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] .admin-module-copy {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .admin-project-copy {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .admin-project-meta {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .admin-project-title {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-section-title {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-subsection-title {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-page-title {
+  color: #0f172a;
+}
+
+[data-bs-theme="light"] .admin-save-note {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .admin-mobile-title {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-brand-title {
+  color: #0f172a;
+}
+
+[data-bs-theme="light"] .admin-brand-subtitle {
+  color: #64748b;
+}
+
 [data-bs-theme="light"] .admin-mobile-action {
   border-color: rgba(0, 0, 0, 0.1);
   background: rgba(0, 0, 0, 0.02);
@@ -416,6 +468,44 @@ button.htmx-request::after {
 
 .li-total-value {
   color: var(--admin-accent, #2db8e8);
+}
+
+/* ── Financials preview table styles ─────────────────────── */
+
+.admin-finance-desc {
+  color: var(--admin-muted);
+  font-size: 0.82rem;
+}
+
+.admin-finance-qty {
+  text-align: center;
+}
+
+.admin-finance-amount {
+  text-align: right;
+  font-weight: 600;
+}
+
+.admin-finance-total-row td {
+  text-align: right;
+  font-weight: 700;
+  background: rgba(45, 184, 232, 0.08);
+}
+
+.admin-finance-total-amount {
+  text-align: right;
+  font-weight: 700;
+  color: var(--admin-primary);
+  background: rgba(45, 184, 232, 0.08);
+}
+
+.admin-finance-table {
+  font-size: 0.83rem;
+}
+
+.admin-finance-preview {
+  border-left: 3px solid rgba(45, 184, 232, 0.4);
+  padding-left: 0.75rem;
 }
 
 /* Light theme overrides */

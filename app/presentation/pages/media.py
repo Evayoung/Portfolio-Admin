@@ -123,7 +123,7 @@ def _asset_delete_modal(asset) -> Modal:
             hx_post="/media/delete",
             hx_target=f"#{mid}-status",
             hx_swap="innerHTML",
-            hx_confirm="",
+            hx_confirm="Delete this asset permanently? This cannot be undone.",
             cls="admin-settings-form",
         ),
         modal_id=mid,

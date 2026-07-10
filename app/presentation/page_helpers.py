@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fasthtml.common import A, Div, H2, H3, Input, P, Span, Textarea
 from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
 
@@ -318,3 +320,15 @@ def toast_fragment(title: str, message: str, variant: str = "success") -> Toast:
         variant=variant,
         hx_swap_oob="afterbegin:#toast-container",
     )
+
+
+def get_or_create_csrf_token(session) -> str:
+    """Return the CSRF token for the current session, creating one if needed."""
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_hex(32)
+    return session["_csrf_token"]
+
+
+def csrf_hidden_field(session) -> Input:
+    """Return a hidden input containing the CSRF token for forms."""
+    return Input(type="hidden", name="_csrf", value=get_or_create_csrf_token(session))

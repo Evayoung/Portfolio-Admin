@@ -104,7 +104,7 @@ function initKeyboardShortcuts() {
     // Quick navigation: g then d/s/p/b/m
     if (e.key === "g") {
       window._adminNavKey = true;
-      setTimeout(() => { window._adminNavKey = false; }, 1200);
+      setTimeout(() => { window._adminNavKey = false; }, 600);
     }
     if (window._adminNavKey) {
       const routes = { d: "/deals", s: "/submissions", p: "/projects", b: "/blog", m: "/media" };
@@ -603,59 +603,94 @@ function initToasts() {
 /* ── Modal Auto-Save Graceful Reload Interceptor ────────────────── */
 
 function initModalSaveFeedback() {
+  // Track which modal triggered a save, so we can reload after close
+  let _pendingModalReload = null;
+
+  // When a form inside a modal succeeds with HX-Refresh, suppress the
+  // automatic reload and instead close the modal + reload manually
   document.addEventListener('htmx:beforeProcessResponse', function (evt) {
     const xhr = evt.detail.xhr;
     if (!xhr) return;
-    
-    // Check if there is an active open modal
+
     const openModal = document.querySelector('.modal.show');
     if (openModal && xhr.getResponseHeader('HX-Refresh') === 'true') {
-      // Mock getResponseHeader to hide HX-Refresh from HTMX response processing
-      const originalGetHeader = xhr.getResponseHeader;
+      // Prevent HTMX from doing the full page refresh
+      const orig = xhr.getResponseHeader.bind(xhr);
       xhr.getResponseHeader = function (name) {
         if (name && name.toLowerCase() === 'hx-refresh') return null;
-        return originalGetHeader.apply(this, arguments);
+        return orig(name);
       };
-      // Store flag and reference to the modal on the xhr object
-      xhr.shouldManualReload = true;
-      xhr.associatedModal = openModal;
+      _pendingModalReload = openModal;
     }
   });
 
   document.addEventListener('htmx:afterRequest', function (evt) {
-    const xhr = evt.detail.xhr;
-    if (!xhr || !xhr.shouldManualReload || !xhr.associatedModal) return;
-    
-    const modal = xhr.associatedModal;
-    const saveBtn = modal.querySelector('#deal-section-save-btn, button[type="submit"], button.htmx-request');
-    
-    if (saveBtn) {
-      if (evt.detail.successful) {
-        saveBtn.disabled = true;
-        const originalHtml = saveBtn.innerHTML;
-        saveBtn.innerHTML = '✓ Saved!';
-        saveBtn.classList.remove('btn-primary', 'admin-install-btn');
-        saveBtn.classList.add('btn-success');
-        
-        setTimeout(function () {
-          if (window.bootstrap) {
-            var bsModal = bootstrap.Modal.getInstance(modal);
-            if (bsModal) bsModal.hide();
-          }
-          setTimeout(function () {
-            window.location.reload();
-          }, 350); // wait for bootstrap hide transition
-        }, 600);
-      } else {
-        // Reset saveBtn state on failure so they can try again
-        saveBtn.disabled = false;
-        alert('Save failed. Please try again.');
-      }
-    } else {
-      // Fallback if no button
-      window.location.reload();
+    if (!_pendingModalReload || !evt.detail.successful) {
+      _pendingModalReload = null;
+      return;
+    }
+    const modal = _pendingModalReload;
+    _pendingModalReload = null;
+
+    // Close the modal, then reload the page
+    if (window.bootstrap) {
+      const bsModal = bootstrap.Modal.getInstance(modal);
+      if (bsModal) bsModal.hide();
+    }
+    setTimeout(() => window.location.reload(), 350);
+  });
+}
+
+/* ── Unsaved Changes Guard ──────────────────────────────── */
+
+function initUnsavedGuard() {
+  let isDirty = false;
+
+  document.addEventListener('input', (e) => {
+    if (e.target.closest('form')) isDirty = true;
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.closest('form')) isDirty = true;
+  });
+  document.addEventListener('htmx:afterRequest', (e) => {
+    if (e.detail.successful) isDirty = false;
+  });
+
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) {
+      e.preventDefault();
+      e.returnValue = '';
     }
   });
+}
+
+/* ── Session Expiry Warning ─────────────────────────────── */
+
+function initSessionWarning() {
+  const meta = document.querySelector('meta[name="session-expires-at"]');
+  if (!meta) return;
+  const expiresAt = parseInt(meta.content, 10);
+  if (!expiresAt) return;
+
+  function checkExpiry() {
+    const now = Math.floor(Date.now() / 1000);
+    const remaining = expiresAt - now;
+    // Warn when 10 minutes left
+    if (remaining > 0 && remaining <= 600 && !window._sessionWarningShown) {
+      window._sessionWarningShown = true;
+      const minutes = Math.ceil(remaining / 60);
+      if (confirm('Your session expires in ' + minutes + ' minute(s). Stay signed in?')) {
+        // Refresh the page to extend the session
+        window.location.reload();
+      }
+    }
+    // Auto-redirect when expired
+    if (remaining <= 0) {
+      window.location.href = '/login';
+    }
+  }
+
+  setInterval(checkExpiry, 30000); // Check every 30 seconds
 }
 
 /* ── DOMContentLoaded init ───────────────────────────────── */
@@ -695,4 +730,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Modal auto-save graceful reload interceptor
   initModalSaveFeedback();
+
+  // Unsaved changes guard
+  initUnsavedGuard();
+
+  // Session expiry warning
+  initSessionWarning();
 });

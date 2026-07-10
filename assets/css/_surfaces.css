@@ -138,6 +138,35 @@ body {
   background: #ffffff;
 }
 
+[data-bs-theme="light"] .admin-surface-card:hover {
+  border-color: rgba(2, 132, 199, 0.2) !important;
+}
+
 [data-bs-theme="light"] .admin-unread-badge {
   color: #fff;
+}
+
+[data-bs-theme="light"] .admin-project-card-link.admin-is-selected::after {
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+[data-bs-theme="light"] .admin-metric-delta {
+  color: #1e293b;
+}
+
+[data-bs-theme="light"] .admin-module-icon-box {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+}
+
+[data-bs-theme="light"] .admin-overview-metric .text-muted {
+  color: #64748b !important;
+}
+
+[data-bs-theme="light"] .admin-overview-metric .text-success {
+  color: #059669 !important;
+}
+
+[data-bs-theme="light"] .admin-overview-metric .text-danger {
+  color: #dc2626 !important;
 }

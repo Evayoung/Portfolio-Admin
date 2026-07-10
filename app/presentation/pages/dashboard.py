@@ -7,11 +7,13 @@ from faststrap import Card, Col, Icon, MetricCard, Row, SEO
 from faststrap.presets import AutoRefresh, LazyLoad
 
 from app.config import settings
+from app.domain.models import AdminMetric
 from app.infrastructure.blog_repository import get_blog_workspace_summary
 from app.infrastructure.cv_repository import get_cv_workspace_summary
 from app.infrastructure.deal_repository import get_deal_workspace_summary
+from app.infrastructure.media_repository import get_media_workspace_summary
 from app.infrastructure.project_repository import get_project_workspace_summary
-from app.infrastructure.seed_data import METRICS, MODULES
+from app.infrastructure.seed_data import MODULES
 from app.infrastructure.submission_repository import get_submission_workspace_summary
 from app.presentation.page_helpers import overview_metric_card, SectionWrap
 from app.presentation.shell import page_frame
@@ -80,9 +82,23 @@ def _workspace_status_card(projects, blog, submissions, deals, cv) -> Div:
     )
 
 
+def _live_metrics() -> tuple[AdminMetric, ...]:
+    """Compute live metrics from repository summaries."""
+    projects = get_project_workspace_summary()
+    blog = get_blog_workspace_summary()
+    media = get_media_workspace_summary()
+    deals = get_deal_workspace_summary()
+    return (
+        AdminMetric("Published Projects", str(projects.total), f"{projects.featured} featured", "info"),
+        AdminMetric("Blog Posts", str(blog.total), f"{blog.published} published", "success"),
+        AdminMetric("Media Assets", str(media.total), f"{media.images} images", "info"),
+        AdminMetric("Client Deals", str(deals.total), f"{deals.proposals} proposals · {deals.invoices} invoices", "warning"),
+    )
+
+
 def _metrics_ring() -> Row:
     """Render the metrics row — both full-page and HTMX partial use this."""
-    return Row(*[overview_metric_card(item) for item in METRICS], cls="g-4")
+    return Row(*[overview_metric_card(item) for item in _live_metrics()], cls="g-4")
 
 
 def _workspace_status_partial() -> Div:

@@ -196,17 +196,17 @@ def _financials_package_preview(raw: str) -> Div:
             rows.append(
                 Tr(
                     Td(Strong(it["label"]) if is_multi_package else it["label"]),
-                    Td(it["description"], style="color:#8a9bb0;font-size:0.82rem;"),
-                    Td(it["quantity"], style="text-align:center;"),
-                    Td(_money(amt), style="text-align:right;font-weight:600;"),
+                    Td(it["description"], cls="admin-finance-desc"),
+                    Td(it["quantity"], cls="admin-finance-qty"),
+                    Td(_money(amt), cls="admin-finance-amount"),
                 )
             )
         rows.append(
             Tr(
                 Td(Strong("Total" if not is_multi_package else f"{pkg_name} Total"), colspan="3",
-                   style="text-align:right;font-weight:700;background:rgba(70,200,238,0.08);"),
+                   cls="admin-finance-total-row"),
                 Td(Strong(_money(pkg_total)),
-                   style="text-align:right;font-weight:700;color:#2db8e8;background:rgba(70,200,238,0.08);"),
+                   cls="admin-finance-total-amount"),
             )
         )
         return Div(
@@ -216,15 +216,14 @@ def _financials_package_preview(raw: str) -> Div:
                     Thead(
                         Tr(
                             Th("Item"), Th("Description"),
-                            Th("Qty", style="width:50px;text-align:center;"),
-                            Th("Amount", style="width:110px;text-align:right;"),
+                            Th("Qty", cls="admin-finance-qty"),
+                            Th("Amount", cls="admin-finance-amount"),
                         )
                     ),
                     Tbody(*rows),
-                    cls="table table-sm table-bordered mb-0",
-                    style="font-size:0.83rem;",
+                    cls="table table-sm table-bordered mb-0 admin-finance-table",
                 ),
-                style="overflow-x:auto;",
+                cls="overflow-auto",
             ),
         )
 
@@ -240,8 +239,7 @@ def _financials_package_preview(raw: str) -> Div:
             cls="admin-module-copy mb-2",
         ),
         *pkg_tables,
-        cls="admin-detail-block mt-2 mb-3",
-        style="border-left:3px solid rgba(70,200,238,0.4);padding-left:0.75rem;",
+        cls="admin-detail-block mt-2 mb-3 admin-finance-preview",
     )
 
 
@@ -750,7 +748,7 @@ def _editor_form(selected, *, stage: str, document_kind: str, search: str) -> Fo
             hx_vals=f'{{"deal_id": "{selected.deal_id if selected else ""}"}}',
             hx_target="#deal-save-result",
             hx_swap="innerHTML",
-            onclick="return confirm('Are you sure you want to permanently delete this deal and all its documents? This cannot be undone.')",
+            hx_confirm="Are you sure you want to permanently delete this deal and all its documents? This cannot be undone.",
         )
         if selected and selected.deal_id
         else "",

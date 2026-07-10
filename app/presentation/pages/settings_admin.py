@@ -428,13 +428,30 @@ def settings_workspace_page() -> tuple:
                 summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
                 cls="g-4",
             ),
+            # Sub-navigation for settings sections
+            Div(
+                A("Profile", href="#settings-profile", cls="admin-filter-chip active"),
+                A("Access", href="#settings-access", cls="admin-filter-chip"),
+                A("Accounts", href="#settings-accounts", cls="admin-filter-chip"),
+                A("AI Providers", href="#settings-ai", cls="admin-filter-chip"),
+                A("Health", href="#settings-health", cls="admin-filter-chip"),
+                cls="admin-filter-row mb-4",
+            ),
             SectionWrap(
                 "Settings Workspace",
                 Row(
                     # Identity panel — reference only; hidden on mobile to prioritise the edit forms
                     Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
-                        Div(editor_panel, access_panel, account_panel, ai_card, production_card, github_card, cls="admin-settings-stack"),
+                        Div(
+                            Div(editor_panel, id="settings-profile"),
+                            Div(access_panel, id="settings-access"),
+                            Div(account_panel, id="settings-accounts"),
+                            Div(ai_card, id="settings-ai"),
+                            Div(production_card, id="settings-health"),
+                            github_card,
+                            cls="admin-settings-stack",
+                        ),
                         span=12,
                         lg=7,
                     ),

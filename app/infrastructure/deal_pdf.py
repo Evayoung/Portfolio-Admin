@@ -608,8 +608,27 @@ def _footer(canvas, doc):
     canvas.restoreState()
 
 
+def _cleanup_old_pdfs() -> None:
+    """Delete PDFs older than 10 minutes from the output directory.
+
+    On Vercel serverless, /tmp accumulates across requests. This prevents
+    disk exhaustion by cleaning up stale PDFs periodically.
+    """
+    if not _os.getenv("VERCEL"):
+        return  # Local dev: keep generated PDFs for debugging
+    import time
+    now = time.time()
+    try:
+        for f in OUTPUT_DIR.glob("*.pdf"):
+            if now - f.stat().st_mtime > 600:  # 10 minutes
+                f.unlink(missing_ok=True)
+    except OSError:
+        pass  # Best-effort cleanup
+
+
 def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    _cleanup_old_pdfs()
     styles = _styles()
     profile = get_site_profile()
     document = next((item for item in deal.documents if item.kind == document_kind), deal.latest_document)

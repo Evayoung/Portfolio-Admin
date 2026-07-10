@@ -21,6 +21,17 @@ _MAX_LOGIN_FAILURES = 4          # attempts before lockout (per email)
 _MAX_IP_FAILURES = 8             # attempts before IP lockout
 _LOCKOUT_SECONDS = 30 * 60      # 30-minute lockout
 
+# Seed password hash — computed once with a random salt (not hardcoded)
+_SEED_SALT = secrets.token_hex(16)
+_SEED_HASH: str = ""
+
+
+def _seed_profile() -> tuple[AdminAccessProfile, str]:
+    global _SEED_HASH
+    if not _SEED_HASH:
+        _SEED_HASH = _hash_password(settings.admin_login_password, salt=_SEED_SALT)
+    return AdminAccessProfile(login_email=settings.admin_login_email, source="seed"), _SEED_HASH
+
 
 def _rest_headers(*, prefer: str | None = None) -> dict[str, str]:
     headers = {
@@ -67,11 +78,6 @@ def _verify_password(password: str, stored_hash: str) -> bool:
         return False
     derived = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), int(iterations))
     return hmac.compare_digest(derived.hex(), expected)
-
-
-def _seed_profile() -> tuple[AdminAccessProfile, str]:
-    hashed = _hash_password(settings.admin_login_password, salt="neo-admin-seed")
-    return AdminAccessProfile(login_email=settings.admin_login_email, source="seed"), hashed
 
 
 def get_admin_access_profile() -> AdminAccessProfile:

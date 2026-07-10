@@ -2,13 +2,31 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
+import secrets as _secrets
+import time as _time
 
-from fasthtml.common import A, Aside, Div, Footer, H1, Main, P, Small, Span
+from fasthtml.common import A, Aside, Button, Div, Footer, H1, Main, Meta, P, Small, Span
 from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem, ToastContainer
 
 from app.config import settings
 from app.infrastructure.settings_repository import get_site_profile
+
+_page_csrf_tokens: list[str] = []
+
+
+def _get_csrf_token() -> str:
+    """Generate a per-render CSRF token for HTMX header injection.
+
+    The actual session-based validation happens in route handlers.
+    This token is embedded in a <meta> tag so admin.js can send it
+    as an HTMX header on every request.
+    """
+    token = _secrets.token_hex(32)
+    _page_csrf_tokens.append(token)
+    if len(_page_csrf_tokens) > 100:
+        _page_csrf_tokens.pop(0)
+    return token
+
 
 NAV_ITEMS = (
     ("Overview", "/", "grid"),
@@ -31,7 +49,19 @@ BOTTOM_NAV_ITEMS = (
 )
 
 
-brand_profile = lru_cache(maxsize=1)(get_site_profile)
+# TTL-based cache for profile (replaces stale lru_cache)
+_profile_cache: tuple = (None, 0.0)  # (profile, timestamp)
+_PROFILE_TTL = 300  # 5 minutes
+
+
+def brand_profile():
+    """Return the site profile, cached for 5 minutes to avoid stale data."""
+    global _profile_cache
+    profile, ts = _profile_cache
+    if profile is None or _time.time() - ts > _PROFILE_TTL:
+        profile = get_site_profile()
+        _profile_cache = (profile, _time.time())
+    return profile
 
 
 def brand_name(profile) -> str:
@@ -147,6 +177,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                         "Sign Out",
                         href="/logout",
                         cls="btn admin-install-btn w-100",
+                        onclick="return confirm('Sign out of Neo Admin?')",
                     ),
                     cls="admin-sidebar-actions",
                 ),
@@ -238,6 +269,7 @@ def admin_mobile_drawer(current: str = "/") -> Div:
             "Sign Out",
             href="/logout",
             cls="btn admin-install-btn w-100",
+            onclick="return confirm('Sign out of Neo Admin?')",
         ),
         cls="admin-sidebar-actions mt-4",
     )
@@ -274,9 +306,57 @@ def admin_install_drawer(profile=None) -> Div:
     )
 
 
+def admin_shortcuts_modal() -> Div:
+    """Keyboard shortcuts help modal — triggered by pressing '?'."""
+    shortcuts = [
+        ("?", "Show keyboard shortcuts"),
+        ("g + d", "Go to Deals"),
+        ("g + s", "Go to Submissions"),
+        ("g + p", "Go to Projects"),
+        ("g + b", "Go to Blog"),
+        ("g + m", "Go to Media"),
+    ]
+    rows = Div(
+        *[
+            Div(
+                Span(keys, cls="badge bg-secondary me-2", style="font-family:monospace;min-width:4rem;text-align:center;display:inline-block;"),
+                Span(desc),
+                cls="d-flex align-items-center gap-2 py-1",
+            )
+            for keys, desc in shortcuts
+        ],
+        cls="mt-3",
+    )
+    return Div(
+        Div(
+            Div(
+                Div(
+                    H1("Keyboard Shortcuts", cls="modal-title fs-5"),
+                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
+                    cls="modal-header",
+                ),
+                Div(rows, cls="modal-body"),
+                Div(
+                    Button("Close", type="button", cls="btn admin-module-btn", data_bs_dismiss="modal"),
+                    cls="modal-footer",
+                ),
+                cls="modal-content",
+            ),
+            cls="modal-dialog modal-dialog-centered",
+        ),
+        cls="modal fade",
+        id="admin-shortcuts-modal",
+        tabindex="-1",
+        aria_hidden="true",
+    )
+
+
 def page_frame(*children, current: str = "/", title: str = "Overview"):
     profile = brand_profile()
+    # Session expiry meta tag for client-side warning
+    session_expires = int(_time.time()) + (8 * 3600)  # 8-hour rolling window
     return (
+        Meta(name="session-expires-at", content=str(session_expires)),
         admin_mobile_header(current, title, profile),
         Div(
             admin_sidebar(current, profile),
@@ -303,7 +383,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                                 Span("·", cls="admin-footer-sep"),
                                 A("Public Site", href=public_site_url(profile), target="_blank", rel="noreferrer", cls="admin-footer-link"),
                                 Span("·", cls="admin-footer-sep"),
-                                A("Sign Out", href="/logout", cls="admin-footer-link"),
+                                A("Sign Out", href="/logout", cls="admin-footer-link", onclick="return confirm('Sign out of Neo Admin?')"),
                                 cls="admin-footer-inner",
                             ),
                         ),
@@ -318,5 +398,6 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         admin_bottom_nav(current),
         admin_mobile_drawer(current),
         admin_install_drawer(profile),
+        admin_shortcuts_modal(),
         ToastContainer(id="toast-container"),
     )

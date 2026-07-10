@@ -23,9 +23,9 @@ class Settings:
     app_name: str = "Neo Admin"
     owner_name: str = "Olorundare Micheal"
     session_cookie: str = "neo_admin_session"
-    secret_key: str = os.getenv("NEO_ADMIN_SECRET_KEY", "neo-admin-local-dev-secret")
-    admin_login_email: str = os.getenv("NEO_ADMIN_LOGIN_EMAIL") or "meshelleva@gmail.com"
-    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD") or "evayoung@33"
+    secret_key: str = os.getenv("NEO_ADMIN_SECRET_KEY", "")
+    admin_login_email: str = os.getenv("NEO_ADMIN_LOGIN_EMAIL") or "admin@example.com"
+    admin_login_password: str = os.getenv("NEO_ADMIN_LOGIN_PASSWORD") or "change-me-before-deploy"
     base_url: str = os.getenv("NEO_ADMIN_BASE_URL", "http://127.0.0.1:5063")
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")
@@ -51,15 +51,31 @@ settings = Settings()
 
 
 def _validate_production_settings() -> None:
+    import warnings
+
+    # Always warn about insecure defaults (not just on Vercel)
+    if not settings.secret_key:
+        warnings.warn(
+            "NEO_ADMIN_SECRET_KEY is not set. Sessions are insecure. "
+            "Set it in your .env file.",
+            stacklevel=2,
+        )
+    if settings.admin_login_password in ("change-me-before-deploy", ""):
+        warnings.warn(
+            "NEO_ADMIN_LOGIN_PASSWORD is using the insecure default. "
+            "Change it before deploying.",
+            stacklevel=2,
+        )
+
     if not os.getenv("VERCEL"):
         return
-    # Check the raw environment variable instead of the computed value
-    # so the hardcoded fallback does not block deployment
+
+    # Production: raise errors instead of warnings
     raw_secret = os.getenv("NEO_ADMIN_SECRET_KEY")
-    if raw_secret is not None and raw_secret in {"neo-admin-local-dev-secret", "replace-with-a-secure-secret"}:
+    if not raw_secret or raw_secret in {"neo-admin-local-dev-secret", "replace-with-a-secure-secret", ""}:
         raise RuntimeError("NEO_ADMIN_SECRET_KEY must be set to a secure value in production.")
     raw_pwd = os.getenv("NEO_ADMIN_LOGIN_PASSWORD")
-    if raw_pwd is not None and raw_pwd in {"Password123!", "replace-with-a-strong-password"}:
+    if raw_pwd is not None and raw_pwd in {"Password123!", "replace-with-a-strong-password", "change-me-before-deploy"}:
         raise RuntimeError("NEO_ADMIN_LOGIN_PASSWORD must be changed before deploying Neo Admin.")
     raw_supabase_url = os.getenv("SUPABASE_URL")
     raw_service_role = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
