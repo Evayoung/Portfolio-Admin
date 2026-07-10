@@ -283,6 +283,29 @@ def _document_link_action_form(*, deal_id: str, document_id: str, document_kind:
     )
 
 
+def _document_reset_form(*, deal_id: str, document_id: str, document_kind: str) -> Form:
+    """Form to reset a document back to 'sent' status and clear client responses."""
+    target_id = f"deal-document-status-result-{document_id}"
+    return Form(
+        Input(type="hidden", name="deal_id", value=deal_id),
+        Input(type="hidden", name="document_id", value=document_id),
+        Input(type="hidden", name="document_kind", value=document_kind),
+        loading_action_button(
+            "Reset to Sent",
+            endpoint="/admin/document/reset",
+            target=f"#{target_id}",
+            button_cls="btn btn-outline-warning mt-3",
+        ),
+        action="/admin/document/reset",
+        method="post",
+        hx_post="/admin/document/reset",
+        hx_target=f"#{target_id}",
+        hx_swap="innerHTML",
+        hx_confirm="Reset this document? This will clear all client responses and set the status back to 'sent'.",
+        cls="d-inline-flex",
+    )
+
+
 def _deal_card(item, *, selected: bool, stage: str, document_kind: str, search: str) -> Card:
     href = f"/deals?deal_id={item.deal_id}&stage={stage}&document_kind={document_kind}&search={search}"
     latest = item.latest_document
@@ -515,6 +538,13 @@ def _document_card(selected, document) -> Div:
                 button_cls="btn btn-outline-danger mt-3",
             )
             if document.public_token
+            else "",
+            _document_reset_form(
+                deal_id=selected.deal_id,
+                document_id=document.document_id,
+                document_kind=document.kind,
+            )
+            if document.status in {"accepted", "rejected", "paid"}
             else "",
             cls="d-flex flex-wrap gap-2",
         ),

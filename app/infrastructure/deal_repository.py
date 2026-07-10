@@ -640,6 +640,47 @@ def update_document_status(
         return False, "danger", f"Could not reach Supabase to update the document workflow. {exc}"
 
 
+def reset_document_with_responses(*, deal_id: str, document_id: str, document_kind: str) -> tuple[bool, str, str]:
+    """Reset a document to 'sent' status and delete all client responses.
+
+    This allows the client to respond again as if the document was just sent.
+    """
+    if not deal_id.strip() or not document_id.strip():
+        return False, "warning", "A valid deal document is required before resetting."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so document reset cannot be performed."
+
+    try:
+        # Delete all client responses for this document
+        _rest_request(
+            "DELETE",
+            "client_document_responses",
+            params={"document_id": f"eq.{document_id}"},
+            prefer="return=minimal",
+        )
+        # Reset document status to sent
+        success, tone, message = update_document_status(
+            deal_id=deal_id,
+            document_id=document_id,
+            document_kind=document_kind,
+            status="sent",
+        )
+        if success:
+            record_audit_event(
+                action="document_reset_to_sent",
+                target_type="client_document",
+                target_id=document_id,
+                detail=f"Deleted responses and reset to sent. Kind: {document_kind}",
+            )
+            return True, "success", "The document has been reset to 'sent' status and all client responses have been cleared. The client can now respond again."
+        return success, tone, message
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the reset operation. {details or exc.reason}"
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to reset the document. {exc}"
+
+
 def revoke_document_link(*, deal_id: str, document_id: str) -> tuple[bool, str, str]:
     if not deal_id.strip() or not document_id.strip():
         return False, "warning", "Choose a valid document before revoking its link."
