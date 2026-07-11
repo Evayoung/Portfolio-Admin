@@ -594,37 +594,35 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     elif document.status == "rejected":
         status_msg = "This document has been declined. You can still send a comment below."
 
-    # Accept button — opens confirmation modal instead of submitting directly
+    # Accept button — JS validates package before opening modal
     accept_btn = (
         Button(
             Icon("check-circle-fill", cls="me-2"),
             "Accept" if document.kind == "proposal" else "Confirm Quote",
             type="button",
             cls="doc-btn-primary",
-            data_bs_toggle="modal",
-            data_bs_target="#acceptConfirmModal",
+            id="doc-open-accept-modal",
             disabled=is_decision_disabled,
             style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
 
-    # Decline button — opens confirmation modal
+    # Decline button — JS validates package before opening modal
     reject_btn = (
         Button(
             Icon("x-circle", cls="me-2"),
             "Decline",
             type="button",
             cls="doc-btn-ghost",
-            data_bs_toggle="modal",
-            data_bs_target="#declineConfirmModal",
+            id="doc-open-decline-modal",
             disabled=is_decision_disabled,
             style="opacity:0.45; cursor:not-allowed;" if is_decision_disabled else "",
         )
         if is_proposal_or_quote else ""
     )
 
-    # Payment button — opens confirmation modal
+    # Payment button — opens confirmation modal (no package validation needed)
     pay_btn = (
         Button(
             Icon("check2-circle", cls="me-2"),
@@ -660,25 +658,19 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             const form = document.querySelector('.doc-response-zone');
             if (!form) return;
 
-            // ── Package validation for accept ──
+            // ── Package validation ──
             function validatePackageSelected() {
                 const radios = document.getElementsByName('selected_package');
                 if (radios.length === 0) return true;
                 for (let r of radios) { if (r.checked) return true; }
                 const selector = document.querySelector('.doc-pkg-selector');
                 if (selector) {
-                    selector.style.borderColor = 'var(--doc-danger)';
-                    selector.style.background = 'rgba(192, 57, 43, 0.05)';
+                    selector.classList.add('doc-pkg-error-state');
                     let errorMsg = selector.querySelector('.doc-pkg-error');
                     if (!errorMsg) {
                         errorMsg = document.createElement('div');
                         errorMsg.className = 'doc-pkg-error';
-                        errorMsg.style.color = 'var(--doc-danger)';
-                        errorMsg.style.fontSize = '0.85rem';
-                        errorMsg.style.fontWeight = '600';
-                        errorMsg.style.marginTop = '0.5rem';
-                        errorMsg.style.fontFamily = '"Space Grotesk", sans-serif';
-                        errorMsg.innerText = 'Please select a package option before accepting.';
+                        errorMsg.innerText = 'Please select a package option before continuing.';
                         selector.appendChild(errorMsg);
                     }
                 }
@@ -686,65 +678,93 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             }
 
             document.querySelectorAll('.doc-pkg-radio').forEach(radio => {
-                radio.onchange = function() {
+                radio.addEventListener('change', function() {
                     const selector = document.querySelector('.doc-pkg-selector');
                     if (selector) {
-                        selector.style.borderColor = 'var(--doc-cyan-border)';
-                        selector.style.background = 'rgba(70, 200, 238, 0.06)';
+                        selector.classList.remove('doc-pkg-error-state');
                         const errorMsg = selector.querySelector('.doc-pkg-error');
                         if (errorMsg) errorMsg.remove();
                     }
-                };
+                });
             });
 
-            // ── Accept modal confirm ──
-            const acceptBtn = document.getElementById('accept-confirm-btn');
-            if (acceptBtn) {
-                acceptBtn.addEventListener('click', function() {
+            // ── Helper: submit form via HTMX ──
+            function submitFormHtmx(action, comment) {
+                document.getElementById('hidden-action-field').value = action;
+                document.getElementById('hidden-comment-field').value = comment || '';
+                htmx.ajax('POST', form.getAttribute('hx_post'), {
+                    target: form.getAttribute('hx_target'),
+                    swap: form.getAttribute('hx_swap'),
+                    values: new FormData(form)
+                });
+            }
+
+            // ── Helper: close any Bootstrap modal by ID ──
+            function closeModal(modalId) {
+                var el = document.getElementById(modalId);
+                if (!el) return;
+                var instance = bootstrap.Modal.getInstance(el);
+                if (!instance) instance = new bootstrap.Modal(el);
+                instance.hide();
+            }
+
+            // ── Open Accept modal (with package validation) ──
+            var openAcceptBtn = document.getElementById('doc-open-accept-modal');
+            if (openAcceptBtn) {
+                openAcceptBtn.addEventListener('click', function() {
                     if (!validatePackageSelected()) return;
-                    const comment = document.getElementById('accept-confirm-comment');
-                    document.getElementById('hidden-action-field').value = 'accepted';
-                    document.getElementById('hidden-comment-field').value = comment ? comment.value : '';
-                    // Close modal and submit form
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('acceptConfirmModal'));
-                    if (modal) modal.hide();
-                    form.submit();
+                    var acceptModal = new bootstrap.Modal(document.getElementById('acceptConfirmModal'));
+                    acceptModal.show();
+                });
+            }
+
+            // ── Accept modal confirm ──
+            var acceptConfirmBtn = document.getElementById('accept-confirm-btn');
+            if (acceptConfirmBtn) {
+                acceptConfirmBtn.addEventListener('click', function() {
+                    var comment = document.getElementById('accept-confirm-comment');
+                    closeModal('acceptConfirmModal');
+                    submitFormHtmx('accepted', comment ? comment.value : '');
+                });
+            }
+
+            // ── Open Decline modal (with package validation) ──
+            var openDeclineBtn = document.getElementById('doc-open-decline-modal');
+            if (openDeclineBtn) {
+                openDeclineBtn.addEventListener('click', function() {
+                    if (!validatePackageSelected()) return;
+                    var declineModal = new bootstrap.Modal(document.getElementById('declineConfirmModal'));
+                    declineModal.show();
                 });
             }
 
             // ── Decline modal confirm ──
-            const declineBtn = document.getElementById('decline-confirm-btn');
-            if (declineBtn) {
-                declineBtn.addEventListener('click', function() {
-                    const comment = document.getElementById('decline-confirm-comment');
+            var declineConfirmBtn = document.getElementById('decline-confirm-btn');
+            if (declineConfirmBtn) {
+                declineConfirmBtn.addEventListener('click', function() {
+                    var comment = document.getElementById('decline-confirm-comment');
                     if (!comment || !comment.value.trim()) {
                         comment.style.borderColor = 'var(--doc-danger)';
                         comment.focus();
                         return;
                     }
-                    document.getElementById('hidden-action-field').value = 'rejected';
-                    document.getElementById('hidden-comment-field').value = comment.value;
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('declineConfirmModal'));
-                    if (modal) modal.hide();
-                    form.submit();
+                    closeModal('declineConfirmModal');
+                    submitFormHtmx('rejected', comment.value);
                 });
             }
 
             // ── Payment modal confirm ──
-            const paymentBtn = document.getElementById('payment-confirm-btn');
-            if (paymentBtn) {
-                paymentBtn.addEventListener('click', function() {
-                    const comment = document.getElementById('payment-confirm-comment');
-                    document.getElementById('hidden-action-field').value = 'payment_submitted';
-                    document.getElementById('hidden-comment-field').value = comment ? comment.value : '';
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentConfirmModal'));
-                    if (modal) modal.hide();
-                    form.submit();
+            var paymentConfirmBtn = document.getElementById('payment-confirm-btn');
+            if (paymentConfirmBtn) {
+                paymentConfirmBtn.addEventListener('click', function() {
+                    var comment = document.getElementById('payment-confirm-comment');
+                    closeModal('paymentConfirmModal');
+                    submitFormHtmx('payment_submitted', comment ? comment.value : '');
                 });
             }
 
             // ── Reset decline comment border on input ──
-            const declineComment = document.getElementById('decline-confirm-comment');
+            var declineComment = document.getElementById('decline-confirm-comment');
             if (declineComment) {
                 declineComment.addEventListener('input', function() {
                     this.style.borderColor = '';

@@ -1095,7 +1095,7 @@
 
 .doc-modal .modal-content {
   background: var(--doc-surface);
-  border: 1px solid var(--doc-border);
+  border: 1px solid var(--doc-line);
   border-radius: var(--doc-radius);
   box-shadow: var(--doc-shadow);
 }
@@ -1103,13 +1103,19 @@
 .doc-modal .modal-header {
   border-bottom-color: var(--doc-line);
   padding: 1rem 1.25rem;
+  background: var(--doc-navy);
+  border-radius: var(--doc-radius) var(--doc-radius) 0 0;
 }
 
 .doc-modal .modal-title {
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--doc-navy);
+  color: #fff;
+}
+
+.doc-modal .modal-header .btn-close {
+  filter: brightness(0) invert(1);
 }
 
 .doc-modal .modal-body {
@@ -1121,6 +1127,30 @@
   padding: 0.75rem 1.25rem;
   background: var(--doc-surface-soft);
   border-radius: 0 0 var(--doc-radius) var(--doc-radius);
+}
+
+/* ── Modal button overrides (light background context) ────── */
+
+.doc-modal .doc-btn-ghost {
+  background: var(--doc-surface);
+  color: var(--doc-navy);
+  border: 1px solid var(--doc-line);
+}
+
+.doc-modal .doc-btn-ghost:hover {
+  background: var(--doc-surface-soft);
+  border-color: var(--doc-navy-mid);
+  color: var(--doc-navy);
+}
+
+.doc-modal .doc-btn-primary {
+  background: var(--doc-cyan);
+  color: #fff;
+}
+
+.doc-modal .doc-btn-primary:hover {
+  background: var(--doc-cyan-strong);
+  color: #fff;
 }
 
 /* Modal text classes for proper contrast */
@@ -1166,6 +1196,20 @@
 
 .doc-modal-input::placeholder {
   color: var(--doc-dim);
+}
+
+/* ── Package selector error state ──────────────────────────── */
+.doc-pkg-error-state {
+  border-color: var(--doc-danger) !important;
+  background: rgba(192, 57, 43, 0.05) !important;
+}
+
+.doc-pkg-error {
+  color: var(--doc-danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  font-family: "Space Grotesk", sans-serif;
 }
 
 /* ── Danger Button (for decline confirm) ───────────────────── */
