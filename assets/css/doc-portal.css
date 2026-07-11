@@ -1131,26 +1131,70 @@
 
 /* ── Modal button overrides (light background context) ────── */
 
-.doc-modal .doc-btn-ghost {
+.doc-modal .doc-btn-ghost,
+.doc-modal .doc-btn-modal-ghost {
   background: var(--doc-surface);
   color: var(--doc-navy);
   border: 1px solid var(--doc-line);
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
 }
 
-.doc-modal .doc-btn-ghost:hover {
+.doc-modal .doc-btn-ghost:hover,
+.doc-modal .doc-btn-modal-ghost:hover {
   background: var(--doc-surface-soft);
   border-color: var(--doc-navy-mid);
   color: var(--doc-navy);
 }
 
-.doc-modal .doc-btn-primary {
+.doc-modal .doc-btn-primary,
+.doc-modal .doc-btn-modal-confirm {
   background: var(--doc-cyan);
+  color: #fff;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.doc-modal .doc-btn-primary:hover,
+.doc-modal .doc-btn-modal-confirm:hover {
+  background: var(--doc-cyan-strong);
   color: #fff;
 }
 
-.doc-modal .doc-btn-primary:hover {
-  background: var(--doc-cyan-strong);
+.doc-modal .doc-btn-danger,
+.doc-modal .doc-btn-modal-danger {
+  background: var(--doc-danger);
   color: #fff;
+  border: 1px solid var(--doc-danger);
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.doc-modal .doc-btn-danger:hover,
+.doc-modal .doc-btn-modal-danger:hover {
+  background: #a93226;
+  border-color: #922a20;
+  color: #fff;
+}
+
+/* ── Spinner icon for loading state ────────────────────────── */
+.doc-btn-spinner-icon {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: doc-btn-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+@keyframes doc-btn-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Modal text classes for proper contrast */

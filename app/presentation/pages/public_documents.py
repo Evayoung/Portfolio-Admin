@@ -442,12 +442,12 @@ def _accept_confirmation_modal(document, token: str) -> Modal:
             cls="form-control doc-modal-input",
         ),
         footer=Div(
-            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button("Cancel", type="button", cls="doc-btn-ghost doc-btn-modal-ghost", data_bs_dismiss="modal"),
             Button(
                 Icon("check-circle-fill", cls="me-2"),
                 f"Confirm {action_label}",
                 type="button",
-                cls="btn doc-btn-primary",
+                cls="doc-btn-primary doc-btn-modal-confirm",
                 id="accept-confirm-btn",
             ),
             cls="d-flex gap-2 justify-content-end",
@@ -483,12 +483,12 @@ def _decline_confirmation_modal(document, token: str) -> Modal:
             cls="mt-2",
         ),
         footer=Div(
-            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button("Cancel", type="button", cls="doc-btn-ghost doc-btn-modal-ghost", data_bs_dismiss="modal"),
             Button(
                 Icon("x-circle", cls="me-2"),
                 "Confirm Decline",
                 type="button",
-                cls="btn doc-btn-danger",
+                cls="doc-btn-danger doc-btn-modal-danger",
                 id="decline-confirm-btn",
             ),
             cls="d-flex gap-2 justify-content-end",
@@ -529,12 +529,12 @@ def _payment_confirmation_modal(document, token: str, account=None) -> Modal:
             cls="form-control doc-modal-input",
         ),
         footer=Div(
-            Button("Cancel", type="button", cls="btn doc-btn-ghost", data_bs_dismiss="modal"),
+            Button("Cancel", type="button", cls="doc-btn-ghost doc-btn-modal-ghost", data_bs_dismiss="modal"),
             Button(
                 Icon("check2-circle", cls="me-2"),
                 "Confirm Payment Sent",
                 type="button",
-                cls="btn doc-btn-primary",
+                cls="doc-btn-primary doc-btn-modal-confirm",
                 id="payment-confirm-btn",
             ),
             cls="d-flex gap-2 justify-content-end",
@@ -655,18 +655,18 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
 
     js_script = Script("""
         (function() {
-            const form = document.querySelector('.doc-response-zone');
+            var form = document.querySelector('.doc-response-zone');
             if (!form) return;
 
             // ── Package validation ──
             function validatePackageSelected() {
-                const radios = document.getElementsByName('selected_package');
+                var radios = document.getElementsByName('selected_package');
                 if (radios.length === 0) return true;
-                for (let r of radios) { if (r.checked) return true; }
-                const selector = document.querySelector('.doc-pkg-selector');
+                for (var i = 0; i < radios.length; i++) { if (radios[i].checked) return true; }
+                var selector = document.querySelector('.doc-pkg-selector');
                 if (selector) {
                     selector.classList.add('doc-pkg-error-state');
-                    let errorMsg = selector.querySelector('.doc-pkg-error');
+                    var errorMsg = selector.querySelector('.doc-pkg-error');
                     if (!errorMsg) {
                         errorMsg = document.createElement('div');
                         errorMsg.className = 'doc-pkg-error';
@@ -677,25 +677,42 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                 return false;
             }
 
-            document.querySelectorAll('.doc-pkg-radio').forEach(radio => {
+            document.querySelectorAll('.doc-pkg-radio').forEach(function(radio) {
                 radio.addEventListener('change', function() {
-                    const selector = document.querySelector('.doc-pkg-selector');
+                    var selector = document.querySelector('.doc-pkg-selector');
                     if (selector) {
                         selector.classList.remove('doc-pkg-error-state');
-                        const errorMsg = selector.querySelector('.doc-pkg-error');
+                        var errorMsg = selector.querySelector('.doc-pkg-error');
                         if (errorMsg) errorMsg.remove();
                     }
                 });
             });
 
+            // ── Helper: show loading state on button ──
+            function btnLoading(btn) {
+                btn.setAttribute('data-original-html', btn.innerHTML);
+                btn.disabled = true;
+                btn.style.pointerEvents = 'none';
+                btn.innerHTML = '<span class="doc-btn-spinner-icon"></span> Processing...';
+            }
+
             // ── Helper: submit form via HTMX ──
-            function submitFormHtmx(action, comment) {
+            function submitFormHtmx(action, comment, btn) {
                 document.getElementById('hidden-action-field').value = action;
                 document.getElementById('hidden-comment-field').value = comment || '';
-                htmx.ajax('POST', form.getAttribute('hx_post'), {
-                    target: form.getAttribute('hx_target'),
-                    swap: form.getAttribute('hx_swap'),
-                    values: new FormData(form)
+                // Collect all form values into a plain object
+                var fd = new FormData(form);
+                var values = {};
+                fd.forEach(function(value, key) { values[key] = value; });
+                // Use the actual HTML attribute names (hx-post, hx-target, hx-swap)
+                var hxUrl = form.getAttribute('hx-post');
+                var hxTarget = form.getAttribute('hx-target');
+                var hxSwap = form.getAttribute('hx-swap');
+                if (!hxUrl) { form.submit(); return; }
+                htmx.ajax('POST', hxUrl, {
+                    target: hxTarget || 'body',
+                    swap: hxSwap || 'innerHTML',
+                    values: values
                 });
             }
 
@@ -713,8 +730,8 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (openAcceptBtn) {
                 openAcceptBtn.addEventListener('click', function() {
                     if (!validatePackageSelected()) return;
-                    var acceptModal = new bootstrap.Modal(document.getElementById('acceptConfirmModal'));
-                    acceptModal.show();
+                    var m = new bootstrap.Modal(document.getElementById('acceptConfirmModal'));
+                    m.show();
                 });
             }
 
@@ -723,8 +740,9 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (acceptConfirmBtn) {
                 acceptConfirmBtn.addEventListener('click', function() {
                     var comment = document.getElementById('accept-confirm-comment');
+                    btnLoading(this);
                     closeModal('acceptConfirmModal');
-                    submitFormHtmx('accepted', comment ? comment.value : '');
+                    submitFormHtmx('accepted', comment ? comment.value : '', this);
                 });
             }
 
@@ -733,8 +751,8 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (openDeclineBtn) {
                 openDeclineBtn.addEventListener('click', function() {
                     if (!validatePackageSelected()) return;
-                    var declineModal = new bootstrap.Modal(document.getElementById('declineConfirmModal'));
-                    declineModal.show();
+                    var m = new bootstrap.Modal(document.getElementById('declineConfirmModal'));
+                    m.show();
                 });
             }
 
@@ -748,8 +766,9 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                         comment.focus();
                         return;
                     }
+                    btnLoading(this);
                     closeModal('declineConfirmModal');
-                    submitFormHtmx('rejected', comment.value);
+                    submitFormHtmx('rejected', comment.value, this);
                 });
             }
 
@@ -758,8 +777,9 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (paymentConfirmBtn) {
                 paymentConfirmBtn.addEventListener('click', function() {
                     var comment = document.getElementById('payment-confirm-comment');
+                    btnLoading(this);
                     closeModal('paymentConfirmModal');
-                    submitFormHtmx('payment_submitted', comment ? comment.value : '');
+                    submitFormHtmx('payment_submitted', comment ? comment.value : '', this);
                 });
             }
 
