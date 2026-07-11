@@ -654,7 +654,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     hidden_comment = Input(type="hidden", name="comment", id="hidden-comment-field", value="")
 
     js_script = Script("""
-        (function() {
+        document.addEventListener('DOMContentLoaded', function() {
             var form = document.querySelector('.doc-response-zone');
             if (!form) return;
 
@@ -786,7 +786,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     this.style.borderColor = '';
                 });
             }
-        })();
+        });
     """)
 
     return Form(
