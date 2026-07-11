@@ -653,7 +653,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     hidden_comment = Input(type="hidden", name="comment", id="hidden-comment-field", value="")
 
     js_script = Script("""
-        document.addEventListener('DOMContentLoaded', function() {
+        function initDocPortal() {
             var form = document.querySelector('.doc-response-zone');
             if (!form) return;
 
@@ -791,19 +791,6 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (commentBtn) {
                 commentBtn.addEventListener('click', function() {
                     var textarea = document.getElementById('main-comment-field');
-                    var nameInput = form.querySelector('input[name="responder_name"]');
-                    var emailInput = form.querySelector('input[name="responder_email"]');
-                    // Validate name and email
-                    if (nameInput && !nameInput.value.trim()) {
-                        nameInput.focus();
-                        nameInput.style.borderColor = 'var(--doc-danger)';
-                        return;
-                    }
-                    if (emailInput && !emailInput.value.trim()) {
-                        emailInput.focus();
-                        emailInput.style.borderColor = 'var(--doc-danger)';
-                        return;
-                    }
                     // Validate comment text (minimum 3 characters)
                     if (!textarea || !textarea.value.trim() || textarea.value.trim().length < 3) {
                         if (textarea) {
@@ -813,9 +800,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                         return;
                     }
                     // Reset borders
-                    if (textarea) textarea.style.borderColor = '';
-                    if (nameInput) nameInput.style.borderColor = '';
-                    if (emailInput) emailInput.style.borderColor = '';
+                    textarea.style.borderColor = '';
                     // Set action and submit
                     btnLoading(this);
                     document.getElementById('hidden-action-field').value = 'commented';
@@ -823,6 +808,12 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     var submitter = document.getElementById('doc-hidden-submit');
                     if (submitter) submitter.click();
                 });
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initDocPortal);
+        document.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target && evt.detail.target.matches && evt.detail.target.matches('body, .doc-shell')) {
+                initDocPortal();
             }
         });
     """)
