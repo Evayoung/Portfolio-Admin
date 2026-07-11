@@ -696,24 +696,15 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                 btn.innerHTML = '<span class="doc-btn-spinner-icon"></span> Processing...';
             }
 
-            // ── Helper: submit form via HTMX ──
-            function submitFormHtmx(action, comment, btn) {
+            // ── Helper: submit form via hidden submit button (triggers HTMX natively) ──
+            function submitFormAction(action, comment) {
                 document.getElementById('hidden-action-field').value = action;
                 document.getElementById('hidden-comment-field').value = comment || '';
-                // Collect all form values into a plain object
-                var fd = new FormData(form);
-                var values = {};
-                fd.forEach(function(value, key) { values[key] = value; });
-                // Use the actual HTML attribute names (hx-post, hx-target, hx-swap)
-                var hxUrl = form.getAttribute('hx-post');
-                var hxTarget = form.getAttribute('hx-target');
-                var hxSwap = form.getAttribute('hx-swap');
-                if (!hxUrl) { form.submit(); return; }
-                htmx.ajax('POST', hxUrl, {
-                    target: hxTarget || 'body',
-                    swap: hxSwap || 'innerHTML',
-                    values: values
-                });
+                // Use the hidden submit button to trigger HTMX form handling
+                var submitter = document.getElementById('doc-hidden-submit');
+                if (submitter) { submitter.click(); return; }
+                // Fallback: native form submit
+                form.submit();
             }
 
             // ── Helper: close any Bootstrap modal by ID ──
@@ -721,8 +712,13 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                 var el = document.getElementById(modalId);
                 if (!el) return;
                 var instance = bootstrap.Modal.getInstance(el);
-                if (!instance) instance = new bootstrap.Modal(el);
-                instance.hide();
+                if (instance) { instance.hide(); return; }
+                // Fallback: force close
+                el.classList.remove('show');
+                el.style.display = 'none';
+                document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+                document.body.classList.remove('modal-open');
+                document.body.style = '';
             }
 
             // ── Open Accept modal (with package validation) ──
@@ -742,7 +738,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     var comment = document.getElementById('accept-confirm-comment');
                     btnLoading(this);
                     closeModal('acceptConfirmModal');
-                    submitFormHtmx('accepted', comment ? comment.value : '', this);
+                    submitFormAction('accepted', comment ? comment.value : '');
                 });
             }
 
@@ -768,7 +764,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     }
                     btnLoading(this);
                     closeModal('declineConfirmModal');
-                    submitFormHtmx('rejected', comment.value, this);
+                    submitFormAction('rejected', comment.value);
                 });
             }
 
@@ -779,7 +775,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
                     var comment = document.getElementById('payment-confirm-comment');
                     btnLoading(this);
                     closeModal('paymentConfirmModal');
-                    submitFormHtmx('payment_submitted', comment ? comment.value : '', this);
+                    submitFormAction('payment_submitted', comment ? comment.value : '');
                 });
             }
 
@@ -849,6 +845,7 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             cls="doc-response-body",
         ),
         js_script,
+        Button(type="submit", id="doc-hidden-submit", style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;"),
         hx_post=f"/documents/{token}/respond",
         hx_target="body",
         hx_swap="innerHTML",
