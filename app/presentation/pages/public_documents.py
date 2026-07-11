@@ -638,9 +638,8 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
     comment_btn = Button(
         Icon("chat-text", cls="me-2"),
         "Send Comment",
-        type="submit",
-        name="action",
-        value="commented",
+        type="button",
+        id="doc-send-comment-btn",
         cls="doc-btn-ghost",
     )
 
@@ -784,6 +783,45 @@ def _response_zone(document, token: str, message: str = "", tone: str = "info", 
             if (declineComment) {
                 declineComment.addEventListener('input', function() {
                     this.style.borderColor = '';
+                });
+            }
+
+            // ── Send Comment button with validation ──
+            var commentBtn = document.getElementById('doc-send-comment-btn');
+            if (commentBtn) {
+                commentBtn.addEventListener('click', function() {
+                    var textarea = document.getElementById('main-comment-field');
+                    var nameInput = form.querySelector('input[name="responder_name"]');
+                    var emailInput = form.querySelector('input[name="responder_email"]');
+                    // Validate name and email
+                    if (nameInput && !nameInput.value.trim()) {
+                        nameInput.focus();
+                        nameInput.style.borderColor = 'var(--doc-danger)';
+                        return;
+                    }
+                    if (emailInput && !emailInput.value.trim()) {
+                        emailInput.focus();
+                        emailInput.style.borderColor = 'var(--doc-danger)';
+                        return;
+                    }
+                    // Validate comment text (minimum 3 characters)
+                    if (!textarea || !textarea.value.trim() || textarea.value.trim().length < 3) {
+                        if (textarea) {
+                            textarea.style.borderColor = 'var(--doc-danger)';
+                            textarea.focus();
+                        }
+                        return;
+                    }
+                    // Reset borders
+                    if (textarea) textarea.style.borderColor = '';
+                    if (nameInput) nameInput.style.borderColor = '';
+                    if (emailInput) emailInput.style.borderColor = '';
+                    // Set action and submit
+                    btnLoading(this);
+                    document.getElementById('hidden-action-field').value = 'commented';
+                    document.getElementById('hidden-comment-field').value = textarea.value.trim();
+                    var submitter = document.getElementById('doc-hidden-submit');
+                    if (submitter) submitter.click();
                 });
             }
         });
