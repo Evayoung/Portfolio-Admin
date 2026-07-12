@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Label, Option, P, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO, Tabs, TabPane
 
@@ -220,6 +222,28 @@ def _overview_tab(selected: AdminDeal) -> Div:
                 span=12, md=6, cls="mt-4 mt-md-0",
             ),
             cls="g-4",
+        ),
+        # Sections content from sections_json (proposal/quote body)
+        *(
+            [
+                Card(
+                    H3("Document Sections", cls="admin-subsection-title"),
+                    *[
+                        Div(
+                            H4(s.get("title", ""), cls="admin-project-title mb-1"),
+                            P(s.get("content", ""), cls="admin-module-copy mb-3"),
+                        )
+                        for s in sorted(
+                            json.loads(selected.sections_json),
+                            key=lambda x: x.get("order", 0),
+                        )
+                        if s.get("title") or s.get("content")
+                    ],
+                    cls="admin-detail-block mt-4",
+                ),
+            ]
+            if selected.sections_json and selected.sections_json.strip() not in ("", "[]")
+            else []
         ),
         Row(
             Col(

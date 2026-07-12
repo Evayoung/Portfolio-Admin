@@ -1058,25 +1058,35 @@ def generate_next_document(
 
     # Package-aware filtering
     import re
-    all_items = _parse_line_items(source_doc.line_items_text) if source_doc.line_items_text else []
+    raw_items = _parse_line_items(source_doc.line_items_text) if source_doc.line_items_text else []
 
     if package_name and package_name.strip():
         # Filter items belonging to this package
         filtered_items = []
-        for label, detail, qty, amount in all_items:
+        for item in raw_items:
+            label = str(item.get("label") or "")
             match = re.match(rf"^{re.escape(package_name)}\s*[-:\s]", label, re.IGNORECASE)
             if match:
                 # Strip the package prefix from the label
                 clean_label = label[match.end():].strip()
-                filtered_items.append((clean_label, detail, qty, amount))
-        line_items_for_payload = [{"label": l, "description": d, "quantity": q, "unit_price": a} for l, d, q, a in filtered_items]
+                filtered_items.append({
+                    "label": clean_label,
+                    "description": item.get("description", ""),
+                    "quantity": item.get("quantity", 1),
+                    "unit_price": item.get("unit_price", 0),
+                })
+        line_items_for_payload = filtered_items
         # Use package-specific amount
         try:
             amount = int(float(package_amount or "0"))
         except ValueError:
             amount = deal.amount_ngn
     else:
-        line_items_for_payload = [{"label": l, "description": d, "quantity": q, "unit_price": a} for l, d, q, a in all_items]
+        line_items_for_payload = [
+            {"label": item.get("label", ""), "description": item.get("description", ""),
+             "quantity": item.get("quantity", 1), "unit_price": item.get("unit_price", 0)}
+            for item in raw_items
+        ]
         amount = source_doc.total_amount or deal.amount_ngn
 
     # Build new document from source data
