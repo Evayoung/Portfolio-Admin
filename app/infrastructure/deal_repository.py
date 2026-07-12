@@ -208,6 +208,11 @@ def _line_items_to_text(items: list[dict[str, object]]) -> str:
 
 
 def _document_from_supabase(row: dict[str, object]) -> DealDocument:
+    line_items_raw = row.get("line_items") or []
+    if isinstance(line_items_raw, list):
+        line_items_text = _line_items_to_text(line_items_raw)
+    else:
+        line_items_text = str(line_items_raw)
     return DealDocument(
         document_id=str(row.get("id") or ""),
         kind=str(row.get("kind") or "proposal"),
@@ -220,6 +225,10 @@ def _document_from_supabase(row: dict[str, object]) -> DealDocument:
         valid_until=str(row.get("valid_until") or ""),
         due_date=str(row.get("due_date") or ""),
         updated_at=str(row.get("updated_at") or "")[:10],
+        summary=str(row.get("summary") or ""),
+        payment_terms=str(row.get("payment_terms") or ""),
+        sections_json=str(row.get("sections_json") or ""),
+        line_items_text=line_items_text,
     )
 
 
@@ -250,7 +259,7 @@ def _deal_from_supabase(row: dict[str, object]) -> AdminDeal:
         tech_stack=tech_stack,
         timeline_text=str(row.get("timeline_text") or ""),
         payment_terms=str(row.get("payment_terms") or ""),
-        line_items_text=_line_items_to_text(list(row.get("client_documents")[0].get("line_items") if row.get("client_documents") else [])),
+        line_items_text=documents[0].line_items_text if documents else "",
         exclusions_text=str(row.get("exclusions_text") or ""),
         closing_note=str(row.get("closing_note") or ""),
         sections_json=str(row.get("sections_json") or ""),
@@ -272,7 +281,7 @@ def _load_supabase_deals() -> tuple[AdminDeal, ...]:
                 "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
                 "sections_json,"
                 "amount_ngn,deposit_percent,updated_at,"
-                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id)"
+                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
             ),
             "order": "updated_at.desc",
         },
@@ -964,6 +973,138 @@ def delete_deal(deal_id: str) -> tuple[bool, str, str]:
         return False, "danger", f"Supabase rejected the delete request. {details or exc.reason}"
     except (URLError, TimeoutError, ValueError) as exc:
         return False, "danger", f"Could not reach Supabase to delete the deal. {exc}"
+
+
+def get_deal_with_documents(deal_id: str) -> AdminDeal | None:
+    """Fetch a deal with full document content for the detail page.
+
+    Unlike get_deal() which reads from the cached _load_deals(), this function
+    makes a fresh Supabase call to get the latest document content including
+    sections_json and line_items — ensuring the admin sees exactly what clients see.
+    """
+    if not deal_id.strip():
+        return None
+    if not (supabase_is_configured() and service_role_is_configured()):
+        return get_deal(deal_id)
+    try:
+        rows = _rest_request(
+            "GET",
+            "client_deals",
+            params={
+                "select": (
+                    "id,client_name,client_email,client_phone,company,project_title,service_type,stage,summary,"
+                    "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
+                    "sections_json,"
+                    "amount_ngn,deposit_percent,updated_at,"
+                    "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
+                ),
+                "id": f"eq.{deal_id}",
+                "limit": "1",
+            },
+        )
+        if isinstance(rows, list) and rows:
+            return _deal_from_supabase(rows[0])
+    except (HTTPError, URLError, TimeoutError, ValueError, KeyError, TypeError):
+        pass
+    return get_deal(deal_id)
+
+
+def get_document_with_responses(document_id: str) -> tuple[DealDocument | None, tuple[ClientDocumentResponse, ...]]:
+    """Fetch a single document with all its responses for the detail page timeline."""
+    responses = list_document_responses(document_id)
+    # Find the document in the deal cache
+    for deal in _load_deals():
+        for doc in deal.documents:
+            if doc.document_id == document_id:
+                return doc, responses
+    return None, responses
+
+
+def generate_next_document(
+    *,
+    deal_id: str,
+    from_kind: str,
+    to_kind: str,
+) -> tuple[bool, str, str, str]:
+    """Generate the next document in the workflow from the accepted previous one.
+
+    Returns (success, tone, message, new_document_id).
+    """
+    if not deal_id.strip():
+        return False, "warning", "A valid deal is required.", ""
+    if from_kind not in {"proposal", "quote", "invoice"} or to_kind not in {"quote", "invoice"}:
+        return False, "warning", "Invalid document generation workflow.", ""
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet.", ""
+
+    deal = get_deal_with_documents(deal_id)
+    if not deal:
+        return False, "warning", "Deal not found.", ""
+
+    source_doc = None
+    for doc in deal.documents:
+        if doc.kind == from_kind:
+            source_doc = doc
+            break
+    if not source_doc:
+        return False, "warning", f"No {from_kind} found in this deal.", ""
+    if source_doc.status not in {"accepted", "paid"}:
+        return False, "warning", f"The {from_kind} must be accepted before generating a {to_kind}.", ""
+
+    # Build new document from source data
+    deposit = deal.deposit_percent
+    amount = deal.amount_ngn
+    if to_kind == "invoice":
+        total = int(amount * deposit / 100)
+        title = f"Invoice — Commitment Fee ({deposit}%)"
+    else:
+        total = amount
+        title = f"Quotation — {deal.project_title}"
+
+    token = _generate_public_token(to_kind, deal_id)
+    doc_number = _generate_document_number(to_kind, deal_id)
+
+    payload = {
+        "deal_id": deal_id,
+        "kind": to_kind,
+        "status": "draft",
+        "document_number": doc_number,
+        "public_token": token,
+        "title": title,
+        "summary": source_doc.summary,
+        "timeline_text": deal.timeline_text,
+        "payment_terms": deal.payment_terms,
+        "line_items": _parse_line_items(source_doc.line_items_text) if source_doc.line_items_text else [],
+        "subtotal": total,
+        "tax_amount": 0,
+        "total_amount": total,
+        "valid_until": source_doc.valid_until or None,
+        "due_date": source_doc.due_date or None,
+        "payment_account_id": source_doc.payment_account_id or None,
+    }
+
+    try:
+        result = _rest_request(
+            "POST",
+            "client_documents",
+            payload=payload,
+            prefer="return=representation",
+        )
+        new_id = ""
+        if isinstance(result, list) and result:
+            new_id = str(result[0].get("id") or "")
+        record_audit_event(
+            action=f"document_generated_{to_kind}",
+            target_type="client_deal",
+            target_id=deal_id,
+            detail=f"From {from_kind} ({source_doc.document_id})",
+        )
+        return True, "success", f"{to_kind.title()} draft created. Review and publish when ready.", new_id
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the document generation. {details or exc.reason}", ""
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to generate the document. {exc}", ""
 
 
 def save_quick_document(

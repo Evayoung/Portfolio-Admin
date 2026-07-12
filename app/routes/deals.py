@@ -12,7 +12,9 @@ try:
     from ..infrastructure.deal_pdf import build_deal_document_pdf
     from ..infrastructure.deal_repository import (
         get_deal,
+        get_deal_with_documents,
         delete_deal,
+        generate_next_document,
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
@@ -21,14 +23,17 @@ try:
         update_document_status,
     )
     from ..presentation.page_helpers import toast_fragment
-    from ..presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
+    from ..presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
+    from ..presentation.pages.deal_detail import deal_detail_page, deal_generate_result_fragment
 except ImportError:
     from config import settings
     from infrastructure.ai_draft_repository import generate_document_draft
     from infrastructure.deal_pdf import build_deal_document_pdf
     from infrastructure.deal_repository import (
         get_deal,
+        get_deal_with_documents,
         delete_deal,
+        generate_next_document,
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
@@ -37,20 +42,22 @@ except ImportError:
         update_document_status,
     )
     from presentation.page_helpers import toast_fragment
-    from presentation.pages.deals import ai_draft_result_fragment, deal_save_status_fragment, deals_workspace_page
+    from presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
+    from presentation.pages.deal_detail import deal_detail_page, deal_generate_result_fragment
 
 
 def setup_deal_routes(app: Any) -> None:
     @app.get("/deals")
-    def deals(deal_id: str = "", stage: str = "all", document_kind: str = "all", search: str = "", from_submission: str = "", from_kind: str = "") -> Any:
+    def deals(stage: str = "all", document_kind: str = "all", search: str = "") -> Any:
         return deals_workspace_page(
-            deal_id=deal_id,
             stage=stage,
             document_kind=document_kind,
             search=search,
-            from_submission=from_submission,
-            from_kind=from_kind,
         )
+
+    @app.get("/deals/{deal_id}")
+    def deal_detail(deal_id: str, tab: str = "documents") -> Any:
+        return deal_detail_page(deal_id=deal_id, tab=tab)
 
     @app.get("/deals/{deal_id}/documents/{document_kind}/pdf")
     def deal_document_pdf(deal_id: str, document_kind: str) -> Any:
@@ -124,8 +131,9 @@ def setup_deal_routes(app: Any) -> None:
             due_date=due_date,
         )
         if result.success:
+            target_deal_id = result.deal_id or deal_id
             return (
-                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{target_deal_id}?tab=documents"}),
                 toast_fragment("Deal draft saved", result.message),
             )
         title_text = "Save not completed"
@@ -238,7 +246,25 @@ def setup_deal_routes(app: Any) -> None:
             },
         )
         title_text = "AI draft ready" if result.success else "AI draft not generated"
-        return ai_draft_result_fragment(title_text, result.message, tone=result.tone, draft=result.draft, draft_kind=ai_draft_kind)
+        return deal_generate_result_fragment(title_text, result.message, tone=result.tone, draft=result.draft, draft_kind=ai_draft_kind)
+
+    @app.post("/deals/{deal_id}/generate")
+    def deal_generate_next(
+        deal_id: str,
+        from_kind: str = "proposal",
+        to_kind: str = "quote",
+    ) -> Any:
+        success, tone, message, new_id = generate_next_document(
+            deal_id=deal_id,
+            from_kind=from_kind,
+            to_kind=to_kind,
+        )
+        if success:
+            return (
+                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{deal_id}?tab=documents"}),
+                toast_fragment(f"{to_kind.title()} created", message),
+            )
+        return deal_generate_result_fragment("Generation failed", message, tone=tone)
 
     @app.post("/deals/documents/update")
     def deal_document_update(

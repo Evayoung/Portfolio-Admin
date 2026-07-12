@@ -172,6 +172,10 @@ class DealDocument:
     valid_until: str
     due_date: str
     updated_at: str
+    summary: str = ""
+    payment_terms: str = ""
+    sections_json: str = ""
+    line_items_text: str = ""
 
 
 @dataclass(frozen=True)

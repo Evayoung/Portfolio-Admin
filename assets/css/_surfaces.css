@@ -170,3 +170,248 @@ body {
 [data-bs-theme="light"] .admin-overview-metric .text-danger {
   color: #dc2626 !important;
 }
+
+/* ============================================================
+   Deal Pipeline List — Grid Layout
+   ============================================================ */
+
+.admin-deal-grid > [class*="col-"] {
+  display: flex;
+}
+
+.admin-deal-grid .admin-project-card {
+  width: 100%;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.admin-deal-grid .admin-project-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(45, 184, 232, 0.32) !important;
+}
+
+.admin-deal-grid .admin-project-card a {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+/* ============================================================
+   Deal Detail — Workflow Pipeline Strip
+   ============================================================ */
+
+.deal-workflow-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.deal-pipeline-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.deal-pipeline-item.upcoming {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.deal-pipeline-item.active {
+  background: rgba(45, 184, 232, 0.15);
+  color: var(--admin-primary);
+}
+
+.deal-pipeline-item.completed {
+  color: rgba(34, 197, 94, 0.85);
+}
+
+.deal-pipeline-item.completed::before {
+  content: "✓";
+  margin-right: 0.3rem;
+}
+
+.deal-pipeline-label {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.deal-pipeline-connector {
+  width: 2rem;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+[data-bs-theme="light"] .deal-pipeline-item {
+  color: rgba(15, 23, 42, 0.45);
+}
+
+[data-bs-theme="light"] .deal-pipeline-item.upcoming {
+  color: rgba(15, 23, 42, 0.35);
+}
+
+[data-bs-theme="light"] .deal-pipeline-item.active {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+}
+
+[data-bs-theme="light"] .deal-pipeline-item.completed {
+  color: rgba(5, 150, 105, 0.85);
+}
+
+[data-bs-theme="light"] .deal-pipeline-connector {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+/* ============================================================
+   Deal Detail — Document Cards
+   ============================================================ */
+
+.deal-document-card {
+  background: linear-gradient(180deg, rgba(14, 28, 45, 0.96), rgba(11, 22, 36, 0.96));
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.deal-document-card:hover {
+  border-color: rgba(45, 184, 232, 0.24);
+}
+
+[data-bs-theme="light"] .deal-document-card {
+  background: #ffffff;
+}
+
+.deal-documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ============================================================
+   Deal Detail — Response Timeline
+   ============================================================ */
+
+.deal-response-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 1rem;
+  border-left: 2px solid rgba(45, 184, 232, 0.2);
+  margin-top: 0.75rem;
+}
+
+.deal-response-item {
+  position: relative;
+  padding: 0.75rem 0 0.75rem 1rem;
+}
+
+.deal-response-item::before {
+  content: "";
+  position: absolute;
+  left: -1.35rem;
+  top: 1rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--admin-primary);
+  border: 2px solid rgba(14, 28, 45, 0.96);
+}
+
+.deal-response-item + .deal-response-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.deal-response-comment {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+[data-bs-theme="light"] .deal-response-timeline {
+  border-left-color: rgba(2, 132, 199, 0.2);
+}
+
+[data-bs-theme="light"] .deal-response-item::before {
+  border-color: #ffffff;
+  background: #0284c7;
+}
+
+[data-bs-theme="light"] .deal-response-item + .deal-response-item {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-bs-theme="light"] .deal-response-comment {
+  color: rgba(15, 23, 42, 0.7);
+}
+
+/* ============================================================
+   Deal Detail — Generate Next CTA
+   ============================================================ */
+
+.deal-generate-next {
+  background: linear-gradient(135deg, rgba(45, 184, 232, 0.08), rgba(139, 92, 246, 0.08));
+  border: 1px dashed rgba(45, 184, 232, 0.3);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.deal-generate-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--admin-primary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+[data-bs-theme="light"] .deal-generate-next {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.05), rgba(139, 92, 246, 0.05));
+  border-color: rgba(2, 132, 199, 0.25);
+}
+
+[data-bs-theme="light"] .deal-generate-label {
+  color: #0284c7;
+}
+
+/* ============================================================
+   Deal Detail — Back Link
+   ============================================================ */
+
+.admin-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  transition: color 0.15s ease;
+}
+
+.admin-back-link:hover {
+  color: var(--admin-primary);
+}
+
+[data-bs-theme="light"] .admin-back-link {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+[data-bs-theme="light"] .admin-back-link:hover {
+  color: #0284c7;
+}
