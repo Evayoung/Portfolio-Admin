@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime
 
 from fasthtml.common import (
@@ -957,6 +958,292 @@ def _doc_footer(profile, deal, document) -> Div:
 
 
 
+# ── Payment account modal (masked reveal) ────────────────────────────────────
+
+def _payment_account_modal(account) -> Modal:
+    """Modal that reveals bank details on demand for invoices."""
+    if not account:
+        return ""
+    return Modal(
+        Div(
+            Div(
+                Span("Account Label", cls="doc-account-label"),
+                Span(account.label, cls="doc-account-value"),
+                cls="doc-account-field",
+            ),
+            Div(
+                Span("Bank", cls="doc-account-label"),
+                Span(account.bank_name, cls="doc-account-value"),
+                cls="doc-account-field",
+            ),
+            Div(
+                Span("Account Name", cls="doc-account-label"),
+                Span(account.account_name, cls="doc-account-value"),
+                cls="doc-account-field",
+            ),
+            Div(
+                Span("Account Number", cls="doc-account-label"),
+                Span(account.account_number, cls="doc-account-value"),
+                cls="doc-account-field",
+            ),
+            cls="doc-account-grid",
+        ),
+        P(account.note, cls="doc-account-note") if account.note else "",
+        Button(
+            Icon("clipboard", cls="me-2"),
+            "Copy Account Number",
+            type="button",
+            cls="doc-btn-primary mt-3",
+            style="font-size:0.88rem; min-height:2.6rem; padding:0.6rem 1.1rem;",
+            data_copy_target=account.account_number,
+            data_copy_label="Copy Account Number",
+        ),
+        footer=Div(
+            Button("Close", type="button", cls="doc-btn-ghost", data_bs_dismiss="modal"),
+            cls="d-flex justify-content-end",
+        ),
+        modal_id="paymentAccountModal",
+        title="Payment Account Details",
+        centered=True,
+        size="sm",
+        cls="doc-modal",
+    )
+
+
+# ── Content builders by document kind ────────────────────────────────────────
+
+def _proposal_content(deal, document) -> list:
+    """Proposal: narrative sections from sections_json + investment + payment terms."""
+    # Prefer document-level sections; fall back to deal-level
+    effective_sections = getattr(document, "sections_json", "") or ""
+    if not effective_sections or effective_sections.strip() in ("", "[]"):
+        effective_sections = deal.sections_json or ""
+    has_sections = effective_sections and effective_sections.strip() not in ("", "[]")
+
+    sections = []
+    if has_sections:
+        sections.extend(_dynamic_sections(effective_sections))
+    else:
+        # Fallback: build from individual deal fields
+        sections.extend([
+            _section_card("Background & Objective", _lines(deal.background_text or deal.summary), fallback=deal.summary),
+            _section_card("Scope of Work", _lines(deal.scope_notes), fallback=deal.summary),
+            _section_card("Options & Delivery Path", _lines(deal.option_notes_text)),
+            _section_card("Timeline", _lines(deal.timeline_text)),
+            _section_card("What Is Not Included", _lines(deal.exclusions_text)),
+            _section_card("Closing Note", _lines(deal.closing_note)),
+        ])
+
+    # Investment options table (always shown for proposals)
+    sections.append(_line_items_table(deal, document))
+
+    # Payment terms card
+    if deal.payment_terms and deal.payment_terms.strip():
+        sections.append(Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Payment Terms", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                *[P(line, cls="doc-body-text") for line in _lines(deal.payment_terms)],
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        ))
+
+    return sections
+
+
+def _quotation_content(deal, document) -> list:
+    """Quotation: agreement summary + selected package + investment + payment terms."""
+    sections = []
+
+    # ── Agreement Summary ──
+    summary_text = document.summary or deal.summary or ""
+    if summary_text:
+        sections.append(Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Agreement Summary", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                P(summary_text, cls="doc-body-text"),
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        ))
+
+    # ── Selected Package ──
+    # Parse line items to show the chosen package details
+    import re
+    raw_items = _line_items(document.line_items_text or deal.line_items_text or "")
+    if raw_items:
+        # Group by package
+        groups = {}
+        for title, detail, qty, amount in raw_items:
+            group_key = None
+            for prefix in ["Package", "Option"]:
+                match = re.match(r"^(" + prefix + r"\s+\w+)\s*[-:]\s*(.*)$", title, re.IGNORECASE)
+                if match:
+                    group_key = match.group(1).strip()
+                    title = match.group(2).strip()
+                    break
+            if not group_key:
+                for prefix in ["Package", "Option"]:
+                    match = re.match(r"^(" + prefix + r"\s+\w+)\s+(.*)$", title, re.IGNORECASE)
+                    if match:
+                        group_key = match.group(1).strip()
+                        title = match.group(2).strip()
+                        break
+            if not group_key:
+                group_key = "Selected Package"
+            groups.setdefault(group_key, []).append((title, detail, qty, amount))
+
+        # Show package name and deliverables
+        for pkg_name, pkg_items in groups.items():
+            items_list = []
+            for title, detail, qty, amount in pkg_items:
+                if detail:
+                    items_list.append(Div(
+                        Strong(title, cls="doc-pkg-item-title"),
+                        P(detail, cls="doc-pkg-item-detail"),
+                        cls="doc-pkg-deliverable",
+                    ))
+                else:
+                    items_list.append(Div(
+                        P(title, cls="doc-body-text"),
+                        cls="doc-pkg-deliverable",
+                    ))
+            sections.append(Div(
+                Div(
+                    Div(cls="doc-section-accent"),
+                    H2(pkg_name, cls="doc-section-title"),
+                    cls="doc-section-head",
+                ),
+                Div(*items_list, cls="doc-card-body"),
+                cls="doc-card",
+            ))
+
+    # ── Investment ──
+    sections.append(_line_items_table(deal, document))
+
+    # ── Payment Terms ──
+    payment_text = document.payment_terms or deal.payment_terms or ""
+    if payment_text:
+        sections.append(Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Payment Terms", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                *[P(line, cls="doc-body-text") for line in _lines(payment_text)],
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        ))
+
+    return sections
+
+
+def _invoice_content(deal, document, account) -> list:
+    """Invoice: amount due hero + project reference + line items + schedule + masked account."""
+    sections = []
+
+    # ── Amount Due Hero Card ──
+    total = document.total_amount or 0
+    due_label = document.due_date or "On receipt"
+    # Try to infer milestone label from title
+    milestone_label = ""
+    if document.title:
+        # Extract milestone from title like "Invoice — Commitment Fee (30%)"
+        milestone_match = re.search(r"[\u2014\u2013\-]\s*(.+)$", document.title)
+        if milestone_match:
+            milestone_label = milestone_match.group(1).strip()
+
+    sections.append(Div(
+        Div(
+            Div(
+                Span("Amount Due", cls="doc-amount-label"),
+                cls="doc-amount-head",
+            ),
+            Div(
+                _money(total),
+                cls="doc-amount-value",
+            ),
+            Div(
+                Span(milestone_label, cls="doc-amount-milestone") if milestone_label else "",
+                Span(f"Due: {due_label}", cls="doc-amount-due"),
+                cls="doc-amount-meta",
+            ),
+            cls="doc-amount-hero",
+        ),
+    ))
+
+    # ── Project Reference ──
+    sections.append(Div(
+        Div(
+            Div(cls="doc-section-accent"),
+            H2("Project Reference", cls="doc-section-title"),
+            cls="doc-section-head",
+        ),
+        Div(
+            P(deal.project_title, cls="doc-body-text fw-bold"),
+            P(deal.summary or "", cls="doc-body-text mt-1") if deal.summary else "",
+            cls="doc-card-body",
+        ),
+        cls="doc-card",
+    ))
+
+    # ── Line Items ──
+    sections.append(_line_items_table(deal, document))
+
+    # ── Payment Schedule ──
+    payment_text = document.payment_terms or deal.payment_terms or ""
+    if payment_text:
+        sections.append(Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Payment Schedule", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                *[P(line, cls="doc-body-text") for line in _lines(payment_text)],
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        ))
+
+    # ── Payment Account (masked — button opens modal) ──
+    if account:
+        sections.append(Div(
+            Div(
+                Div(cls="doc-section-accent"),
+                H2("Payment Details", cls="doc-section-title"),
+                cls="doc-section-head",
+            ),
+            Div(
+                P("Complete your payment to the account below.", cls="doc-body-text mb-3"),
+                P("Click the button to view account details.", cls="doc-account-hint"),
+                Button(
+                    Icon("eye-fill", cls="me-2"),
+                    "View Payment Details",
+                    type="button",
+                    cls="doc-btn-primary",
+                    data_bs_toggle="modal",
+                    data_bs_target="#paymentAccountModal",
+                    style="font-size:0.9rem; min-height:2.8rem; padding:0.65rem 1.2rem;",
+                ),
+                cls="doc-card-body",
+            ),
+            cls="doc-card",
+        ))
+
+    return sections
+
+
 # ── Main page function ────────────────────────────────────────────────────────
 
 def document_portal_page(*, token: str, message: str = "", tone: str = "info") -> tuple:
@@ -996,44 +1283,17 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     responses = list_document_responses(document.document_id)
     expired = _is_expired(document.valid_until)
 
-    # ── Section cards (dynamic or fixed) ──────────────────────────
-    # Prefer deal-level sections; fall back to document-level sections_json
-    effective_sections = deal.sections_json
-    if not effective_sections or effective_sections.strip() in ("", "[]"):
-        effective_sections = getattr(document, "sections_json", "") or ""
-    has_sections = effective_sections and effective_sections.strip() not in ("", "[]")
-    if has_sections:
-        narrative_cards = _dynamic_sections(effective_sections)
-    else:
-        narrative_cards = [
-            _section_card("Background & Objective", _lines(deal.background_text or deal.summary), fallback=deal.summary),
-            _section_card("Scope of Work", _lines(deal.scope_notes), fallback=deal.summary),
-            _section_card("Options & Delivery Path", _lines(deal.option_notes_text)),
-            _section_card("Timeline", _lines(deal.timeline_text)),
-            _section_card("Payment Terms", _lines(deal.payment_terms)),
-            _section_card("What Is Not Included", _lines(deal.exclusions_text)),
-            _section_card("Closing Note", _lines(deal.closing_note)),
-        ]
-
-    investment_table = _line_items_table(deal, document)
-    account_panel = _payment_account_panel(account) if (document.kind == "invoice" and account) else ""
+    # ── Content sections by document kind ─────────────────────────
     expiry_banner = _expiry_banner(document.valid_until) if expired else ""
 
-    # Payment terms bridge card — shown between investment and response form
-    payment_terms_card = ""
-    if deal.payment_terms and deal.payment_terms.strip():
-        payment_terms_card = Div(
-            Div(
-                Div(cls="doc-section-accent"),
-                H2("Payment Terms", cls="doc-section-title"),
-                cls="doc-section-head",
-            ),
-            Div(
-                *[P(line, cls="doc-body-text") for line in _lines(deal.payment_terms)],
-                cls="doc-card-body",
-            ),
-            cls="doc-card",
-        )
+    if document.kind == "proposal":
+        content_sections = _proposal_content(deal, document)
+    elif document.kind == "quote":
+        content_sections = _quotation_content(deal, document)
+    elif document.kind == "invoice":
+        content_sections = _invoice_content(deal, document, account)
+    else:
+        content_sections = _proposal_content(deal, document)
 
     response_zone = _response_zone(document, token, message, tone, expired=expired, deal=deal)
     history = _response_history(responses)
@@ -1042,6 +1302,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     accept_modal = _accept_confirmation_modal(document, token)
     decline_modal = _decline_confirmation_modal(document, token)
     payment_modal = _payment_confirmation_modal(document, token, account)
+    account_modal = _payment_account_modal(account) if (document.kind == "invoice" and account) else ""
 
     return (
         *SEO(
@@ -1074,11 +1335,8 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
                 _meta_strip(deal, document, profile),
                 # Expiry warning
                 expiry_banner,
-                # Content sections
-                *narrative_cards,
-                investment_table,
-                payment_terms_card,
-                account_panel,
+                # Content sections (kind-specific)
+                *content_sections,
                 # Response
                 response_zone,
                 history,
@@ -1090,6 +1348,7 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
             accept_modal,
             decline_modal,
             payment_modal,
+            account_modal,
             cls="doc-shell",
         ),
     )

@@ -618,6 +618,156 @@ def _line_items_to_text(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _section_manager(selected: AdminDeal) -> Div:
+    """Section Manager — add, edit, remove, reorder document sections."""
+    try:
+        sections = json.loads(selected.sections_json) if selected.sections_json else []
+    except (json.JSONDecodeError, TypeError):
+        sections = []
+    if not isinstance(sections, list):
+        sections = []
+
+    section_modal = Div(
+        Div(
+            Div(
+                Label("Section Title", cls="form-label fw-semibold"),
+                Input(type="text", id="section-title-input", cls="form-control",
+                       placeholder="e.g. Technical Approach, Timeline, Deliverables..."),
+                cls="mb-3",
+            ),
+            Div(
+                Label("Content (Markdown)", cls="form-label fw-semibold"),
+                Textarea(id="section-content-input", rows=10, cls="form-control",
+                         placeholder="Write your section content here. Markdown is supported.\n\n## Subheading\n- List item 1\n- List item 2\n\n> Blockquote text"),
+                P("Supports markdown: headings, lists, bold, italic, tables, code blocks.", cls="form-text text-muted small"),
+                cls="mb-3",
+            ),
+            Input(type="hidden", id="section-edit-index", value="-1"),
+            footer=Div(
+                Button("Cancel", type="button", cls="btn btn-secondary", **{"data_bs_dismiss": "modal"}),
+                Button("Save Section", type="button", cls="btn btn-primary",
+                       id="section-save-btn", onclick="saveSection()"),
+                cls="d-flex gap-2 justify-content-end",
+            ),
+            modal_id="sectionEditModal",
+            title="Add Section",
+            centered=True,
+            size="lg",
+        ),
+    )
+
+    section_js = Script("""
+        function getSections() {
+            var field = document.getElementById('sections-json-field');
+            try { return JSON.parse(field.value || '[]'); } catch(e) { return []; }
+        }
+        function setSections(sections) {
+            document.getElementById('sections-json-field').value = JSON.stringify(sections);
+            renderSectionList();
+        }
+        function renderSectionList() {
+            var sections = getSections();
+            var container = document.getElementById('section-list-container');
+            if (!sections.length) {
+                container.innerHTML = '<p class="text-muted small mb-0">No sections yet. Add your first section below.</p>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < sections.length; i++) {
+                var s = sections[i];
+                html += '<div class="d-flex align-items-center gap-2 py-2 border-bottom">';
+                html += '<span class="badge bg-secondary" style="font-size:0.7rem;">#' + (s.order || (i+1)) + '</span>';
+                html += '<span class="fw-semibold" style="flex:1;">' + (s.title || 'Untitled') + '</span>';
+                html += '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;padding:0.2rem 0.5rem;" onclick="editSection(' + i + ')">Edit</button>';
+                html += '<button type="button" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:0.2rem 0.5rem;" onclick="removeSection(' + i + ')">Del</button>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        }
+        function addSection() {
+            document.getElementById('section-title-input').value = '';
+            document.getElementById('section-content-input').value = '';
+            document.getElementById('section-edit-index').value = '-1';
+            document.querySelector('#sectionEditModal .modal-title').textContent = 'Add Section';
+            var m = new bootstrap.Modal(document.getElementById('sectionEditModal'));
+            m.show();
+        }
+        function editSection(idx) {
+            var sections = getSections();
+            if (idx < 0 || idx >= sections.length) return;
+            document.getElementById('section-title-input').value = sections[idx].title || '';
+            document.getElementById('section-content-input').value = sections[idx].content || '';
+            document.getElementById('section-edit-index').value = idx;
+            document.querySelector('#sectionEditModal .modal-title').textContent = 'Edit Section';
+            var m = new bootstrap.Modal(document.getElementById('sectionEditModal'));
+            m.show();
+        }
+        function removeSection(idx) {
+            if (!confirm('Remove this section?')) return;
+            var sections = getSections();
+            sections.splice(idx, 1);
+            for (var i = 0; i < sections.length; i++) sections[i].order = i + 1;
+            setSections(sections);
+        }
+        function saveSection() {
+            var title = document.getElementById('section-title-input').value.trim();
+            var content = document.getElementById('section-content-input').value.trim();
+            var idx = parseInt(document.getElementById('section-edit-index').value);
+            if (!title) { alert('Section title is required.'); return; }
+            var sections = getSections();
+            if (idx >= 0 && idx < sections.length) {
+                sections[idx].title = title;
+                sections[idx].content = content;
+            } else {
+                sections.push({ order: sections.length + 1, title: title, content: content });
+            }
+            setSections(sections);
+            var modal = bootstrap.Modal.getInstance(document.getElementById('sectionEditModal'));
+            if (modal) modal.hide();
+        }
+        document.addEventListener('DOMContentLoaded', function() { renderSectionList(); });
+    """)
+
+    return Div(
+        Div(
+            P("Document Sections", cls="admin-form-section-title"),
+            P("Add and manage narrative sections for the proposal. These render as markdown on the client portal.",
+              cls="admin-module-copy mb-3 small"),
+            Div(id="section-list-container", *_section_items_list(sections)),
+            Div(
+                Button("+ Add Section", type="button", cls="btn btn-outline-primary btn-sm",
+                       style="font-size:0.82rem;", onclick="addSection()"),
+                cls="mt-3",
+            ),
+            cls="admin-form-section",
+        ),
+        section_modal,
+        section_js,
+    )
+
+
+def _section_items_list(sections: list) -> list:
+    """Render section list items for initial load."""
+    items = []
+    for i, s in enumerate(sections):
+        title = s.get("title", f"Section {i+1}")
+        order = s.get("order", i + 1)
+        items.append(
+            Div(
+                Span(f"#{order}", cls="badge bg-secondary me-2", style="font-size:0.7rem;"),
+                Span(title, cls="fw-semibold", style="flex:1;"),
+                Button("Edit", type="button", cls="btn btn-sm btn-outline-primary",
+                       style="font-size:0.75rem; padding:0.2rem 0.5rem;", onclick=f"editSection({i})"),
+                Button("Del", type="button", cls="btn btn-sm btn-outline-danger",
+                       style="font-size:0.75rem; padding:0.2rem 0.5rem;", onclick=f"removeSection({i})"),
+                cls="d-flex align-items-center gap-2 py-2 border-bottom",
+            )
+        )
+    if not items:
+        items = [P("No sections yet. Add your first section below.", cls="text-muted small mb-0")]
+    return items
+
+
 def _edit_tab(selected: AdminDeal) -> Div:
     """Edit tab — deal settings form refactored from the old editor."""
     accounts = list_payment_accounts()
@@ -697,6 +847,9 @@ def _edit_tab(selected: AdminDeal) -> Div:
             cls="admin-form-section",
         ),
 
+        # Document Sections
+        _section_manager(selected),
+
         # Hidden fields for backward compat
         Input(type="hidden", name="summary", value=selected.summary),
         Input(type="hidden", name="background_text", value=selected.background_text),
@@ -706,7 +859,7 @@ def _edit_tab(selected: AdminDeal) -> Div:
         Input(type="hidden", name="timeline_text", value=selected.timeline_text),
         Input(type="hidden", name="exclusions_text", value=selected.exclusions_text),
         Input(type="hidden", name="closing_note", value=selected.closing_note),
-        Input(type="hidden", name="sections_json", value=selected.sections_json),
+        Input(type="hidden", name="sections_json", value=selected.sections_json, id="sections-json-field"),
         Input(type="hidden", name="line_items", value=selected.line_items_text),
 
         Div(

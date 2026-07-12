@@ -1110,6 +1110,7 @@ def generate_next_document(
         "public_token": token,
         "title": title,
         "summary": source_doc.summary,
+        "sections_json": "",  # Quotes/invoices don't carry narrative sections
         "timeline_text": deal.timeline_text,
         "payment_terms": deal.payment_terms,
         "line_items": line_items_for_payload,
