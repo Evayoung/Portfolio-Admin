@@ -43,6 +43,58 @@ def _money(value: int) -> str:
     return f"\u20a6{value:,.0f}"
 
 
+def _parse_line_items(raw: str) -> list[tuple[str, str, str, int]]:
+    """Parse pipe-delimited line items text into (label, detail, qty, amount) tuples."""
+    items = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        label = parts[0] if len(parts) > 0 else ""
+        detail = parts[1] if len(parts) > 1 else ""
+        qty_str = parts[2] if len(parts) > 2 else "1"
+        price_str = parts[3] if len(parts) > 3 else "0"
+        try:
+            qty = max(1, int(qty_str or "1"))
+        except ValueError:
+            qty = 1
+        try:
+            amount = max(0, int(float(price_str or "0")))
+        except ValueError:
+            amount = 0
+        if label:
+            items.append((label, detail, qty, amount))
+    return items
+
+
+def _group_packages(raw: str) -> dict[str, list[tuple[str, str, str, int]]]:
+    """Group line items by Package/Option prefix. Returns dict of group_name -> items."""
+    import re
+    items = _parse_line_items(raw)
+    groups: dict[str, list[tuple[str, str, str, int]]] = {}
+    for label, detail, qty, amount in items:
+        group_key = None
+        for prefix in ("Package", "Option"):
+            match = re.match(rf"^({prefix}\s+\w+)\s*[-:\s]", label, re.IGNORECASE)
+            if match:
+                group_key = match.group(1).strip()
+                label = label[match.end():].strip()
+                break
+        if not group_key:
+            group_key = "Standard"
+        groups.setdefault(group_key, []).append((label, detail, qty, amount))
+    return groups
+
+
+def _package_totals(groups: dict[str, list[tuple[str, str, str, int]]]) -> dict[str, int]:
+    """Calculate total for each package group."""
+    totals = {}
+    for pkg_name, items in groups.items():
+        totals[pkg_name] = sum(amount * qty for _, _, qty, amount in items)
+    return totals
+
+
 def _status_color(status: str) -> str:
     return {
         "draft": "secondary",
@@ -110,6 +162,33 @@ def _overview_tab(selected: AdminDeal) -> Div:
     for doc in docs:
         doc_counts[doc.kind] = doc_counts.get(doc.kind, 0) + 1
 
+    # Check for multi-package from proposal or quote
+    source_doc = next((d for d in docs if d.kind in ("proposal", "quote")), None)
+    groups = _group_packages(source_doc.line_items_text if source_doc else "") if source_doc else {}
+    multi_package = len(groups) > 1
+    pkg_totals = _package_totals(groups) if multi_package else {}
+
+    # Amount display — show per-package if multi-package
+    if multi_package:
+        amount_display = Div(
+            Span("Packages", cls="admin-field-label"),
+            *[
+                Div(
+                    Span(pkg_name, cls="admin-module-copy"),
+                    Span(_money(total), cls="fw-bold"),
+                    cls="d-flex justify-content-between",
+                )
+                for pkg_name, total in pkg_totals.items()
+            ],
+            Div(
+                Span("Total", cls="admin-field-label fw-bold mt-1 pt-1 border-top"),
+                Span(_money(selected.amount_ngn), cls="fw-bold mt-1 pt-1 border-top"),
+                cls="d-flex justify-content-between",
+            ),
+        )
+    else:
+        amount_display = Div(Span("Amount", cls="admin-field-label"), Strong(_money(selected.amount_ngn)))
+
     return Div(
         Row(
             Col(
@@ -132,7 +211,7 @@ def _overview_tab(selected: AdminDeal) -> Div:
                     Div(
                         Div(Span("Stage", cls="admin-field-label"), Badge(selected.stage.replace("_", " ").title(), cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)}")),
                         Div(Span("Service", cls="admin-field-label"), Strong(selected.service_type or "Not set")),
-                        Div(Span("Amount", cls="admin-field-label"), Strong(_money(selected.amount_ngn))),
+                        amount_display,
                         Div(Span("Deposit", cls="admin-field-label"), Strong(f"{selected.deposit_percent}%")),
                         cls="admin-field-grid",
                     ),
@@ -282,6 +361,65 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
             )
         )
 
+    # Package-aware line items display
+    line_items_raw = document.line_items_text or ""
+    groups = _group_packages(line_items_raw)
+    has_packages = len(groups) > 1 or ("Standard" not in groups and len(groups) == 1)
+    multi_package = len(groups) > 1
+
+    line_items_section = ""
+    if multi_package:
+        pkg_cards = []
+        for pkg_name, pkg_items in groups.items():
+            pkg_total = sum(amt * qty for _, _, qty, amt in pkg_items)
+            rows = []
+            for label, detail, qty, amount in pkg_items:
+                rows.append(
+                    Div(
+                        Span(label, cls="admin-field-label"),
+                        Span(detail, cls="admin-module-copy") if detail else "",
+                        Span(f"×{qty}" if qty > 1 else "", cls="admin-project-meta"),
+                        Span(_money(amount * qty), cls="fw-semibold"),
+                        cls="d-flex justify-content-between align-items-baseline gap-2",
+                    )
+                )
+            pkg_cards.append(
+                Div(
+                    Div(
+                        Span(pkg_name, cls="fw-bold"),
+                        Span(_money(pkg_total), cls="fw-bold ms-auto"),
+                        cls="d-flex justify-content-between align-items-center",
+                    ),
+                    Div(*rows, cls="mt-1"),
+                    cls="admin-pkg-group",
+                )
+            )
+        line_items_section = Div(
+            Div("Packages", cls="admin-form-section-title mt-3 mb-2"),
+            *pkg_cards,
+            cls="admin-pkg-breakdown",
+        )
+    elif groups and line_items_raw:
+        # Single standard group — show compact line items
+        items = list(groups.values())[0] if groups else []
+        rows = []
+        for label, detail, qty, amount in items:
+            rows.append(
+                Div(
+                    Span(label, cls="admin-field-label"),
+                    Span(detail, cls="admin-module-copy") if detail else "",
+                    Span(f"×{qty}" if qty > 1 else "", cls="admin-project-meta"),
+                    Span(_money(amount * qty), cls="fw-semibold"),
+                    cls="d-flex justify-content-between align-items-baseline gap-2",
+                )
+            )
+        if rows:
+            line_items_section = Div(
+                Div("Line Items", cls="admin-form-section-title mt-3 mb-2"),
+                *rows,
+                cls="admin-pkg-breakdown",
+            )
+
     return Div(
         Div(
             Div(
@@ -299,6 +437,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
             Div(Span("Due Date", cls="admin-field-label"), Strong(document.due_date or "Not set")),
             cls="admin-field-grid mt-3",
         ),
+        line_items_section,
         P(f"Last viewed: {view_time}" if view_time else "", cls="admin-project-meta mt-2 mb-0"),
         Div(*actions, cls="d-flex flex-wrap gap-2 mt-3"),
         Div(id=f"doc-status-{document.document_id}", cls="mt-2"),
@@ -318,17 +457,25 @@ def _generate_next_cta(selected: AdminDeal, source_doc) -> Div | None:
 
     next_label = {"quote": "Quotation", "invoice": "Invoice"}.get(next_kind, next_kind.title())
 
-    return Div(
-        Div(
-            Span(f"Generate {next_label}", cls="deal-generate-label"),
-            P(f"AI will use the accepted {source_doc.kind} to draft a {next_label} for {_money(selected.amount_ngn)}.",
-              cls="admin-module-copy mb-2"),
-            Div(
+    # Package-aware amount for the CTA
+    groups = _group_packages(source_doc.line_items_text or "")
+    pkg_totals = _package_totals(groups)
+    multi_package = len(groups) > 1
+
+    if multi_package:
+        # Show each package as a separate generate option
+        pkg_options = []
+        for pkg_name, pkg_total in pkg_totals.items():
+            if next_kind == "invoice":
+                pkg_total = int(pkg_total * selected.deposit_percent / 100)
+            pkg_options.append(
                 Form(
                     Input(type="hidden", name="from_kind", value=source_doc.kind),
                     Input(type="hidden", name="to_kind", value=next_kind),
+                    Input(type="hidden", name="package_name", value=pkg_name),
+                    Input(type="hidden", name="package_amount", value=str(pkg_total)),
                     loading_action_button(
-                        f"\u2728 AI Generate {next_label}",
+                        f"\u2728 {pkg_name} \u2014 {_money(pkg_total)}",
                         endpoint=f"/deals/{selected.deal_id}/generate",
                         target="#generate-result",
                         button_cls="btn admin-module-btn",
@@ -339,13 +486,53 @@ def _generate_next_cta(selected: AdminDeal, source_doc) -> Div | None:
                     hx_target="#generate-result",
                     hx_swap="innerHTML",
                     cls="d-inline-flex",
-                ),
+                )
+            )
+        return Div(
+            Div(
+                Span(f"Generate {next_label}", cls="deal-generate-label"),
+                P(f"AI will use the accepted {source_doc.kind} to draft a {next_label}. Select a package:",
+                  cls="admin-module-copy mb-2"),
+                Div(*pkg_options, cls="d-flex flex-wrap gap-2"),
+                Div(id="generate-result", cls="mt-2"),
+                cls="deal-generate-next-inner",
             ),
-            Div(id="generate-result", cls="mt-2"),
-            cls="deal-generate-next-inner",
-        ),
-        cls="deal-generate-next",
-    )
+            cls="deal-generate-next",
+        )
+    else:
+        # Single package — use deal total or source doc total
+        amount = source_doc.total_amount or selected.amount_ngn
+        if next_kind == "invoice":
+            amount = int(amount * selected.deposit_percent / 100)
+
+        return Div(
+            Div(
+                Span(f"Generate {next_label}", cls="deal-generate-label"),
+                P(f"AI will use the accepted {source_doc.kind} to draft a {next_label} for {_money(amount)}.",
+                  cls="admin-module-copy mb-2"),
+                Div(
+                    Form(
+                        Input(type="hidden", name="from_kind", value=source_doc.kind),
+                        Input(type="hidden", name="to_kind", value=next_kind),
+                        loading_action_button(
+                            f"\u2728 AI Generate {next_label}",
+                            endpoint=f"/deals/{selected.deal_id}/generate",
+                            target="#generate-result",
+                            button_cls="btn admin-module-btn",
+                        ),
+                        action=f"/deals/{selected.deal_id}/generate",
+                        method="post",
+                        hx_post=f"/deals/{selected.deal_id}/generate",
+                        hx_target="#generate-result",
+                        hx_swap="innerHTML",
+                        cls="d-inline-flex",
+                    ),
+                ),
+                Div(id="generate-result", cls="mt-2"),
+                cls="deal-generate-next-inner",
+            ),
+            cls="deal-generate-next",
+        )
 
 
 def _documents_tab(selected: AdminDeal) -> Div:
@@ -531,7 +718,7 @@ def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
         *[
             TabPane(
                 content,
-                id=f"tab-{tab_id}",
+                tab_id=f"tab-{tab_id}",
                 label=label,
                 active=(tab_id == tab),
             )

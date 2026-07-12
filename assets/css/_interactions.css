@@ -707,3 +707,26 @@ a.htmx-request {
   background: rgba(0, 0, 0, 0.02);
   border-color: rgba(0, 0, 0, 0.08);
 }
+
+/* ── Package group display ──────────────────────────────── */
+
+.admin-pkg-breakdown {
+  margin-top: 0.75rem;
+}
+
+.admin-pkg-group {
+  border: 1px solid rgba(130, 183, 214, 0.12);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.5rem;
+  background: rgba(45, 184, 232, 0.04);
+}
+
+.admin-pkg-group:last-child {
+  margin-bottom: 0;
+}
+
+[data-bs-theme="light"] .admin-pkg-group {
+  background: rgba(2, 132, 199, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}

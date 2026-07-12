@@ -253,11 +253,15 @@ def setup_deal_routes(app: Any) -> None:
         deal_id: str,
         from_kind: str = "proposal",
         to_kind: str = "quote",
+        package_name: str = "",
+        package_amount: str = "0",
     ) -> Any:
         success, tone, message, new_id = generate_next_document(
             deal_id=deal_id,
             from_kind=from_kind,
             to_kind=to_kind,
+            package_name=package_name,
+            package_amount=package_amount,
         )
         if success:
             return (

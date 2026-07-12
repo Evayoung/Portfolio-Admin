@@ -1025,8 +1025,13 @@ def generate_next_document(
     deal_id: str,
     from_kind: str,
     to_kind: str,
+    package_name: str = "",
+    package_amount: str = "0",
 ) -> tuple[bool, str, str, str]:
     """Generate the next document in the workflow from the accepted previous one.
+
+    When package_name is provided, only include line items belonging to that
+    package and use the package-specific amount instead of the deal total.
 
     Returns (success, tone, message, new_document_id).
     """
@@ -1051,15 +1056,38 @@ def generate_next_document(
     if source_doc.status not in {"accepted", "paid"}:
         return False, "warning", f"The {from_kind} must be accepted before generating a {to_kind}.", ""
 
+    # Package-aware filtering
+    import re
+    all_items = _parse_line_items(source_doc.line_items_text) if source_doc.line_items_text else []
+
+    if package_name and package_name.strip():
+        # Filter items belonging to this package
+        filtered_items = []
+        for label, detail, qty, amount in all_items:
+            match = re.match(rf"^{re.escape(package_name)}\s*[-:\s]", label, re.IGNORECASE)
+            if match:
+                # Strip the package prefix from the label
+                clean_label = label[match.end():].strip()
+                filtered_items.append((clean_label, detail, qty, amount))
+        line_items_for_payload = [{"label": l, "description": d, "quantity": q, "unit_price": a} for l, d, q, a in filtered_items]
+        # Use package-specific amount
+        try:
+            amount = int(float(package_amount or "0"))
+        except ValueError:
+            amount = deal.amount_ngn
+    else:
+        line_items_for_payload = [{"label": l, "description": d, "quantity": q, "unit_price": a} for l, d, q, a in all_items]
+        amount = source_doc.total_amount or deal.amount_ngn
+
     # Build new document from source data
     deposit = deal.deposit_percent
-    amount = deal.amount_ngn
     if to_kind == "invoice":
         total = int(amount * deposit / 100)
         title = f"Invoice — Commitment Fee ({deposit}%)"
     else:
         total = amount
-        title = f"Quotation — {deal.project_title}"
+        pkg_suffix = f" ({package_name})" if package_name and package_name.strip() else ""
+        title = f"Quotation — {deal.project_title}{pkg_suffix}"
 
     token = _generate_public_token(to_kind, deal_id)
     doc_number = _generate_document_number(to_kind, deal_id)
@@ -1074,7 +1102,7 @@ def generate_next_document(
         "summary": source_doc.summary,
         "timeline_text": deal.timeline_text,
         "payment_terms": deal.payment_terms,
-        "line_items": _parse_line_items(source_doc.line_items_text) if source_doc.line_items_text else [],
+        "line_items": line_items_for_payload,
         "subtotal": total,
         "tax_amount": 0,
         "total_amount": total,
