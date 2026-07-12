@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Label, Option, P, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
+from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Label, Option, P, Script, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
 from faststrap import Badge, Card, Col, EmptyState, Row, SEO, Tabs, TabPane
 
 from app.config import settings
