@@ -358,6 +358,25 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
             )
         )
 
+    if document.status == "sent":
+        actions.append(
+            Form(
+                Input(type="hidden", name="deal_id", value=selected.deal_id),
+                Input(type="hidden", name="document_id", value=document.document_id),
+                Input(type="hidden", name="document_kind", value=document.kind),
+                Input(type="hidden", name="status", value="accepted"),
+                loading_action_button("Mark Accepted", endpoint="/deals/documents/update",
+                                     target=f"#doc-status-{document.document_id}",
+                                     button_cls="btn btn-outline-success"),
+                action="/deals/documents/update", method="post",
+                hx_post="/deals/documents/update",
+                hx_target=f"#doc-status-{document.document_id}",
+                hx_swap="innerHTML",
+                hx_confirm="Mark this document as accepted?",
+                cls="d-inline-flex",
+            )
+        )
+
     if document.public_token:
         actions.append(A("Copy Link", href="#", cls="btn admin-install-btn",
                          **{"data_copy_target": doc_url, "data_copy_label": "Copy Link"}))

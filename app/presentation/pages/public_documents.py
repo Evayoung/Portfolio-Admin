@@ -201,7 +201,6 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
 def _line_items_table(deal, document) -> Div:
     import re
     raw_items = _line_items(deal.line_items_text)
-    total = document.total_amount
 
     # Group line items by package prefix
     groups = {}
@@ -287,13 +286,19 @@ def _line_items_table(deal, document) -> Div:
             style="overflow:hidden;",
         )
 
-    # Standard single total layout
+    # Standard single total layout — calculate total from displayed items
     rows = []
+    calculated_total = 0
     for title, detail, qty, amount in groups.get("Standard", []):
         try:
             amt_int = int(float(amount or "0"))
         except ValueError:
             amt_int = 0
+        try:
+            qty_int = int(qty or "1")
+        except ValueError:
+            qty_int = 1
+        calculated_total += amt_int * qty_int
         rows.append(
             Tr(
                 Td(
@@ -304,6 +309,9 @@ def _line_items_table(deal, document) -> Div:
                 Td(_money(amt_int)),
             )
         )
+
+    # Fall back to document.total_amount if no items were parsed
+    display_total = calculated_total if calculated_total > 0 else document.total_amount
 
     return Div(
         Div(
@@ -324,7 +332,7 @@ def _line_items_table(deal, document) -> Div:
                 Tfoot(
                     Tr(
                         Td(Strong("Total"), colspan="2"),
-                        Td(Strong(_money(total))),
+                        Td(Strong(_money(display_total))),
                     )
                 ),
                 cls="doc-table",
@@ -989,9 +997,13 @@ def document_portal_page(*, token: str, message: str = "", tone: str = "info") -
     expired = _is_expired(document.valid_until)
 
     # ── Section cards (dynamic or fixed) ──────────────────────────
-    has_sections = deal.sections_json and deal.sections_json.strip() not in ("", "[]")
+    # Prefer deal-level sections; fall back to document-level sections_json
+    effective_sections = deal.sections_json
+    if not effective_sections or effective_sections.strip() in ("", "[]"):
+        effective_sections = getattr(document, "sections_json", "") or ""
+    has_sections = effective_sections and effective_sections.strip() not in ("", "[]")
     if has_sections:
-        narrative_cards = _dynamic_sections(deal.sections_json)
+        narrative_cards = _dynamic_sections(effective_sections)
     else:
         narrative_cards = [
             _section_card("Background & Objective", _lines(deal.background_text or deal.summary), fallback=deal.summary),
