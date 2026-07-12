@@ -281,7 +281,7 @@ def _load_supabase_deals() -> tuple[AdminDeal, ...]:
                 "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
                 "sections_json,"
                 "amount_ngn,deposit_percent,updated_at,"
-                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
+                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms)"
             ),
             "order": "updated_at.desc",
         },
@@ -996,7 +996,7 @@ def get_deal_with_documents(deal_id: str) -> AdminDeal | None:
                     "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
                     "sections_json,"
                     "amount_ngn,deposit_percent,updated_at,"
-                    "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
+                    "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms)"
                 ),
                 "id": f"eq.{deal_id}",
                 "limit": "1",

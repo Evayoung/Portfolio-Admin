@@ -401,4 +401,6 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         admin_install_drawer(profile),
         admin_shortcuts_modal(),
         ModernToastStack(position="top-end", gap=2, id="toast-container"),
+        # Global HTMX loading bar — shows at the top during any request
+        Div(cls="admin-loading-bar", id="admin-loading-bar"),
     )

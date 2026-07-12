@@ -114,6 +114,9 @@ def search_filter_bar(
     hidden_fields: dict[str, str],
     submit_label: str = "Find",
     form_cls: str = "",
+    hx_target: str | None = None,
+    hx_swap: str | None = None,
+    push_url: bool = False,
 ) -> Div:
     """Compose a Faststrap FilterBar for the shared workspace search pattern."""
 
@@ -138,6 +141,9 @@ def search_filter_bar(
         form_cls=form_cls,
         filters_cls="admin-filter-fields",
         actions_cls="admin-filter-actions",
+        hx_target=hx_target,
+        hx_swap=hx_swap or "innerHTML",
+        push_url=push_url,
     )
 
 

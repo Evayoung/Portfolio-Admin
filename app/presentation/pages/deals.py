@@ -22,7 +22,16 @@ def deal_save_status_fragment(title: str, message: str, tone: str = "info") -> D
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
-    return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
+    return A(
+        label,
+        Span(cls="admin-filter-loading-spinner"),
+        href=href,
+        hx_get=href,
+        hx_target="body",
+        hx_swap="innerHTML",
+        hx_push_url="true",
+        cls=f"admin-filter-chip{' active' if active else ''}",
+    )
 
 
 def _money(value: int) -> str:
@@ -60,7 +69,7 @@ def _status_color(status: str) -> str:
 
 
 def _deal_card(item: AdminDeal) -> Card:
-    """Render a deal card for the pipeline list grid."""
+    """Render a deal card for the pipeline list grid with HTMX loading."""
     docs = item.documents
     doc_count = len(docs)
     latest = item.latest_document
@@ -82,27 +91,37 @@ def _deal_card(item: AdminDeal) -> Card:
                 )
             )
 
+    card_content = Div(
+        Div(
+            Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
+            Badge(latest_status, cls=f"bg-{_status_color(latest.status) if latest else 'secondary'} bg-opacity-10 text-{_status_color(latest.status) if latest else 'secondary'}"),
+            cls="d-flex align-items-center gap-2 flex-wrap",
+        ),
+        Span(_money(item.amount_ngn), cls="admin-project-meta"),
+        H3(item.project_title, cls="admin-project-title"),
+        P(item.summary[:120] + ("..." if len(item.summary) > 120 else ""), cls="admin-project-copy"),
+        Div(
+            Span(item.client_name, cls="admin-project-meta"),
+            *doc_badges,
+            cls="d-flex align-items-center flex-wrap gap-2 mt-3",
+        ),
+        cls="admin-project-card-body",
+    )
+
     return Card(
         A(
-            Div(
-                Div(
-                    Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
-                    Badge(latest_status, cls=f"bg-{_status_color(latest.status) if latest else 'secondary'} bg-opacity-10 text-{_status_color(latest.status) if latest else 'secondary'}"),
-                    cls="d-flex align-items-center gap-2 flex-wrap",
-                ),
-                Span(_money(item.amount_ngn), cls="admin-project-meta"),
-                H3(item.project_title, cls="admin-project-title"),
-                P(item.summary[:120] + ("..." if len(item.summary) > 120 else ""), cls="admin-project-copy"),
-                Div(
-                    Span(item.client_name, cls="admin-project-meta"),
-                    *doc_badges,
-                    cls="d-flex align-items-center flex-wrap gap-2 mt-3",
-                ),
-                cls="admin-project-card-body",
-            ),
+            card_content,
+            Span(cls="admin-card-loading-spinner"),
             href=f"/deals/{item.deal_id}",
+            hx_get=f"/deals/{item.deal_id}",
+            hx_target="body",
+            hx_swap="innerHTML",
+            hx_push_url="true",
+            hx_indicator=f"#deal-card-{item.deal_id}",
+            cls="deal-card-link",
         ),
-        cls="admin-surface-card admin-project-card",
+        id=f"deal-card-{item.deal_id}",
+        cls="admin-surface-card admin-project-card deal-card",
     )
 
 
@@ -232,6 +251,9 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         search_value=search,
         hidden_fields={"stage": stage, "document_kind": document_kind},
         form_cls="admin-search-form admin-filter-bar mt-3",
+        hx_target="body",
+        hx_swap="innerHTML",
+        push_url=True,
     )
 
     # Deal cards in responsive grid

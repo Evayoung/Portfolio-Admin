@@ -553,6 +553,10 @@ def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
                 A(
                     "\u2190 Back to Pipeline",
                     href="/deals",
+                    hx_get="/deals",
+                    hx_target="body",
+                    hx_swap="innerHTML",
+                    hx_push_url="true",
                     cls="admin-back-link",
                 ),
                 Div(
