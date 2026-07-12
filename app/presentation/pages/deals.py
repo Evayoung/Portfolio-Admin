@@ -84,10 +84,8 @@ def _deal_card(item: AdminDeal) -> Card:
             color = _document_kind_color(doc.kind)
             doc_badges.append(
                 Badge(
-                    Span(
-                        doc.kind.title(),
-                        cls=f"badge bg-{color} bg-opacity-10 text-{color}",
-                    ),
+                    doc.kind.title(),
+                    cls=f"bg-{color} bg-opacity-10 text-{color}",
                 )
             )
 

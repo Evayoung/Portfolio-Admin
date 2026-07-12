@@ -707,26 +707,22 @@ def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
             ),
         )
 
-    # Tabs
-    tab_items = [
-        ("overview", "Overview", _overview_tab(selected)),
-        ("documents", "Documents", _documents_tab(selected)),
-        ("edit", "Edit", _edit_tab(selected)),
-    ]
-
-    tabs_component = Tabs(
-        *[
-            TabPane(
-                content,
-                tab_id=f"tab-{tab_id}",
-                label=label,
-                active=(tab_id == tab),
-            )
-            for tab_id, label, content in tab_items
-        ],
-        active_tab=f"tab-{tab}",
+    # Tabs — Tabs() builds the nav bar, TabPane() builds content panels
+    tabs_nav = Tabs(
+        ("tab-overview", "Overview", tab == "overview"),
+        ("tab-documents", "Documents", tab == "documents"),
+        ("tab-edit", "Edit", tab == "edit"),
         cls="deal-detail-tabs",
     )
+
+    tab_content = Div(
+        TabPane(_overview_tab(selected), tab_id="tab-overview", active=(tab == "overview")),
+        TabPane(_documents_tab(selected), tab_id="tab-documents", active=(tab == "documents")),
+        TabPane(_edit_tab(selected), tab_id="tab-edit", active=(tab == "edit")),
+        cls="tab-content",
+    )
+
+    tabs_component = Div(tabs_nav, tab_content)
 
     return (
         *SEO(
