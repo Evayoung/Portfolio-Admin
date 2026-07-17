@@ -703,17 +703,37 @@ def _section_manager(selected: AdminDeal) -> Div:
             m.show();
         }
         function removeSection(idx) {
-            if (!confirm('Remove this section?')) return;
-            var sections = getSections();
-            sections.splice(idx, 1);
-            for (var i = 0; i < sections.length; i++) sections[i].order = i + 1;
-            setSections(sections);
+            showConfirm(
+                'Remove this section?',
+                function() {
+                    var sections = getSections();
+                    sections.splice(idx, 1);
+                    for (var i = 0; i < sections.length; i++) sections[i].order = i + 1;
+                    setSections(sections);
+                },
+                null,
+                { title: "Remove Section", confirmText: "Remove", variant: "danger" }
+            );
         }
         function saveSection() {
             var title = document.getElementById('section-title-input').value.trim();
             var content = document.getElementById('section-content-input').value.trim();
             var idx = parseInt(document.getElementById('section-edit-index').value);
-            if (!title) { alert('Section title is required.'); return; }
+            if (!title) {
+                var tc = document.getElementById('toast-container');
+                if (tc) {
+                    var te = document.createElement('div');
+                    te.className = 'toast align-items-center text-bg-warning border-0';
+                    te.setAttribute('role', 'alert');
+                    te.innerHTML = '<div class="d-flex"><div class="toast-body">Section title is required.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+                    tc.appendChild(te);
+                    var bt = new bootstrap.Toast(te, {delay: 4000});
+                    bt.show();
+                    te.addEventListener('hidden.bs.toast', function(){te.remove();});
+                }
+                document.getElementById('section-title-input').focus();
+                return;
+            }
             var sections = getSections();
             if (idx >= 0 && idx < sections.length) {
                 sections[idx].title = title;

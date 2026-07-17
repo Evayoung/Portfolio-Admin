@@ -117,8 +117,13 @@ def search_filter_bar(
     hx_target: str | None = None,
     hx_swap: str | None = None,
     push_url: bool = False,
+    mode: str = "apply",
 ) -> Div:
-    """Compose a Faststrap FilterBar for the shared workspace search pattern."""
+    """Compose a Faststrap FilterBar for the shared workspace search pattern.
+
+    Use mode="auto" for live search (triggers on keyup with debounce).
+    Use mode="apply" (default) for submit-button search.
+    """
 
     hidden_inputs = [
         Input(type="hidden", name=name, value=value)
@@ -136,7 +141,7 @@ def search_filter_bar(
         Div(search_input, cls="admin-search-field"),
         endpoint=endpoint,
         method="get",
-        mode="apply",
+        mode=mode,
         apply_label=submit_label,
         form_cls=form_cls,
         filters_cls="admin-filter-fields",

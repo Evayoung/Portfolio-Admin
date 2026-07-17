@@ -8,13 +8,13 @@ from fasthtml.common import Option, Select
 from starlette.responses import Response
 
 try:
-    from ..infrastructure.project_repository import list_project_categories, save_project
+    from ..infrastructure.project_repository import get_project, get_project_workspace_summary, list_projects, save_project
     from ..presentation.page_helpers import toast_fragment
-    from ..presentation.pages.projects import project_save_status_fragment, projects_page
+    from ..presentation.pages.projects import _projects_list_panel, project_save_status_fragment, projects_page
 except ImportError:
-    from infrastructure.project_repository import list_project_categories, save_project
+    from infrastructure.project_repository import get_project, get_project_workspace_summary, list_projects, save_project
     from presentation.page_helpers import toast_fragment
-    from presentation.pages.projects import project_save_status_fragment, projects_page
+    from presentation.pages.projects import _projects_list_panel, project_save_status_fragment, projects_page
 
 
 from starlette.datastructures import UploadFile
@@ -24,6 +24,15 @@ def setup_project_routes(app: Any) -> None:
     @app.get("/projects")
     def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:
         return projects_page(slug=slug, category=category, featured=featured, search=search, new=new)
+
+    @app.get("/projects/search")
+    def projects_search(category: str = "all", featured: str = "0", search: str = "") -> Any:
+        """Return just the project list panel for HTMX live search."""
+        featured_only = featured == "1"
+        project_list = list_projects(category=category, featured_only=featured_only, search=search)
+        selected = project_list[0] if project_list else None
+        summary = get_project_workspace_summary()
+        return _projects_list_panel(project_list, selected, category=category, featured_only=featured_only, search=search, summary=summary)
 
     @app.post("/projects/category/create")
     def project_category_create(name: str = "") -> Any:

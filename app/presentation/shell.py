@@ -5,8 +5,9 @@ from __future__ import annotations
 import secrets as _secrets
 import time as _time
 
-from fasthtml.common import A, Aside, Button, Div, Footer, H1, Main, Meta, P, Small, Span
+from fasthtml.common import A, Aside, Button, Div, Footer, H1, Li, Main, Meta, Nav, P, Small, Span, Ul
 from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem
+from faststrap.components.feedback.confirm import ConfirmDialog
 from faststrap.components.feedback.modern_toast import ModernToastStack
 
 from app.config import settings
@@ -39,6 +40,42 @@ NAV_ITEMS = (
     ("AI Assistant", "/ai-assistant", "robot"),
     ("Media", "/media", "images"),
     ("Settings", "/settings", "sliders"),
+)
+
+# Grouped sidebar navigation — each group has a label and list of (label, href, icon) tuples.
+# "Overview" stays at the top as a standalone link outside any group.
+NAV_GROUPS = (
+    {
+        "label": "Content",
+        "items": [
+            ("Projects", "/projects", "kanban"),
+            ("Blog", "/blog", "journal-richtext"),
+            ("CV", "/cv", "file-earmark-person"),
+        ],
+    },
+    {
+        "label": "Business",
+        "items": [
+            ("Submissions", "/submissions", "inbox"),
+            ("Deals", "/deals", "briefcase"),
+        ],
+    },
+    {
+        "label": "Tools",
+        "items": [
+            ("AI Assistant", "/ai-assistant", "robot"),
+            ("Media", "/media", "images"),
+            ("Settings", "/settings", "sliders"),
+        ],
+    },
+    {
+        "label": "Data",
+        "items": [
+            ("Blog Posts", "/resource/blog_posts", "journal-richtext"),
+            ("Contacts", "/resource/contact_submissions", "envelope-paper"),
+            ("Bookings", "/resource/booking_requests", "calendar-check"),
+        ],
+    },
 )
 
 BOTTOM_NAV_ITEMS = (
@@ -125,9 +162,10 @@ def _nav_link(label: str, href: str, icon: str, current: str, *, compact: bool =
     )
 
 
-def admin_sidebar(current: str = "/", profile=None) -> Aside:
-    profile = profile or brand_profile()
-    sidebar_nav = SidebarNavbar(
+def _sidebar_group_nav(current: str, group: dict) -> Div:
+    """Render a single navigation group with a kicker label and nav items."""
+    items = group["items"]
+    nav = SidebarNavbar(
         *[
             SidebarNavItem(
                 label,
@@ -137,7 +175,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                 theme="dark",
                 cls="admin-nav-link",
             )
-            for label, href, icon in NAV_ITEMS
+            for label, href, icon in items
         ],
         theme="dark",
         sticky=False,
@@ -145,6 +183,41 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
         width="100%",
         cls="admin-sidebar-nav",
     )
+    return Div(
+        Span(group["label"], cls="admin-sidebar-kicker"),
+        nav,
+        cls="admin-sidebar-group",
+    )
+
+
+def admin_sidebar(current: str = "/", profile=None) -> Aside:
+    profile = profile or brand_profile()
+
+    # Overview link (standalone, outside groups)
+    overview_item = NAV_ITEMS[0]
+    overview_nav = SidebarNavbar(
+        SidebarNavItem(
+            overview_item[0],
+            href=overview_item[1],
+            icon=overview_item[2],
+            active=overview_item[1] == current,
+            theme="dark",
+            cls="admin-nav-link",
+        ),
+        theme="dark",
+        sticky=False,
+        collapsible=False,
+        width="100%",
+        cls="admin-sidebar-nav",
+    )
+    overview_group = Div(
+        overview_nav,
+        cls="admin-sidebar-group",
+    )
+
+    # Content / Business / Tools groups
+    grouped_navs = [_sidebar_group_nav(current, group) for group in NAV_GROUPS]
+
     return Aside(
         Div(
             A(
@@ -157,11 +230,8 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                 href="/",
                 cls="admin-brand",
             ),
-            Div(
-                Span("Workspace", cls="admin-sidebar-kicker"),
-                sidebar_nav,
-                cls="admin-sidebar-group",
-            ),
+            overview_group,
+            *grouped_navs,
             Div(
                 Div(
                     A(
@@ -172,13 +242,14 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                         rel="noreferrer",
                         cls="btn admin-nav-btn w-100",
                     ),
-                    A(Icon("phone", cls="me-2"), "Install App", href="#", id="install-app-trigger", cls="btn admin-install-btn w-100"),
+                    A(Icon("phone", cls="me-2"), "Install App", href="#", data_install_trigger="sidebar", cls="btn admin-install-btn w-100"),
                     A(
                         Icon("box-arrow-right", cls="me-2"),
                         "Sign Out",
-                        href="/logout",
+                        href="#",
+                        data_bs_toggle="modal",
+                        data_bs_target="#sign-out-confirm-modal",
                         cls="btn admin-install-btn w-100",
-                        onclick="return confirm('Sign out of Neo Admin?')",
                     ),
                     cls="admin-sidebar-actions",
                 ),
@@ -204,7 +275,7 @@ def admin_mobile_header(current: str = "/", title: str = "Overview", profile=Non
                 A(
                     Icon("download"),
                     href="#",
-                    id="install-app-trigger-mobile",
+                    data_install_trigger="mobile",
                     cls="admin-mobile-action",
                     aria_label="Install app",
                 ),
@@ -245,10 +316,25 @@ def admin_bottom_nav(current: str = "/") -> Div:
 
 def admin_mobile_drawer(current: str = "/") -> Div:
     profile = brand_profile()
-    nav_links = Div(
-        *[_nav_link(label, href, icon, current) for label, href, icon in NAV_ITEMS],
+
+    # Overview (standalone)
+    overview_section = Div(
+        _nav_link("Overview", "/", "grid", current),
         cls="admin-sidebar-links mt-0",
     )
+
+    # Grouped sections
+    group_sections = []
+    for group in NAV_GROUPS:
+        group_div = Div(
+            P(group["label"], cls="admin-sidebar-kicker mb-2 mt-3"),
+            Div(
+                *[_nav_link(label, href, icon, current) for label, href, icon in group["items"]],
+                cls="admin-sidebar-links mt-0",
+            ),
+        )
+        group_sections.append(group_div)
+
     actions = Div(
         A(
             Icon("box-arrow-up-right", cls="me-2"),
@@ -262,22 +348,24 @@ def admin_mobile_drawer(current: str = "/") -> Div:
             Icon("phone", cls="me-2"),
             "Install App",
             href="#",
-            id="install-app-trigger-drawer",
+            data_install_trigger="drawer",
             cls="btn admin-install-btn w-100",
         ),
         A(
             Icon("box-arrow-right", cls="me-2"),
             "Sign Out",
-            href="/logout",
+            href="#",
+            data_bs_toggle="modal",
+            data_bs_target="#sign-out-confirm-modal",
             cls="btn admin-install-btn w-100",
-            onclick="return confirm('Sign out of Neo Admin?')",
         ),
         cls="admin-sidebar-actions mt-4",
     )
     return Drawer(
         Div(
             P("Workspace", cls="admin-sidebar-kicker mb-3"),
-            nav_links,
+            overview_section,
+            *group_sections,
             actions,
             cls="admin-mobile-drawer-stack",
         ),
@@ -352,10 +440,51 @@ def admin_shortcuts_modal() -> Div:
     )
 
 
-def page_frame(*children, current: str = "/", title: str = "Overview"):
+def _build_breadcrumbs(current: str, title: str, profile=None) -> Nav:
+    """Build a breadcrumb navigation from the current path."""
+    nav_lookup = {href: label for label, href, _ in NAV_ITEMS}
+    parts = [p for p in current.split("/") if p]
+
+    items = [Li(A("Home", href="/", cls="admin-breadcrumb-item"), cls="breadcrumb-item")]
+
+    if not parts:
+        items.append(Li(Span(title, cls="admin-breadcrumb-current"), cls="breadcrumb-item active", aria_current="page"))
+    else:
+        # Walk the path and build crumbs
+        for i, part in enumerate(parts):
+            path = "/" + "/".join(parts[: i + 1])
+            label = nav_lookup.get(path, part.replace("-", " ").title())
+            if i == len(parts) - 1:
+                # Last segment = current page (not a link)
+                items.append(Li(Span(label, cls="admin-breadcrumb-current"), cls="breadcrumb-item active", aria_current="page"))
+            else:
+                items.append(Li(A(label, href=path, cls="admin-breadcrumb-item"), cls="breadcrumb-item"))
+
+    return Nav(
+        Ul(*items, cls="breadcrumb admin-breadcrumb"),
+        aria_label="Breadcrumb",
+    )
+
+
+def _sign_out_confirm_dialog() -> Div:
+    """Branded sign-out confirmation modal — replaces native confirm()."""
+    return ConfirmDialog(
+        "You will be signed out of the admin dashboard. Any unsaved changes will be lost.",
+        confirm_text="Sign Out",
+        cancel_text="Stay Signed In",
+        title="Sign Out",
+        variant="danger",
+        dialog_id="sign-out-confirm-modal",
+        hx_confirm_method="get",
+        hx_confirm_url="/logout",
+    )
+
+
+def page_frame(*children, current: str = "/", title: str = "Overview", show_breadcrumbs: bool = True):
     profile = brand_profile()
     # Session expiry meta tag for client-side warning
     session_expires = int(_time.time()) + (8 * 3600)  # 8-hour rolling window
+    breadcrumbs = _build_breadcrumbs(current, title, profile) if show_breadcrumbs else ""
     return (
         Meta(name="session-expires-at", content=str(session_expires)),
         admin_mobile_header(current, title, profile),
@@ -364,6 +493,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
             Main(
                 Div(
                     Container(
+                        breadcrumbs,
                         Div(
                             P(brand_name(profile), cls="admin-kicker"),
                             H1(title, cls="admin-page-title"),
@@ -384,7 +514,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
                                 Span("·", cls="admin-footer-sep"),
                                 A("Public Site", href=public_site_url(profile), target="_blank", rel="noreferrer", cls="admin-footer-link"),
                                 Span("·", cls="admin-footer-sep"),
-                                A("Sign Out", href="/logout", cls="admin-footer-link", onclick="return confirm('Sign out of Neo Admin?')"),
+                                A("Sign Out", href="#", cls="admin-footer-link", data_bs_toggle="modal", data_bs_target="#sign-out-confirm-modal"),
                                 cls="admin-footer-inner",
                             ),
                         ),
@@ -400,6 +530,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview"):
         admin_mobile_drawer(current),
         admin_install_drawer(profile),
         admin_shortcuts_modal(),
+        _sign_out_confirm_dialog(),
         ModernToastStack(position="top-end", gap=2, id="toast-container"),
         # Global HTMX loading bar — shows at the top during any request
         Div(cls="admin-loading-bar", id="admin-loading-bar"),

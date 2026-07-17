@@ -36,6 +36,8 @@ def _require_admin_login(req, session):
     return Redirect(f"/login?next_path={quote(next_path, safe='/?=&')}")
 
 
+JS_VERSION = "20260717a"
+
 app = FastHTML(secret_key=settings.secret_key, session_cookie=settings.session_cookie)
 app.before.append(
     Beforeware(
@@ -49,6 +51,7 @@ app.before.append(
             r"/sw\.js",
             r"/offline",
             r"/documents/.*",
+            r"/resource/.*",
         ],
     )
 )
@@ -66,7 +69,13 @@ add_pwa(
     cache_version="v3",
     pre_cache_urls=[
         "/assets/css/custom.css",
-        "/assets/js/admin.js?v=20260427c",
+        f"/assets/js/modules/utilities.js?v={JS_VERSION}",
+        f"/assets/js/modules/line_items.js?v={JS_VERSION}",
+        f"/assets/js/modules/ai_draft.js?v={JS_VERSION}",
+        f"/assets/js/modules/cv_editor.js?v={JS_VERSION}",
+        f"/assets/js/modules/deal_sections.js?v={JS_VERSION}",
+        f"/assets/js/modules/toasts.js?v={JS_VERSION}",
+        f"/assets/js/admin.js?v={JS_VERSION}",
         "/assets/icon-192.png",
         "/assets/icon-512.png",
     ],
@@ -87,10 +96,21 @@ app.hdrs = app.hdrs + [
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
     ),
     Link(rel="stylesheet", href="/assets/css/custom.css?v=1"),
-    Script(src="/assets/js/admin.js?v=20260427c", defer=True),
+    # JS modules — loaded in dependency order before the orchestrator
+    Script(src=f"/assets/js/modules/utilities.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/modules/line_items.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/modules/ai_draft.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/modules/cv_editor.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/modules/deal_sections.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/modules/toasts.js?v={JS_VERSION}", defer=True),
+    Script(src=f"/assets/js/admin.js?v={JS_VERSION}", defer=True),
 ]
 
 setup_routes(app)
+
+# ── Schema-driven CRUD routes (Blog, Submissions, Bookings) ──────────────
+from app.routes.resource import register_resource_routes
+register_resource_routes(app)
 
 if __name__ == "__main__":
     serve(port=settings.port)

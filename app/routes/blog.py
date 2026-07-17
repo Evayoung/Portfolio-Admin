@@ -7,19 +7,27 @@ from typing import Any
 from starlette.responses import Response
 
 try:
-    from ..infrastructure.blog_repository import save_blog_post
+    from ..infrastructure.blog_repository import get_blog_post, get_blog_workspace_summary, list_blog_posts, save_blog_post
     from ..presentation.page_helpers import toast_fragment
-    from ..presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
+    from ..presentation.pages.blog_admin import _blog_list_panel, blog_save_status_fragment, blog_workspace_page
 except ImportError:
-    from infrastructure.blog_repository import save_blog_post
+    from infrastructure.blog_repository import get_blog_post, get_blog_workspace_summary, list_blog_posts, save_blog_post
     from presentation.page_helpers import toast_fragment
-    from presentation.pages.blog_admin import blog_save_status_fragment, blog_workspace_page
+    from presentation.pages.blog_admin import _blog_list_panel, blog_save_status_fragment, blog_workspace_page
 
 
 def setup_blog_routes(app: Any) -> None:
     @app.get("/blog")
     def blog(slug: str = "", category: str = "all", search: str = "", new: str = "") -> Any:
         return blog_workspace_page(slug=slug, category=category, search=search, new=new)
+
+    @app.get("/blog/search")
+    def blog_search(category: str = "all", search: str = "") -> Any:
+        """Return just the blog list panel for HTMX live search."""
+        posts = list_blog_posts(category=category, search=search)
+        selected = posts[0] if posts else None
+        summary = get_blog_workspace_summary()
+        return _blog_list_panel(posts, selected, category=category, search=search, summary=summary)
 
     @app.post("/blog/save")
     def blog_save(

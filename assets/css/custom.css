@@ -11,6 +11,53 @@
 
 /* ── Add any project-specific overrides below this line ── */
 
+/* ── Breadcrumb navigation ──────────────────────────── */
+.admin-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-breadcrumb-item {
+  color: rgba(151, 171, 192, 0.8);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.admin-breadcrumb-item:hover {
+  color: #2db8e8;
+  text-decoration: none;
+}
+
+.admin-breadcrumb-sep {
+  color: rgba(151, 171, 192, 0.4);
+  font-size: 0.7rem;
+  user-select: none;
+}
+
+.admin-breadcrumb-current {
+  color: rgba(238, 246, 255, 0.92);
+  font-weight: 600;
+}
+
+[data-bs-theme="light"] .admin-breadcrumb-item {
+  color: #64748b;
+}
+
+[data-bs-theme="light"] .admin-breadcrumb-item:hover {
+  color: #0284c7;
+}
+
+[data-bs-theme="light"] .admin-breadcrumb-sep {
+  color: #cbd5e1;
+}
+
+[data-bs-theme="light"] .admin-breadcrumb-current {
+  color: #0f172a;
+}
+
 /* ── Section editor ──────────────────────────── */
 .deal-section-item {
   background: #fff;

@@ -135,29 +135,26 @@ def _editor_form(selected, *, category: str, search: str) -> Form:
     )
 
 
-def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = "", new: str = "") -> tuple:
-    creating_new = new == "1"
-    categories = list_blog_categories()
-    posts = list_blog_posts(category=category, search=search)
-    selected = None if creating_new else get_blog_post(slug) or (posts[0] if posts else None)
-    summary = get_blog_workspace_summary()
-
+def _blog_list_panel(posts, selected, *, category: str, search: str, summary) -> Card:
+    """Render the blog list panel — reusable for both full page and search fragment."""
     category_links = Div(
         *[
             _filter_link(label, f"/blog?category={item_slug}&search={search}", active=item_slug == category)
-            for item_slug, label in categories
+            for item_slug, label in list_blog_categories()
         ],
         cls="admin-filter-row",
     )
     search_form = search_filter_bar(
-        endpoint="/blog",
-        placeholder="Search title, slug, summary, or tags",
+        endpoint="/blog/search",
+        placeholder="Search title, slug, summary, or tags (live)",
         search_value=search,
         hidden_fields={"category": category},
         form_cls="admin-search-form admin-filter-bar mt-3",
+        hx_target="#blog-list-panel",
+        hx_swap="outerHTML",
+        mode="auto",
     )
-
-    list_panel = Card(
+    return Card(
         Div(
             Div(
                 H2("Blog Records", cls="admin-section-title"),
@@ -190,15 +187,32 @@ def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = 
             )
             if posts
             else EmptyState(
-                icon="search",
-                title="No blog post matches this filter",
-                description="Try a different category or search term.",
+                icon="journal-richtext",
+                title="No blog posts yet" if summary.total == 0 else "No blog post matches this filter",
+                description="Write your first article to build the editorial library." if summary.total == 0 else "Try a different category or search term.",
+                action=A(
+                    Icon("plus-lg", cls="me-1"),
+                    "Write First Post",
+                    href=_new_blog_href(category=category, search=search),
+                    cls="btn admin-module-btn mt-3",
+                ) if summary.total == 0 else "",
                 cls="py-5",
             ),
             cls="admin-panel-stack",
         ),
+        id="blog-list-panel",
         cls="admin-surface-card h-100",
     )
+
+
+def blog_workspace_page(*, slug: str = "", category: str = "all", search: str = "", new: str = "") -> tuple:
+    creating_new = new == "1"
+    categories = list_blog_categories()
+    posts = list_blog_posts(category=category, search=search)
+    selected = None if creating_new else get_blog_post(slug) or (posts[0] if posts else None)
+    summary = get_blog_workspace_summary()
+
+    list_panel = _blog_list_panel(posts, selected, category=category, search=search, summary=summary)
 
     if creating_new:
         detail_panel = Card(

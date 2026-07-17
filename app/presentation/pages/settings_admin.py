@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Row, SEO, Tabs, TabPane
 
 from app.config import settings
 from app.infrastructure.ai_settings_repository import PROVIDER_PRESETS, get_active_provider, get_ai_providers, save_ai_provider, delete_ai_provider
@@ -428,29 +428,44 @@ def settings_workspace_page() -> tuple:
                 summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
                 cls="g-4",
             ),
-            # Sub-navigation for settings sections
-            Div(
-                A("Profile", href="#settings-profile", cls="admin-filter-chip active"),
-                A("Access", href="#settings-access", cls="admin-filter-chip"),
-                A("Accounts", href="#settings-accounts", cls="admin-filter-chip"),
-                A("AI Providers", href="#settings-ai", cls="admin-filter-chip"),
-                A("Health", href="#settings-health", cls="admin-filter-chip"),
-                cls="admin-filter-row mb-4",
-            ),
             SectionWrap(
                 "Settings Workspace",
                 Row(
                     # Identity panel — reference only; hidden on mobile to prioritise the edit forms
                     Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
                     Col(
+                        # Tabbed navigation for settings sections
+                        Tabs(
+                            ("tab-profile", "Profile", True),
+                            ("tab-access", "Access", False),
+                            ("tab-accounts", "Accounts", False),
+                            ("tab-ai", "AI Providers", False),
+                            ("tab-health", "Health", False),
+                            cls="settings-tabs mb-4",
+                        ),
                         Div(
-                            Div(editor_panel, id="settings-profile"),
-                            Div(access_panel, id="settings-access"),
-                            Div(account_panel, id="settings-accounts"),
-                            Div(ai_card, id="settings-ai"),
-                            Div(production_card, id="settings-health"),
-                            github_card,
-                            cls="admin-settings-stack",
+                            TabPane(
+                                Div(editor_panel, cls="mt-3"),
+                                tab_id="tab-profile",
+                                active=True,
+                            ),
+                            TabPane(
+                                Div(access_panel, cls="mt-3"),
+                                tab_id="tab-access",
+                            ),
+                            TabPane(
+                                Div(account_panel, cls="mt-3"),
+                                tab_id="tab-accounts",
+                            ),
+                            TabPane(
+                                Div(ai_card, cls="mt-3"),
+                                tab_id="tab-ai",
+                            ),
+                            TabPane(
+                                Div(production_card, github_card, cls="mt-3"),
+                                tab_id="tab-health",
+                            ),
+                            cls="tab-content",
                         ),
                         span=12,
                         lg=7,

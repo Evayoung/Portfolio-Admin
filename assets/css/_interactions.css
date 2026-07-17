@@ -284,6 +284,31 @@ button.htmx-request::after {
   100% { transform: translateX(350%); }
 }
 
+/* ── Button loading state (port from datascience_admin) ── */
+
+.btn.is-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.btn.is-loading::after {
+  content: "";
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: admin-btn-spin 0.6s linear infinite;
+}
+
+@keyframes admin-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Deal card loading state ───────────────────────────── */
 
 .deal-card .deal-card-link {

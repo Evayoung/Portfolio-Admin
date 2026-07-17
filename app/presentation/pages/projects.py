@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Script, Select, Span, Strong
 from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Modal, Row, SEO
 
 from app.config import settings
@@ -194,14 +194,8 @@ def _category_create_modal() -> Modal:
     )
 
 
-def projects_page(*, slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> tuple:
-    featured_only = featured == "1"
-    creating_new = new == "1"
-    categories = list_project_categories()
-    projects = list_projects(category=category, featured_only=featured_only, search=search)
-    selected = None if creating_new else get_project(slug) or (projects[0] if projects else None)
-    summary = get_project_workspace_summary()
-
+def _projects_list_panel(projects, selected, *, category: str, featured_only: bool, search: str, summary) -> Card:
+    """Render the project list panel — reusable for both full page and search fragment."""
     category_links = Div(
         *[
             _filter_link(
@@ -209,7 +203,7 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
                 _project_href(category=item_slug, featured="1" if featured_only else "0", search=search),
                 active=item_slug == category,
             )
-            for item_slug, label in categories
+            for item_slug, label in list_project_categories()
         ],
         cls="admin-filter-row",
     )
@@ -219,17 +213,19 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
         active=featured_only,
     )
     search_form = search_filter_bar(
-        endpoint="/projects",
-        placeholder="Search title, slug, or summary",
+        endpoint="/projects/search",
+        placeholder="Search title, slug, or summary (live)",
         search_value=search,
         hidden_fields={
             "category": category,
             "featured": "1" if featured_only else "0",
         },
         form_cls="admin-search-form admin-filter-bar mt-3",
+        hx_target="#projects-list-panel",
+        hx_swap="outerHTML",
+        mode="auto",
     )
-
-    list_panel = Card(
+    return Card(
         Div(
             Div(
                 H2("Project Records", cls="admin-section-title"),
@@ -267,15 +263,33 @@ def projects_page(*, slug: str = "", category: str = "all", featured: str = "0",
             )
             if projects
             else EmptyState(
-                icon="search",
-                title="No project matches this filter",
-                description="Try a different category, search term, or turn off the featured-only view.",
+                icon="kanban",
+                title="No projects yet" if summary.total == 0 else "No project matches this filter",
+                description="Create your first portfolio project to get started." if summary.total == 0 else "Try a different category, search term, or turn off the featured-only view.",
+                action=A(
+                    Icon("plus-lg", cls="me-1"),
+                    "Create First Project",
+                    href=_new_project_href(category=category, featured_only=featured_only, search=search),
+                    cls="btn admin-module-btn mt-3",
+                ) if summary.total == 0 else "",
                 cls="py-5",
             ),
             cls="admin-panel-stack",
         ),
-            cls="admin-surface-card h-100",
-        )
+        id="projects-list-panel",
+        cls="admin-surface-card h-100",
+    )
+
+
+def projects_page(*, slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> tuple:
+    featured_only = featured == "1"
+    creating_new = new == "1"
+    categories = list_project_categories()
+    projects = list_projects(category=category, featured_only=featured_only, search=search)
+    selected = None if creating_new else get_project(slug) or (projects[0] if projects else None)
+    summary = get_project_workspace_summary()
+
+    list_panel = _projects_list_panel(projects, selected, category=category, featured_only=featured_only, search=search, summary=summary)
 
     if creating_new:
         detail_panel = Card(

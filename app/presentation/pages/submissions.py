@@ -123,11 +123,8 @@ def _editor_form(selected, *, kind: str, status: str, search: str) -> Form:
     )
 
 
-def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status: str = "all", search: str = "") -> tuple:
-    items = list_submissions(kind=kind, status=status, search=search)
-    selected = get_submission(entry_id, kind=kind) or (items[0] if items else None)
-    summary = get_submission_workspace_summary()
-
+def _submissions_list_panel(items, selected, *, kind: str, status: str, search: str, summary) -> Card:
+    """Render the submissions list panel — reusable for both full page and search fragment."""
     kind_links = Div(
         _filter_link("All", f"/submissions?kind=all&status={status}&search={search}", active=kind == "all"),
         _filter_link("Contact", f"/submissions?kind=contact&status={status}&search={search}", active=kind == "contact"),
@@ -142,17 +139,19 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
         cls="admin-filter-row mt-3",
     )
     search_form = search_filter_bar(
-        endpoint="/submissions",
-        placeholder="Search sender, message, email, or status",
+        endpoint="/submissions/search",
+        placeholder="Search sender, message, email, or status (live)",
         search_value=search,
         hidden_fields={
             "kind": kind,
             "status": status,
         },
         form_cls="admin-search-form admin-filter-bar mt-3",
+        hx_target="#submissions-list-panel",
+        hx_swap="outerHTML",
+        mode="auto",
     )
-
-    list_panel = Card(
+    return Card(
         Div(
             Div(
                 Div(
@@ -182,14 +181,23 @@ def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status:
             if items
             else EmptyState(
                 icon="inbox",
-                title="No submission matches this view",
-                description=summary.note if summary.total == 0 else "Try a different filter or search term.",
+                title="Inbox is empty" if summary.total == 0 else "No submission matches this view",
+                description="Submissions will appear here when visitors use the contact or booking form on your public site." if summary.total == 0 else "Try a different filter or search term.",
                 cls="py-5",
             ),
             cls="admin-panel-stack",
         ),
+        id="submissions-list-panel",
         cls="admin-surface-card h-100",
     )
+
+
+def submissions_workspace_page(*, entry_id: str = "", kind: str = "all", status: str = "all", search: str = "") -> tuple:
+    items = list_submissions(kind=kind, status=status, search=search)
+    selected = get_submission(entry_id, kind=kind) or (items[0] if items else None)
+    summary = get_submission_workspace_summary()
+
+    list_panel = _submissions_list_panel(items, selected, kind=kind, status=status, search=search, summary=summary)
 
     convert_modal_id = f"convert-modal-{selected.entry_id}" if selected else ""
     detail_panel = (
