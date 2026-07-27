@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
-from faststrap import Badge, Card, Col, EmptyState, Modal, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -30,6 +30,7 @@ def _filter_link(label: str, href: str, *, active: bool) -> A:
         hx_target="body",
         hx_swap="innerHTML",
         hx_push_url="true",
+        aria_label=f"Filter: {label}",
         cls=f"admin-filter-chip{' active' if active else ''}",
     )
 
@@ -89,6 +90,7 @@ def _deal_card(item: AdminDeal) -> Card:
                 )
             )
 
+
     card_content = Div(
         Div(
             Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
@@ -119,7 +121,7 @@ def _deal_card(item: AdminDeal) -> Card:
             cls="deal-card-link",
         ),
         id=f"deal-card-{item.deal_id}",
-        cls="admin-surface-card admin-project-card deal-card",
+        cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card admin-project-card deal-card"],
     )
 
 
@@ -194,13 +196,20 @@ def _quick_document_form() -> Form:
             ),
             cls="admin-form-actions mt-4",
         ),
-        Div(id="quick-document-result", cls="mt-3"),
+        Div(
+            P(
+                "Generate a lightweight deal record and client link — the result will appear here.",
+                cls="admin-module-copy text-muted mb-0",
+            ),
+            id="quick-document-result",
+            cls="mt-3",
+        ),
         action="/deals/quick",
         method="post",
         hx_post="/deals/quick",
         hx_target="#quick-document-result",
         hx_swap="innerHTML",
-        cls="admin-settings-form",
+        cls="admin-settings-form admin-quick-doc",
     )
 
 
@@ -212,14 +221,19 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         items = list_deals(stage=stage, document_kind=document_kind, search=search)
     summary = get_deal_workspace_summary()
 
-    # Pipeline stage strip with counts
+    # Pipeline stage strip with counts — this IS the stage filter.
     stage_counts = {s: sum(1 for i in all_items if i.stage == s) for s, _ in _stage_options()}
     pipeline_strip = Div(
         *[
             A(
                 Span(str(stage_counts.get(s, 0)), cls="admin-pipeline-count"),
                 Span(label, cls="admin-pipeline-label"),
+                Span(cls="admin-filter-loading-spinner"),
                 href=f"/deals?stage={s}&document_kind={document_kind}&search={search}",
+                hx_get=f"/deals?stage={s}&document_kind={document_kind}&search={search}",
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
                 cls=f"admin-pipeline-stage{' active' if stage == s else ''}",
             )
             for s, label in _stage_options()
@@ -227,31 +241,31 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         cls="admin-pipeline-strip",
     )
 
-    # Filter chips
-    stage_links = Div(
-        _filter_link("All Stages", f"/deals?stage=all&document_kind={document_kind}&search={search}", active=stage == "all"),
-        _filter_link("Lead", f"/deals?stage=lead&document_kind={document_kind}&search={search}", active=stage == "lead"),
-        _filter_link("Proposal", f"/deals?stage=proposal&document_kind={document_kind}&search={search}", active=stage == "proposal"),
-        _filter_link("Quoted", f"/deals?stage=quoted&document_kind={document_kind}&search={search}", active=stage == "quoted"),
-        _filter_link("Invoiced", f"/deals?stage=invoiced&document_kind={document_kind}&search={search}", active=stage == "invoiced"),
-        cls="admin-filter-row",
-    )
+    # Refinement: document kind only (stage lives on the pipeline strip above).
     document_links = Div(
         _filter_link("All Docs", f"/deals?stage={stage}&document_kind=all&search={search}", active=document_kind == "all"),
         _filter_link("Proposals", f"/deals?stage={stage}&document_kind=proposal&search={search}", active=document_kind == "proposal"),
         _filter_link("Quotes", f"/deals?stage={stage}&document_kind=quote&search={search}", active=document_kind == "quote"),
         _filter_link("Invoices", f"/deals?stage={stage}&document_kind=invoice&search={search}", active=document_kind == "invoice"),
-        cls="admin-filter-row mt-3",
+        cls="admin-filter-row",
     )
     search_form = search_filter_bar(
         endpoint="/deals",
         placeholder="Search client, company, project, or summary",
         search_value=search,
         hidden_fields={"stage": stage, "document_kind": document_kind},
-        form_cls="admin-search-form admin-filter-bar mt-3",
+        form_cls="admin-search-form admin-filter-bar",
         hx_target="body",
         hx_swap="innerHTML",
         push_url=True,
+    )
+
+    # One control cluster: stage strip (primary) → doc-kind (refine) → search (lookup).
+    deals_controls = Div(
+        pipeline_strip,
+        document_links,
+        search_form,
+        cls="admin-deals-controls",
     )
 
     # Deal cards in responsive grid
@@ -267,21 +281,11 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
 
     # Quick document modal
     quick_doc_modal = Modal(
-        Div(
-            Div(
-                H3("Quick Document", cls="modal-title fs-5"),
-                Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
-                cls="modal-header",
-            ),
-            Div(
-                _quick_document_form(),
-                cls="modal-body",
-            ),
-            cls="modal-dialog modal-lg",
-        ),
-        id="quickDocModal",
-        tabindex="-1",
-        aria_hidden="true",
+        _quick_document_form(),
+        modal_id="quickDocModal",
+        title="Quick Document",
+        size="lg",
+        centered=True,
     )
 
     # Main content panel
@@ -292,9 +296,7 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
                 P("Track every client from lead to payment. Click any deal to view documents, responses, and generate next steps.", cls="admin-module-copy mb-0"),
                 cls="mb-3",
             ),
-            pipeline_strip,
-            Div(stage_links, document_links, cls="mt-3"),
-            search_form,
+            deals_controls,
             Div(
                 cls="d-flex justify-content-between align-items-center mt-4 mb-3",
             ),

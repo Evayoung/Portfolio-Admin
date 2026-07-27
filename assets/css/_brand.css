@@ -18,6 +18,14 @@
   --admin-shadow: 0 16px 48px rgba(2, 6, 23, 0.2);
   --admin-sidebar-width: 18.75rem;
   --admin-bottom-nav-height: 5.6rem;
+
+  /* ── Spacing scale ─ spacing is theme-neutral, no light override needed ─ */
+  --admin-space-section: 2.5rem;   /* gap between major page sections */
+  --admin-space-block: 1.5rem;    /* gap between cards/blocks in a section */
+  --admin-space-control: 0.75rem; /* gap between stacked controls */
+  --admin-pad-panel: 1.5rem;      /* page-level panel padding */
+  --admin-pad-card: 1.25rem;      /* inline card padding */
+  --admin-pad-mobile: 1.1rem;    /* mobile side padding for page shell */
 }
 
 /* ── Light theme overrides ─────────────────────────────── */

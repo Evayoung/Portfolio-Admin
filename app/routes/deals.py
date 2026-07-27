@@ -56,8 +56,16 @@ def setup_deal_routes(app: Any) -> None:
         )
 
     @app.get("/deals/{deal_id}")
-    def deal_detail(deal_id: str, tab: str = "documents") -> Any:
-        return deal_detail_page(deal_id=deal_id, tab=tab)
+    def deal_detail(deal_id: str, view: str = "overview") -> Any:
+        return deal_detail_page(deal_id=deal_id, view=view)
+
+    @app.get("/deals/{deal_id}/documents")
+    def deal_documents(deal_id: str) -> Any:
+        return deal_detail_page(deal_id=deal_id, view="documents")
+
+    @app.get("/deals/{deal_id}/edit")
+    def deal_edit(deal_id: str) -> Any:
+        return deal_detail_page(deal_id=deal_id, view="edit")
 
     @app.get("/deals/{deal_id}/documents/{document_kind}/pdf")
     def deal_document_pdf(deal_id: str, document_kind: str) -> Any:
@@ -133,7 +141,7 @@ def setup_deal_routes(app: Any) -> None:
         if result.success:
             target_deal_id = result.deal_id or deal_id
             return (
-                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{target_deal_id}?tab=documents"}),
+                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{target_deal_id}?view=documents"}),
                 toast_fragment("Deal draft saved", result.message),
             )
         title_text = "Save not completed"
@@ -265,7 +273,7 @@ def setup_deal_routes(app: Any) -> None:
         )
         if success:
             return (
-                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{deal_id}?tab=documents"}),
+                Response("", status_code=200, headers={"HX-Redirect": f"/deals/{deal_id}?view=documents"}),
                 toast_fragment(f"{to_kind.title()} created", message),
             )
         return deal_generate_result_fragment("Generation failed", message, tone=tone)

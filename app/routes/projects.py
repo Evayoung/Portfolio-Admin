@@ -1,29 +1,63 @@
-"""Project routes — workspace page and save handler."""
+"""Project routes — workspace page, dedicated editor page, quick preview, and save handler."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from fasthtml.common import Option, Select
+from starlette.datastructures import UploadFile
 from starlette.responses import Response
 
 try:
-    from ..infrastructure.project_repository import get_project, get_project_workspace_summary, list_projects, save_project
+    from ..infrastructure.project_repository import (
+        get_project,
+        get_project_workspace_summary,
+        list_project_categories,
+        list_projects,
+        save_project,
+    )
     from ..presentation.page_helpers import toast_fragment
-    from ..presentation.pages.projects import _projects_list_panel, project_save_status_fragment, projects_page
+    from ..presentation.pages.projects import (
+        _projects_list_panel,
+        _quick_preview_modal,
+        project_edit_page,
+        project_save_status_fragment,
+        projects_page,
+    )
 except ImportError:
-    from infrastructure.project_repository import get_project, get_project_workspace_summary, list_projects, save_project
+    from infrastructure.project_repository import (
+        get_project,
+        get_project_workspace_summary,
+        list_project_categories,
+        list_projects,
+        save_project,
+    )
     from presentation.page_helpers import toast_fragment
-    from presentation.pages.projects import _projects_list_panel, project_save_status_fragment, projects_page
-
-
-from starlette.datastructures import UploadFile
+    from presentation.pages.projects import (
+        _projects_list_panel,
+        _quick_preview_modal,
+        project_edit_page,
+        project_save_status_fragment,
+        projects_page,
+    )
 
 
 def setup_project_routes(app: Any) -> None:
     @app.get("/projects")
-    def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:
-        return projects_page(slug=slug, category=category, featured=featured, search=search, new=new)
+    def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "") -> Any:
+        return projects_page(category=category, featured=featured, search=search)
+
+    @app.get("/projects/edit")
+    def project_edit(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:
+        return project_edit_page(slug=slug, category=category, featured=featured, search=search, new=new)
+
+    @app.get("/projects/preview")
+    def project_preview(slug: str = "") -> Any:
+        """Return the Quick Preview modal HTML fragment for a given project slug."""
+        project = get_project(slug)
+        if not project:
+            return Response("Project not found", status_code=404)
+        return _quick_preview_modal(project)
 
     @app.get("/projects/search")
     def projects_search(category: str = "all", featured: str = "0", search: str = "") -> Any:
@@ -57,7 +91,7 @@ def setup_project_routes(app: Any) -> None:
             from ..infrastructure.media_repository import upload_media_asset
         except ImportError:
             from infrastructure.media_repository import upload_media_asset
-        from fasthtml.common import Div, Span, Script
+        from fasthtml.common import Div, Script, Span
 
         if image_file is None or not getattr(image_file, "filename", ""):
             return Div("Please select a file first.", cls="text-danger mt-1")
@@ -67,7 +101,7 @@ def setup_project_routes(app: Any) -> None:
             return Div(
                 Span("✓ Uploaded successfully!", cls="text-success me-2"),
                 Script(f"document.getElementById('image_url').value = '{result.public_url}';"),
-                cls="mt-1"
+                cls="mt-1",
             )
         return Div(f"Upload failed: {result.message}", cls="text-danger mt-1")
 
@@ -103,8 +137,9 @@ def setup_project_routes(app: Any) -> None:
             published=bool(published),
         )
         if result.success:
+            target_slug = result.slug or slug
             return (
-                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                Response("", status_code=200, headers={"HX-Redirect": f"/projects/edit?slug={target_slug}"}),
                 toast_fragment("Project saved", result.message),
             )
         title_text = "Save not completed"

@@ -1,9 +1,10 @@
-"""Settings workspace for Neo Admin."""
+"""Settings workspace for Neo Admin — subpage views and ConfirmDialog modals."""
 
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO, Tabs, TabPane
+from faststrap import Badge, Card, Col, EmptyState, Fx, Row, SEO
+from faststrap.components.feedback.confirm import ConfirmDialog
 
 from app.config import settings
 from app.infrastructure.ai_settings_repository import PROVIDER_PRESETS, get_active_provider, get_ai_providers, save_ai_provider, delete_ai_provider
@@ -32,8 +33,30 @@ def _health_row(label: str, ready: bool, note: str) -> Div:
     )
 
 
+def settings_tab_bar(active_tab: str = "profile") -> Div:
+    tabs = [
+        ("Profile", "/settings", "profile"),
+        ("Access", "/settings/access", "access"),
+        ("Accounts", "/settings/accounts", "accounts"),
+        ("AI Providers", "/settings/ai", "ai"),
+        ("Health & Services", "/settings/health", "health"),
+    ]
+    return Div(
+        *[
+            A(
+                label,
+                href=href,
+                aria_label=f"Settings Section: {label}",
+                cls=f"admin-filter-chip{' active' if active_tab == tab_id else ''}",
+            )
+            for label, href, tab_id in tabs
+        ],
+        cls="admin-filter-row mb-4",
+    )
+
+
 def _ai_settings_card() -> Card:
-    """Return the AI settings card for HTMX partial swaps (set-default / delete)."""
+    """Return the AI settings card for HTMX partial swaps."""
     ai_providers = get_ai_providers()
     active_provider = next((p for p in ai_providers if p.is_default), ai_providers[0] if ai_providers else None)
 
@@ -43,6 +66,7 @@ def _ai_settings_card() -> Card:
     ]
 
     provider_rows = []
+    modals = []
     for p in ai_providers:
         row_actions = []
         if not p.is_default:
@@ -53,12 +77,25 @@ def _ai_settings_card() -> Card:
                   hx_target="#ai-settings-card", hx_swap="outerHTML"),
             )
         if p.source != "env":
+            modal_id = f"delete-ai-modal-{p.config_id}"
+            modals.append(
+                ConfirmDialog(
+                    f"Delete AI provider \"{p.label}\"? This cannot be undone.",
+                    confirm_text="Delete Provider",
+                    cancel_text="Cancel",
+                    title=f"Delete AI Provider: {p.label}",
+                    variant="danger",
+                    dialog_id=modal_id,
+                    hx_confirm_method="post",
+                    hx_confirm_url=f"/settings/ai-delete?id={p.config_id}",
+                    hx_target="#ai-settings-card",
+                    hx_swap="outerHTML",
+                )
+            )
             row_actions.append(
-                A("Delete", href=f"/settings/ai-delete?id={p.config_id}",
-                  cls="btn btn-outline-danger btn-sm",
-                  hx_post=f"/settings/ai-delete?id={p.config_id}",
-                  hx_target="#ai-settings-card", hx_swap="outerHTML",
-                  hx_confirm="Delete this AI provider? This cannot be undone."),
+                Button("Delete", type="button",
+                       cls="btn admin-danger-btn btn-sm",
+                       data_bs_toggle="modal", data_bs_target=f"#{modal_id}"),
             )
         provider_rows.append(
             Div(
@@ -138,10 +175,11 @@ def _ai_settings_card() -> Card:
                 cls="admin-field-grid admin-detail-block mb-4",
             ) if active_provider else "",
             Div(H3("Saved Providers", cls="admin-subsection-title h6"), *provider_rows) if provider_rows else EmptyState(icon="cpu", title="No AI providers configured", description="Add your first provider below to enable AI-powered drafting.", cls="py-3"),
+            *modals,
             Div(H3("Add / Edit Provider", cls="admin-subsection-title"), ai_provider_form, cls="mt-4"),
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
         id="ai-settings-card",
     )
 
@@ -187,43 +225,67 @@ def _account_form(account=None) -> Form:
 def _accounts_panel(edit_account=None) -> Card:
     """Return the payment accounts card for HTMX partial swaps."""
     accounts = list_payment_accounts()
-    account_rows = [
-        Div(
-            Div(Span(account.label, cls="admin-field-label"), Strong(account.bank_name)),
-            Div(Span("Account Name", cls="admin-field-label"), Strong(account.account_name)),
-            Div(Span("Account Number", cls="admin-field-label"), Strong(account.account_number)),
-            Div(Span("Default", cls="admin-field-label"), Strong("Yes" if account.is_default else "No")),
-            Div(
-                Button("Edit", type="button", cls="btn admin-install-btn btn-sm",
-                       hx_post=f"/settings/accounts/edit?id={account.account_id}",
-                       hx_target="#accounts-section", hx_swap="outerHTML"),
-                Button("Delete", type="button", cls="btn btn-outline-danger btn-sm",
-                       hx_post=f"/settings/accounts/delete?id={account.account_id}",
-                       hx_target="#accounts-section", hx_swap="outerHTML",
-                       hx_confirm="Delete this payment account? This cannot be undone."),
-                cls="d-flex gap-2 mt-2",
-            ),
-            cls="admin-field-grid admin-detail-block mb-3",
+    account_rows = []
+    modals = []
+    for account in accounts:
+        modal_id = f"delete-account-modal-{account.account_id}"
+        modals.append(
+            ConfirmDialog(
+                f"Delete payment account \"{account.label}\" ({account.bank_name})? This cannot be undone.",
+                confirm_text="Delete Account",
+                cancel_text="Cancel",
+                title=f"Delete Payment Account: {account.label}",
+                variant="danger",
+                dialog_id=modal_id,
+                hx_confirm_method="post",
+                hx_confirm_url=f"/settings/accounts/delete?id={account.account_id}",
+                hx_target="#accounts-section",
+                hx_swap="outerHTML",
+            )
         )
-        for account in accounts
-    ]
+        account_rows.append(
+            Div(
+                Div(Span(account.label, cls="admin-field-label"), Strong(account.bank_name)),
+                Div(Span("Account Name", cls="admin-field-label"), Strong(account.account_name)),
+                Div(Span("Account Number", cls="admin-field-label"), Strong(account.account_number)),
+                Div(Span("Default", cls="admin-field-label"), Strong("Yes" if account.is_default else "No")),
+                Div(
+                    Button("Edit", type="button", cls="btn admin-install-btn btn-sm",
+                           hx_post=f"/settings/accounts/edit?id={account.account_id}",
+                           hx_target="#accounts-section", hx_swap="outerHTML"),
+                    Button("Delete", type="button", cls="btn admin-danger-btn btn-sm",
+                           data_bs_toggle="modal", data_bs_target=f"#{modal_id}"),
+                    cls="d-flex gap-2 mt-2",
+                ),
+                cls="admin-field-grid admin-detail-block mb-3",
+            )
+        )
+
     return Card(
         Div(
             H3("Payment Accounts", cls="admin-subsection-title"),
             P("Saved accounts become available when drafting invoice links and PDF exports, so you can choose the receiving account per client workflow.", cls="admin-module-copy"),
             Div(*account_rows, cls="mb-4") if account_rows else "",
+            *modals,
             Div(H3("Add / Edit Account", cls="admin-subsection-title"), _account_form(edit_account), cls="mt-4"),
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
         id="accounts-section",
     )
 
 
-def settings_workspace_page() -> tuple:
+def _summary_row(profile):
+    return Row(
+        summary_card("Profile Source", profile.source.title(), "Where identity data is being loaded from."),
+        summary_card("Brand Label", profile.site_name.replace(" Portfolio", ""), "Drives the public short-name brand treatment."),
+        summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
+        cls="g-4",
+    )
+
+
+def settings_profile_page() -> tuple:
     profile = get_site_profile()
-    access = get_admin_access_profile()
-    github = get_github_stats()
     identity_panel = Card(
         Div(
             Div(
@@ -276,7 +338,7 @@ def settings_workspace_page() -> tuple:
             ),
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
     )
 
     form = Form(
@@ -331,8 +393,37 @@ def settings_workspace_page() -> tuple:
             form,
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
     )
+
+    return (
+        *SEO(
+            title=f"{settings.app_name} | Profile Settings",
+            description="Settings workspace for managing public identity, profile links, and SEO defaults.",
+            url=f"{settings.base_url}/settings",
+        ),
+        *page_frame(
+            _summary_row(profile),
+            SectionWrap(
+                "Settings Workspace",
+                Div(
+                    settings_tab_bar("profile"),
+                    Row(
+                        Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
+                        Col(editor_panel, span=12, lg=7),
+                        cls="g-4",
+                    ),
+                ),
+            ),
+            current="/settings",
+            title="Profile Settings",
+        ),
+    )
+
+
+def settings_access_page() -> tuple:
+    profile = get_site_profile()
+    access = get_admin_access_profile()
 
     access_form = Form(
         floating_field("Login Email", "login_email", access.login_email, input_type="email", placeholder="admin@neoportfolio.dev", required=True, autocomplete="username"),
@@ -357,7 +448,7 @@ def settings_workspace_page() -> tuple:
 
     access_panel = Card(
         Div(
-            H3("Admin Access", cls="admin-subsection-title"),
+            H3("Admin Access Credentials", cls="admin-subsection-title"),
             P("Seeded credentials get you in the first time. After that, you can rotate the login email and password here without touching code.", cls="admin-module-copy"),
             Div(
                 Div(Span("Current Login", cls="admin-field-label"), Strong(access.login_email)),
@@ -367,18 +458,103 @@ def settings_workspace_page() -> tuple:
             access_form,
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
     )
 
-    account_panel = _accounts_panel()
+    return (
+        *SEO(
+            title=f"{settings.app_name} | Admin Access",
+            description="Manage login credentials for the Neo Admin dashboard.",
+            url=f"{settings.base_url}/settings/access",
+        ),
+        *page_frame(
+            _summary_row(profile),
+            SectionWrap(
+                "Settings Workspace",
+                Div(
+                    settings_tab_bar("access"),
+                    access_panel,
+                ),
+            ),
+            current="/settings",
+            title="Admin Access Credentials",
+        ),
+    )
+
+
+def settings_accounts_page() -> tuple:
+    profile = get_site_profile()
+    return (
+        *SEO(
+            title=f"{settings.app_name} | Payment Accounts",
+            description="Manage bank and payment accounts for deal invoices.",
+            url=f"{settings.base_url}/settings/accounts",
+        ),
+        *page_frame(
+            _summary_row(profile),
+            SectionWrap(
+                "Settings Workspace",
+                Div(
+                    settings_tab_bar("accounts"),
+                    _accounts_panel(),
+                ),
+            ),
+            current="/settings",
+            title="Payment Accounts",
+        ),
+    )
+
+
+def settings_ai_page() -> tuple:
+    profile = get_site_profile()
+    return (
+        *SEO(
+            title=f"{settings.app_name} | AI Provider Settings",
+            description="Manage AI providers for proposal and quote drafting.",
+            url=f"{settings.base_url}/settings/ai",
+        ),
+        *page_frame(
+            _summary_row(profile),
+            SectionWrap(
+                "Settings Workspace",
+                Div(
+                    settings_tab_bar("ai"),
+                    _ai_settings_card(),
+                ),
+            ),
+            current="/settings",
+            title="AI Provider Settings",
+        ),
+    )
+
+
+def settings_health_page() -> tuple:
+    profile = get_site_profile()
+    github = get_github_stats()
+    active_provider = get_active_provider()
+
+    production_card = Card(
+        Div(
+            H3("Production Health Checks", cls="admin-subsection-title"),
+            P("Quick visibility for the environment pieces that decide whether the admin can read, write, email, and generate shareable links.", cls="admin-module-copy"),
+            Div(
+                _health_row("Supabase Read", supabase_is_configured(), "Requires SUPABASE_URL and SUPABASE_ANON_KEY."),
+                _health_row("Supabase Write", service_role_is_configured(), "Requires SUPABASE_SERVICE_ROLE_KEY for admin saves and uploads."),
+                _health_row("Email Sending", settings.email_enabled, "Requires RESEND_API_KEY plus a valid sender domain when email actions are added."),
+                _health_row("AI Drafting", bool(active_provider and active_provider.api_key), "Requires an AI provider with a valid API key configured in AI Provider Settings."),
+                _health_row("Public Base URL", settings.base_url.startswith("https://"), "Use the deployed https admin URL so copied document links are production-safe."),
+                _health_row("GitHub Pulse", bool(settings.github_access_token), "Optional, but improves GitHub stats reliability and rate limits."),
+                cls="admin-settings-stack",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
+    )
 
     github_card = Card(
         Div(
             H3("GitHub Pulse", cls="admin-subsection-title"),
-            P(
-                "Open-source proof from your GitHub profile. Stays graceful even when the API is unavailable.",
-                cls="admin-module-copy",
-            ),
+            P("Open-source proof from your GitHub profile. Stays graceful even when the API is unavailable.", cls="admin-module-copy"),
             Div(
                 Div(Span("Profile", cls="admin-field-label"), Strong(github.username)),
                 Div(Span("Public Repos", cls="admin-field-label"), Strong(str(github.public_repos))),
@@ -390,90 +566,39 @@ def settings_workspace_page() -> tuple:
             ),
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
-    )
-
-    ai_card = _ai_settings_card()
-
-    active_provider = get_active_provider()
-
-    production_card = Card(
-        Div(
-            H3("Production Health", cls="admin-subsection-title"),
-            P("Quick visibility for the environment pieces that decide whether the admin can read, write, email, and generate shareable links.", cls="admin-module-copy"),
-            Div(
-                _health_row("Supabase Read", supabase_is_configured(), "Requires SUPABASE_URL and SUPABASE_ANON_KEY."),
-                _health_row("Supabase Write", service_role_is_configured(), "Requires SUPABASE_SERVICE_ROLE_KEY for admin saves and uploads."),
-                _health_row("Email Sending", settings.email_enabled, "Requires RESEND_API_KEY plus a valid sender domain when email actions are added."),
-                _health_row("AI Drafting", bool(active_provider and active_provider.api_key), "Requires an AI provider with a valid API key configured in AI Provider Settings above."),
-                _health_row("Public Base URL", settings.base_url.startswith("https://"), "Use the deployed https admin URL so copied document links are production-safe."),
-                _health_row("GitHub Pulse", bool(settings.github_access_token), "Optional, but improves GitHub stats reliability and rate limits."),
-                cls="admin-settings-stack",
-            ),
-            cls="admin-panel-stack",
-        ),
-        cls="admin-surface-card h-100",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100 mt-4"],
     )
 
     return (
         *SEO(
-            title=f"{settings.app_name} | Settings",
-            description="Settings workspace for managing public identity, profile links, and SEO defaults.",
-            url=f"{settings.base_url}/settings",
+            title=f"{settings.app_name} | Production Health",
+            description="Production environment health checks and GitHub pulse.",
+            url=f"{settings.base_url}/settings/health",
         ),
         *page_frame(
-            Row(
-                summary_card("Profile Source", profile.source.title(), "Where the current public identity data is being loaded from."),
-                summary_card("Brand Label", profile.site_name.replace(" Portfolio", ""), "This drives the public short-name brand treatment."),
-                summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
-                cls="g-4",
-            ),
+            _summary_row(profile),
             SectionWrap(
                 "Settings Workspace",
-                Row(
-                    # Identity panel — reference only; hidden on mobile to prioritise the edit forms
-                    Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
-                    Col(
-                        # Tabbed navigation for settings sections
-                        Tabs(
-                            ("tab-profile", "Profile", True),
-                            ("tab-access", "Access", False),
-                            ("tab-accounts", "Accounts", False),
-                            ("tab-ai", "AI Providers", False),
-                            ("tab-health", "Health", False),
-                            cls="settings-tabs mb-4",
-                        ),
-                        Div(
-                            TabPane(
-                                Div(editor_panel, cls="mt-3"),
-                                tab_id="tab-profile",
-                                active=True,
-                            ),
-                            TabPane(
-                                Div(access_panel, cls="mt-3"),
-                                tab_id="tab-access",
-                            ),
-                            TabPane(
-                                Div(account_panel, cls="mt-3"),
-                                tab_id="tab-accounts",
-                            ),
-                            TabPane(
-                                Div(ai_card, cls="mt-3"),
-                                tab_id="tab-ai",
-                            ),
-                            TabPane(
-                                Div(production_card, github_card, cls="mt-3"),
-                                tab_id="tab-health",
-                            ),
-                            cls="tab-content",
-                        ),
-                        span=12,
-                        lg=7,
-                    ),
-                    cls="g-4",
+                Div(
+                    settings_tab_bar("health"),
+                    production_card,
+                    github_card,
                 ),
             ),
             current="/settings",
-            title="Settings",
+            title="Production Health & Pulse",
         ),
     )
+
+
+def settings_workspace_page(tab: str = "profile") -> tuple:
+    """Master dispatcher for settings subpages."""
+    if tab == "access":
+        return settings_access_page()
+    elif tab == "accounts":
+        return settings_accounts_page()
+    elif tab == "ai":
+        return settings_ai_page()
+    elif tab == "health":
+        return settings_health_page()
+    return settings_profile_page()

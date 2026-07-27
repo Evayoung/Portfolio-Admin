@@ -95,6 +95,21 @@
   padding: 1.25rem;
 }
 
+.admin-mobile-drawer .admin-sidebar-nav.sidebar-navbar {
+  margin-top: 0.35rem;
+}
+
+.admin-mobile-drawer .admin-sidebar-nav .nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-mobile-drawer .admin-sidebar-nav .nav-link {
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+}
+
+
 /* ── Sidebar ───────────────────────────────────────────── */
 
 .admin-sidebar {
@@ -145,6 +160,34 @@
   gap: 0.45rem;
   padding-inline: 0 !important;
 }
+
+/* Active nav item — clear cyan fill, strong left accent */
+.admin-sidebar-nav .nav-link.active,
+.admin-sidebar-nav .admin-nav-link.active {
+  background: rgba(45, 184, 232, 0.18) !important;
+  color: #ffffff !important;
+  border-left: 3px solid var(--admin-primary);
+  padding-left: calc(var(--bs-nav-link-padding-x, 1rem) - 3px);
+  border-radius: 0 8px 8px 0;
+}
+
+.admin-sidebar-nav .nav-link:hover:not(.active),
+.admin-sidebar-nav .admin-nav-link:hover:not(.active) {
+  background: rgba(45, 184, 232, 0.09) !important;
+  color: rgba(238, 246, 255, 0.95) !important;
+  border-left: 3px solid rgba(45, 184, 232, 0.4);
+  padding-left: calc(var(--bs-nav-link-padding-x, 1rem) - 3px);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Mobile drawer active link */
+.admin-sidebar-links .admin-nav-link.active {
+  background: rgba(45, 184, 232, 0.18);
+  color: #ffffff;
+  border-left: 3px solid var(--admin-primary);
+  padding-left: calc(0.85rem - 3px);
+}
+
 
 .admin-sidebar-actions {
   display: grid;
@@ -266,6 +309,13 @@
   color: #fff;
 }
 
+.admin-bottom-nav .nav-link.active,
+.admin-bottom-nav .admin-bottom-link.active {
+  color: var(--admin-primary) !important;
+  background: rgba(45, 184, 232, 0.12);
+  border-radius: 8px;
+}
+
 .admin-bottom-nav .nav-link small {
   font-size: 0.68rem !important;
   font-weight: 600;
@@ -309,22 +359,22 @@
 /* ── Page header ───────────────────────────────────────── */
 
 .admin-page-header {
-  margin-bottom: 1.8rem;
+  margin-bottom: var(--admin-space-block);
   max-width: 46rem;
-}
-
-.admin-page-header-divider {
-  width: 3rem;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--admin-primary), transparent);
-  margin: 0.5rem 0 0.9rem;
 }
 
 /* ── Section block ─────────────────────────────────────── */
 
 .admin-section-block {
-  margin-top: 1.8rem;
+  margin-top: var(--admin-space-section);
+}
+
+/* ── Panel divider — separates header→filters→list transitions ── */
+
+.admin-panel-divider {
+  border: 0;
+  border-top: 1px solid var(--admin-border);
+  margin: var(--admin-space-block) 0;
 }
 
 /* ── Filter row ────────────────────────────────────────── */
@@ -333,6 +383,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+/* ── Deals control cluster — stage strip → doc-kind → search ── */
+
+.admin-deals-controls {
+  display: grid;
+  gap: var(--admin-space-control);
 }
 
 /* ── Project list ──────────────────────────────────────── */
@@ -708,14 +765,14 @@
   }
 
   .admin-shell {
-    padding-top: 2rem;
+    padding-top: calc(var(--admin-space-block) + 0.5rem);
     padding-bottom: 3rem;
   }
 
   .admin-metric-card-body,
   .admin-module-card-body,
   .admin-panel-stack {
-    padding: 1.45rem;
+    padding: var(--admin-pad-panel);
   }
 
   .admin-panel-toggle-btn {
@@ -785,38 +842,38 @@
   }
 }
 
-/* ── Mobile outer container/padding reductions ─────────── */
+/* ── Mobile outer container/padding ───────────────────── */
 
 @media (max-width: 767.98px) {
   .admin-shell {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    padding-left: var(--admin-pad-mobile);
+    padding-right: var(--admin-pad-mobile);
   }
 
   .admin-panel-stack {
-    padding: 0.75rem 0.5rem !important;
+    padding: var(--admin-pad-card);
   }
 
+  /* Detail / form blocks keep their borders and surface on mobile —
+     no more flattened edge-to-edge treatment. */
   .admin-detail-block,
   .admin-form-section {
-    padding: 0.75rem 0.6rem !important;
-    border: none !important;
-    background: transparent !important;
-    border-radius: 0 !important;
+    padding: var(--admin-space-block);
+    border-radius: 8px;
   }
 
   .admin-field-grid {
-    gap: 0.65rem;
+    gap: var(--admin-space-control);
   }
 
   .g-4, .gx-4 {
-    --bs-gutter-x: 0.75rem !important;
-    --bs-gutter-y: 0.75rem !important;
+    --bs-gutter-x: 0.85rem !important;
+    --bs-gutter-y: 0.85rem !important;
   }
 
   .g-3, .gx-3 {
-    --bs-gutter-x: 0.5rem !important;
-    --bs-gutter-y: 0.5rem !important;
+    --bs-gutter-x: 0.6rem !important;
+    --bs-gutter-y: 0.6rem !important;
   }
 }
 

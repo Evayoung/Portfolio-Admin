@@ -5,7 +5,7 @@ HTMX-powered pagination and live search.
 """
 from __future__ import annotations
 
-from fasthtml.common import Div
+from fasthtml.common import Div, P, Span 
 from faststrap import Icon
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
@@ -14,7 +14,7 @@ from app.presentation.crud_helpers import (
     delete_confirm_modal,
     resource_form,
     resource_table,
-)
+) 
 from app.presentation.shell import page_frame
 from app.schema import TABLES, TableConfig
 

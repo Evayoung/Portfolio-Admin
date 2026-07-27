@@ -32,7 +32,23 @@ def _hx_refresh_response(message: str, title: str = "Saved") -> Any:
 def setup_settings_routes(app: Any) -> None:
     @app.get("/settings")
     def settings_page() -> Any:
-        return settings_workspace_page()
+        return settings_workspace_page("profile")
+
+    @app.get("/settings/access")
+    def settings_access_get() -> Any:
+        return settings_workspace_page("access")
+
+    @app.get("/settings/accounts")
+    def settings_accounts_get() -> Any:
+        return settings_workspace_page("accounts")
+
+    @app.get("/settings/ai")
+    def settings_ai_get() -> Any:
+        return settings_workspace_page("ai")
+
+    @app.get("/settings/health")
+    def settings_health_get() -> Any:
+        return settings_workspace_page("health")
 
     @app.post("/settings/save")
     def settings_save(

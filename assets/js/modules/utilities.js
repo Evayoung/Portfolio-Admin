@@ -207,3 +207,23 @@ function showConfirm(message, onConfirm, onCancel, opts) {
     modal.remove();
   });
 }
+
+/* ── Global HTMX top loading bar indicator ────────────────── */
+function initLoadingBar() {
+  const bar = document.getElementById("admin-loading-bar");
+  if (!bar) return;
+  document.body.addEventListener("htmx:beforeRequest", () => {
+    bar.classList.add("htmx-request");
+    bar.classList.remove("htmx-settling");
+  });
+  document.body.addEventListener("htmx:afterSwap", () => {
+    bar.classList.remove("htmx-request");
+    bar.classList.add("htmx-settling");
+    setTimeout(() => bar.classList.remove("htmx-settling"), 500);
+  });
+  document.body.addEventListener("htmx:responseError", () => {
+    bar.classList.remove("htmx-request");
+    bar.classList.remove("htmx-settling");
+  });
+}
+

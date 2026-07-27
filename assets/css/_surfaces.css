@@ -59,6 +59,41 @@ body {
   padding: 1.2rem;
 }
 
+/* ── Quick Document modal — numbered step sections ─────────── */
+
+.admin-quick-doc {
+  counter-reset: step;
+}
+
+.admin-quick-doc .admin-form-section {
+  border-radius: 8px;
+}
+
+.admin-quick-doc .admin-form-section + .admin-form-section {
+  margin-top: var(--admin-space-block);
+}
+
+.admin-quick-doc .admin-field-grid,
+.admin-quick-doc .row {
+  row-gap: var(--admin-space-control);
+}
+
+.admin-quick-doc .admin-form-section-title {
+  counter-increment: step;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.admin-quick-doc .admin-form-section-title::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 0.7rem;
+  color: var(--admin-muted);
+  letter-spacing: 0.16em;
+  opacity: 0.65;
+}
+
 /* ── Module icon box ───────────────────────────────────── */
 
 .admin-module-icon-box {

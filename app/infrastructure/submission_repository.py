@@ -208,6 +208,39 @@ def update_submission(*, entry_id: str, kind: str, status: str, notes: str) -> S
         return SubmissionSaveResult(False, "danger", f"Could not reach Supabase to update this submission. {exc}", "Supabase")
 
 
+def delete_submission(*, entry_id: str, kind: str) -> SubmissionSaveResult:
+    if not entry_id.strip() or kind not in {"contact", "booking"}:
+        return SubmissionSaveResult(False, "warning", "A valid submission record is required for deletion.", "Validation")
+
+    if not service_role_is_configured():
+        return SubmissionSaveResult(
+            False,
+            "info",
+            "Supabase service-role access is not configured yet. Add SUPABASE_SERVICE_ROLE_KEY to enable inbox deletions.",
+            "Read-only",
+        )
+
+    table = "contact_submissions" if kind == "contact" else "booking_requests"
+
+    try:
+        rows = _rest_request(
+            "DELETE",
+            table,
+            params={"id": f"eq.{entry_id}", "select": "id"},
+            use_service_role=True,
+            prefer="return=representation",
+        )
+        if isinstance(rows, list) and rows:
+            return SubmissionSaveResult(True, "success", "Submission record deleted from Supabase.", "Supabase")
+        return SubmissionSaveResult(False, "danger", "Supabase did not return the deleted submission record.", "Supabase")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return SubmissionSaveResult(False, "danger", f"Supabase rejected deletion. {details or exc.reason}", "Supabase")
+    except (URLError, TimeoutError, ValueError) as exc:
+        return SubmissionSaveResult(False, "danger", f"Could not reach Supabase to delete submission. {exc}", "Supabase")
+
+
+
 def notify_new_public_submission(
     *,
     name: str,

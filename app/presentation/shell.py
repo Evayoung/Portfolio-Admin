@@ -6,7 +6,7 @@ import secrets as _secrets
 import time as _time
 
 from fasthtml.common import A, Aside, Button, Div, Footer, H1, Li, Main, Meta, Nav, P, Small, Span, Ul
-from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, SidebarNavbar, SidebarNavItem
+from faststrap import BottomNav, BottomNavItem, Container, Drawer, Icon, Modal, SidebarNavbar, SidebarNavItem, Spinner
 from faststrap.components.feedback.confirm import ConfirmDialog
 from faststrap.components.feedback.modern_toast import ModernToastStack
 
@@ -162,21 +162,39 @@ def _nav_link(label: str, href: str, icon: str, current: str, *, compact: bool =
     )
 
 
+def _nav_item_label(label: str) -> Span:
+    """Wrap nav label with a Faststrap Spinner for live HTMX loading states."""
+    return Span(
+        Span(label),
+        Spinner(size="sm", cls="admin-nav-spinner ms-auto"),
+        cls="d-flex align-items-center justify-content-between w-100 me-1",
+    )
+
+
+def _sidebar_nav_item(label: str, href: str, icon: str, current: str, *, prefix: str = "desk") -> SidebarNavItem:
+    """Render a Faststrap SidebarNavItem with HTMX navigation and live loading spinner indicator."""
+    nav_id = f"nav-link-{prefix}-{label.lower().replace(' ', '-').replace('/', '-')}"
+    return SidebarNavItem(
+        _nav_item_label(label),
+        href=href,
+        icon=icon,
+        active=href == current,
+        theme="dark",
+        cls="admin-nav-link",
+        id=nav_id,
+        hx_get=href,
+        hx_target="body",
+        hx_swap="innerHTML",
+        hx_push_url="true",
+        hx_indicator=f"#{nav_id}",
+    )
+
+
 def _sidebar_group_nav(current: str, group: dict) -> Div:
     """Render a single navigation group with a kicker label and nav items."""
     items = group["items"]
     nav = SidebarNavbar(
-        *[
-            SidebarNavItem(
-                label,
-                href=href,
-                icon=icon,
-                active=href == current,
-                theme="dark",
-                cls="admin-nav-link",
-            )
-            for label, href, icon in items
-        ],
+        *[_sidebar_nav_item(label, href, icon, current, prefix="desk") for label, href, icon in items],
         theme="dark",
         sticky=False,
         collapsible=False,
@@ -196,14 +214,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
     # Overview link (standalone, outside groups)
     overview_item = NAV_ITEMS[0]
     overview_nav = SidebarNavbar(
-        SidebarNavItem(
-            overview_item[0],
-            href=overview_item[1],
-            icon=overview_item[2],
-            active=overview_item[1] == current,
-            theme="dark",
-            cls="admin-nav-link",
-        ),
+        _sidebar_nav_item(overview_item[0], overview_item[1], overview_item[2], current, prefix="desk"),
         theme="dark",
         sticky=False,
         collapsible=False,
@@ -249,7 +260,7 @@ def admin_sidebar(current: str = "/", profile=None) -> Aside:
                         href="#",
                         data_bs_toggle="modal",
                         data_bs_target="#sign-out-confirm-modal",
-                        cls="btn admin-install-btn w-100",
+                        cls="btn admin-muted-btn w-100",
                     ),
                     cls="admin-sidebar-actions",
                 ),
@@ -318,22 +329,30 @@ def admin_mobile_drawer(current: str = "/") -> Div:
     profile = brand_profile()
 
     # Overview (standalone)
+    overview_nav = SidebarNavbar(
+        _sidebar_nav_item("Overview", "/", "grid", current, prefix="mob"),
+        theme="dark",
+        cls="admin-sidebar-nav",
+    )
     overview_section = Div(
-        _nav_link("Overview", "/", "grid", current),
-        cls="admin-sidebar-links mt-0",
+        overview_nav,
+        cls="mt-0",
     )
 
     # Grouped sections
     group_sections = []
     for group in NAV_GROUPS:
+        nav = SidebarNavbar(
+            *[_sidebar_nav_item(label, href, icon, current, prefix="mob") for label, href, icon in group["items"]],
+            theme="dark",
+            cls="admin-sidebar-nav",
+        )
         group_div = Div(
-            P(group["label"], cls="admin-sidebar-kicker mb-2 mt-3"),
-            Div(
-                *[_nav_link(label, href, icon, current) for label, href, icon in group["items"]],
-                cls="admin-sidebar-links mt-0",
-            ),
+            P(group["label"], cls="admin-sidebar-kicker mb-1 mt-3"),
+            nav,
         )
         group_sections.append(group_div)
+
 
     actions = Div(
         A(
@@ -357,13 +376,13 @@ def admin_mobile_drawer(current: str = "/") -> Div:
             href="#",
             data_bs_toggle="modal",
             data_bs_target="#sign-out-confirm-modal",
-            cls="btn admin-install-btn w-100",
+            cls="btn admin-muted-btn w-100",
         ),
         cls="admin-sidebar-actions mt-4",
     )
     return Drawer(
         Div(
-            P("Workspace", cls="admin-sidebar-kicker mb-3"),
+            P("Workspace", cls="admin-sidebar-kicker mb-2"),
             overview_section,
             *group_sections,
             actions,
@@ -408,7 +427,7 @@ def admin_shortcuts_modal() -> Div:
     rows = Div(
         *[
             Div(
-                Span(keys, cls="badge bg-secondary me-2", style="font-family:monospace;min-width:4rem;text-align:center;display:inline-block;"),
+                Span(keys, cls="badge bg-secondary me-2 admin-shortcut-badge"),
                 Span(desc),
                 cls="d-flex align-items-center gap-2 py-1",
             )
@@ -416,27 +435,13 @@ def admin_shortcuts_modal() -> Div:
         ],
         cls="mt-3",
     )
-    return Div(
-        Div(
-            Div(
-                Div(
-                    H1("Keyboard Shortcuts", cls="modal-title fs-5"),
-                    Button(type="button", cls="btn-close", data_bs_dismiss="modal", aria_label="Close"),
-                    cls="modal-header",
-                ),
-                Div(rows, cls="modal-body"),
-                Div(
-                    Button("Close", type="button", cls="btn admin-module-btn", data_bs_dismiss="modal"),
-                    cls="modal-footer",
-                ),
-                cls="modal-content",
-            ),
-            cls="modal-dialog modal-dialog-centered",
-        ),
-        cls="modal fade",
-        id="admin-shortcuts-modal",
-        tabindex="-1",
-        aria_hidden="true",
+    return Modal(
+        rows,
+        modal_id="admin-shortcuts-modal",
+        title="Keyboard Shortcuts",
+        size="md",
+        centered=True,
+        footer=Button("Close", type="button", cls="btn admin-module-btn", data_bs_dismiss="modal"),
     )
 
 
@@ -495,13 +500,7 @@ def page_frame(*children, current: str = "/", title: str = "Overview", show_brea
                     Container(
                         breadcrumbs,
                         Div(
-                            P(brand_name(profile), cls="admin-kicker"),
                             H1(title, cls="admin-page-title"),
-                            Div(cls="admin-page-header-divider"),
-                            P(
-                                f"Control panel for {brand_name(profile)}'s portfolio content, submissions, and publishing workflow.",
-                                cls="admin-page-copy",
-                            ),
                             cls="admin-page-header",
                         ),
                         *children,

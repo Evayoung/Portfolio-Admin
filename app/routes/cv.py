@@ -19,7 +19,7 @@ try:
         save_cv_section_work_history,
     )
     from ..presentation.page_helpers import toast_fragment
-    from ..presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
+    from ..presentation.pages.cv_admin import cv_edit_page, cv_preview_page, cv_save_status_fragment
 except ImportError:
     from infrastructure.cv_repository import (
         save_cv_profile,
@@ -32,7 +32,7 @@ except ImportError:
         save_cv_section_work_history,
     )
     from presentation.page_helpers import toast_fragment
-    from presentation.pages.cv_admin import cv_save_status_fragment, cv_workspace_page
+    from presentation.pages.cv_admin import cv_edit_page, cv_preview_page, cv_save_status_fragment
 
 
 def _section_save_response(result) -> Any:
@@ -60,7 +60,11 @@ def _safe_parse_json(data: str) -> list | None:
 def setup_cv_routes(app: Any) -> None:
     @app.get("/cv")
     def cv() -> Any:
-        return cv_workspace_page()
+        return cv_preview_page()
+
+    @app.get("/cv/edit")
+    def cv_edit() -> Any:
+        return cv_edit_page()
 
     @app.post("/cv/save")
     def cv_save(

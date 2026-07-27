@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Modal, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Fx, Modal, Row, SEO
+from faststrap.components.feedback.confirm import ConfirmDialog
 
 from app.config import settings
 from app.infrastructure.media_repository import get_media_workspace_summary, list_media_assets
@@ -33,7 +34,7 @@ def media_save_status_fragment(title: str, message: str, tone: str = "info", pub
 
 
 def _filter_link(label: str, href: str, *, active: bool) -> A:
-    return A(label, href=href, cls=f"admin-filter-chip{' active' if active else ''}")
+    return A(label, href=href, aria_label=f"Filter: {label}", cls=f"admin-filter-chip{' active' if active else ''}")
 
 
 def _kind_options() -> list[tuple[str, str]]:
@@ -107,35 +108,22 @@ def _asset_replace_modal(asset) -> Modal:
     )
 
 
-def _asset_delete_modal(asset) -> Modal:
-    mid = f"delete-{asset.asset_id}"
-    return Modal(
-        Form(
-            Input(type="hidden", name="asset_id", value=asset.asset_id),
-            P(f"Are you sure you want to delete \"{asset.title}\"? This removes the asset record and its storage object permanently.", cls="admin-module-copy"),
-            Div(
-                loading_action_button("Delete Asset", endpoint="/media/delete", target=f"#{mid}-status", button_cls="btn btn-outline-danger"),
-                cls="admin-form-actions mt-3",
-            ),
-            Div(id=f"{mid}-status", cls="mt-2"),
-            action="/media/delete",
-            method="post",
-            hx_post="/media/delete",
-            hx_target=f"#{mid}-status",
-            hx_swap="innerHTML",
-            hx_confirm="Delete this asset permanently? This cannot be undone.",
-            cls="admin-settings-form",
-        ),
-        modal_id=mid,
-        title=f"Delete: {asset.title}",
-        size="md",
-        centered=True,
+def _asset_delete_modal(asset) -> ConfirmDialog:
+    return ConfirmDialog(
+        f"Are you sure you want to delete \"{asset.title}\"? This removes the asset record and its storage object permanently.",
+        confirm_text="Delete Asset",
+        cancel_text="Cancel",
+        title=f"Delete Asset: {asset.title}",
+        variant="danger",
+        dialog_id=f"delete-{asset.asset_id}",
+        hx_confirm_method="post",
+        hx_confirm_url=f"/media/delete?asset_id={asset.asset_id}",
     )
 
 
-def _asset_card(asset, *, modals: list) -> Card:
-    size_kb = max(1, round(asset.size_bytes / 1024))
-    is_image = (asset.content_type or "").startswith("image/")
+def _asset_card(asset, modals: list) -> Card:
+    is_image = asset.kind in ("image", "logo")
+    size_kb = round(asset.size_bytes / 1024, 1) if asset.size_bytes else 0
     # Collect modals for this asset
     modals.append(_asset_edit_modal(asset))
     modals.append(_asset_replace_modal(asset))
@@ -160,12 +148,12 @@ def _asset_card(asset, *, modals: list) -> Card:
                 Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=asset.public_url, data_copy_label="Copy URL"),
                 Button("Edit", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#edit-{asset.asset_id}"),
                 Button("Replace", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#replace-{asset.asset_id}"),
-                Button("Delete", type="button", cls="btn btn-outline-danger", data_bs_toggle="modal", data_bs_target=f"#delete-{asset.asset_id}"),
+                Button("Delete", type="button", cls="btn admin-danger-btn", data_bs_toggle="modal", data_bs_target=f"#delete-{asset.asset_id}"),
                 cls="d-flex flex-wrap gap-2 mt-3",
             ),
             cls="admin-project-card-body",
         ),
-        cls="admin-surface-card admin-project-card h-100",
+        cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card admin-project-card h-100"],
     )
 
 

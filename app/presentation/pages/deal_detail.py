@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Label, Option, P, Script, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO, Tabs, TabPane
+from faststrap import Badge, Card, Col, EmptyState, Row, SEO
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -28,7 +28,7 @@ def deal_generate_result_fragment(title: str, message: str, tone: str = "info", 
             P("AI-generated draft:", cls="admin-module-copy mt-3 mb-2"),
             Textarea(draft, rows=12, readonly=True, cls="form-control admin-form-control admin-form-textarea", id="ai-draft-content"),
             Div(
-                Button("Copy Draft", type="button", cls="btn admin-module-btn",
+                Button("Copy Draft", type="button", cls="btn admin-icon-btn admin-module-btn",
                        hx_onclick=f"navigator.clipboard.writeText(document.getElementById('ai-draft-content').value).then(() => this.textContent = 'Copied!')"),
                 cls="d-flex flex-wrap gap-2 mt-3",
             ),
@@ -147,7 +147,7 @@ def _workflow_pipeline(selected: AdminDeal) -> Div:
         items.append(
             A(
                 Span(label, cls="deal-pipeline-label"),
-                href=f"/deals/{selected.deal_id}?tab=documents",
+                href=f"/deals/{selected.deal_id}?view=documents",
                 cls=f"deal-pipeline-item {status_cls}",
             )
         )
@@ -349,7 +349,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="status", value="sent"),
                 loading_action_button("Mark Sent", endpoint="/deals/documents/update",
                                      target=f"#doc-status-{document.document_id}",
-                                     button_cls="btn admin-install-btn"),
+                                     button_cls="btn admin-icon-btn admin-install-btn"),
                 action="/deals/documents/update", method="post",
                 hx_post="/deals/documents/update",
                 hx_target=f"#doc-status-{document.document_id}",
@@ -367,7 +367,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="status", value="accepted"),
                 loading_action_button("Mark Accepted", endpoint="/deals/documents/update",
                                      target=f"#doc-status-{document.document_id}",
-                                     button_cls="btn btn-outline-success"),
+                                     button_cls="btn admin-icon-btn btn-outline-success"),
                 action="/deals/documents/update", method="post",
                 hx_post="/deals/documents/update",
                 hx_target=f"#doc-status-{document.document_id}",
@@ -378,13 +378,13 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
         )
 
     if document.public_token:
-        actions.append(A("Copy Link", href="#", cls="btn admin-install-btn",
+        actions.append(A("Copy Link", href="#", cls="btn admin-icon-btn admin-install-btn",
                          **{"data_copy_target": doc_url, "data_copy_label": "Copy Link"}))
         actions.append(A("Open Client Link", href=f"/documents/{document.public_token}",
-                         cls="btn admin-module-btn", target="_blank"))
+                         cls="btn admin-icon-btn admin-module-btn", target="_blank"))
 
     actions.append(A("Download PDF", href=f"/deals/{selected.deal_id}/documents/{document.kind}/pdf",
-                     cls="btn admin-install-btn"))
+                     cls="btn admin-icon-btn admin-install-btn"))
 
     if document.status in {"accepted", "rejected", "paid"}:
         actions.append(
@@ -394,7 +394,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_kind", value=document.kind),
                 loading_action_button("Reset to Sent", endpoint="/admin/document/reset",
                                      target=f"#doc-status-{document.document_id}",
-                                     button_cls="btn btn-outline-warning"),
+                                     button_cls="btn admin-icon-btn btn-outline-warning"),
                 action="/admin/document/reset", method="post",
                 hx_post="/admin/document/reset",
                 hx_target=f"#doc-status-{document.document_id}",
@@ -521,7 +521,7 @@ def _generate_next_cta(selected: AdminDeal, source_doc) -> Div | None:
                         f"\u2728 {pkg_name} \u2014 {_money(pkg_total)}",
                         endpoint=f"/deals/{selected.deal_id}/generate",
                         target="#generate-result",
-                        button_cls="btn admin-module-btn",
+                        button_cls="btn admin-icon-btn admin-module-btn",
                     ),
                     action=f"/deals/{selected.deal_id}/generate",
                     method="post",
@@ -561,7 +561,7 @@ def _generate_next_cta(selected: AdminDeal, source_doc) -> Div | None:
                             f"\u2728 AI Generate {next_label}",
                             endpoint=f"/deals/{selected.deal_id}/generate",
                             target="#generate-result",
-                            button_cls="btn admin-module-btn",
+                            button_cls="btn admin-icon-btn admin-module-btn",
                         ),
                         action=f"/deals/{selected.deal_id}/generate",
                         method="post",
@@ -905,12 +905,13 @@ def _edit_tab(selected: AdminDeal) -> Div:
     )
 
 
-def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
-    """Deal detail page with tabbed layout."""
+def deal_detail_page(*, deal_id: str = "", view: str = "overview") -> tuple:
+    """Deal detail page routed by view: overview | documents | edit."""
     selected = get_deal_with_documents(deal_id) if deal_id else None
     if not selected:
         return (
-            *SEO(title=f"{settings.app_name} | Deal Not Found", description="Deal not found.", url=f"{settings.base_url}/deals"),
+            *SEO(title=f"{settings.app_name} | Deal Not Found",
+                 description="Deal not found.", url=f"{settings.base_url}/deals"),
             *page_frame(
                 EmptyState(
                     icon="exclamation-circle",
@@ -923,22 +924,24 @@ def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
             ),
         )
 
-    # Tabs — Tabs() builds the nav bar, TabPane() builds content panels
-    tabs_nav = Tabs(
-        ("tab-overview", "Overview", tab == "overview"),
-        ("tab-documents", "Documents", tab == "documents"),
-        ("tab-edit", "Edit", tab == "edit"),
-        cls="deal-detail-tabs",
-    )
+    view_map = {
+        "overview": _overview_tab,
+        "documents": _documents_tab,
+        "edit": _edit_tab,
+    }
+    renderer = view_map.get(view, _overview_tab)
+    view_content = renderer(selected)
 
-    tab_content = Div(
-        TabPane(_overview_tab(selected), tab_id="tab-overview", active=(tab == "overview")),
-        TabPane(_documents_tab(selected), tab_id="tab-documents", active=(tab == "documents")),
-        TabPane(_edit_tab(selected), tab_id="tab-edit", active=(tab == "edit")),
-        cls="tab-content",
+    # Navigation pills (not tabs) — simple nav between the 3 views
+    nav_pills = Div(
+        A("Overview", href=f"/deals/{deal_id}?view=overview",
+          cls=f"admin-filter-chip{' active' if view == 'overview' else ''}"),
+        A("Documents", href=f"/deals/{deal_id}?view=documents",
+          cls=f"admin-filter-chip{' active' if view == 'documents' else ''}"),
+        A("Edit", href=f"/deals/{deal_id}?view=edit",
+          cls=f"admin-filter-chip{' active' if view == 'edit' else ''}"),
+        cls="d-flex flex-wrap gap-2 mb-4",
     )
-
-    tabs_component = Div(tabs_nav, tab_content)
 
     return (
         *SEO(
@@ -975,8 +978,8 @@ def deal_detail_page(*, deal_id: str = "", tab: str = "documents") -> tuple:
                 _workflow_pipeline(selected),
                 cls="mb-4",
             ),
-            # Tabs content
-            tabs_component,
+            nav_pills,
+            view_content,
             current="/deals",
             title=selected.project_title,
         ),

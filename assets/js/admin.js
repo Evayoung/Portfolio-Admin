@@ -63,12 +63,13 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   setInstallVisibility(false);
 
-  // Utilities (clipboard, panel toggle, keyboard, image preview, guards, form loading)
+  // Utilities (clipboard, panel toggle, keyboard, image preview, guards, form loading, loading bar)
   initClipboardCopy();
   initPanelToggle();
   initKeyboardShortcuts();
   initImagePreview();
   initFormLoading();
+  initLoadingBar();
 
   // Feature modules
   initApplyDraft();

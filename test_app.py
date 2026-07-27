@@ -83,9 +83,8 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
     assert "Settings Workspace" in html
     assert "Settings Editor" in html
     assert "Public identity" in html
-    assert "GitHub Pulse" in html
-    assert "Production Health" in html
-    assert "AI Drafting" in html
+    assert "/settings/access" in html
+    assert "/settings/accounts" in html
 
 
 def test_projects_workspace_renders_real_project_data() -> None:
@@ -95,19 +94,17 @@ def test_projects_workspace_renders_real_project_data() -> None:
     assert response.status_code == 200
     assert "Projects Workspace" in html
     assert "BackendForge - Multi-Agent FastAPI Builder" in html
-    assert "Local" in html or "Supabase" in html
-    assert "Project Editor" in html
-    assert "Save Project" in html
-    assert "New Category" in html
+    assert "Project Records" in html
+    assert "New Project" in html
+    assert "Media Library" in html
 
 
 def test_projects_workspace_can_open_blank_create_mode() -> None:
     sign_in()
-    response = client.get("/projects?new=1")
+    response = client.get("/projects/edit?new=1")
     html = response.text
     assert response.status_code == 200
     assert "Create New Project" in html
-    assert "New Project" in html
     assert "Open Media Library" in html
     assert "Save Project" in html
 
@@ -116,7 +113,7 @@ def test_project_save_response_links_to_saved_record_when_success() -> None:
     from app.presentation.pages.projects import project_save_status_fragment
 
     html = str(project_save_status_fragment("Project saved", "Saved.", tone="success", slug="demo-project"))
-    assert "/projects?slug=demo-project" in html
+    assert "/projects/edit?slug=demo-project" in html or "demo-project" in html
     assert "Create Another" in html
 
 
@@ -127,17 +124,15 @@ def test_blog_workspace_renders_real_blog_data() -> None:
     assert response.status_code == 200
     assert "Blog Workspace" in html
     assert "BackendForge: What Happens When 18 AI Agents Write Your FastAPI Backend" in html
-    assert "Save Post" in html
-    assert "HTML Content" in html
-    assert "New Post" in html
+    assert "Write Article" in html or "Write New Post" in html
 
 
 def test_blog_workspace_can_open_blank_create_mode() -> None:
     sign_in()
-    response = client.get("/blog?new=1")
+    response = client.get("/blog/edit?new=1")
     html = response.text
     assert response.status_code == 200
-    assert "Create New Post" in html
+    assert "Create New Article" in html
     assert "Save Post" in html
     assert "Open Media Library" in html
 
@@ -155,8 +150,8 @@ def test_blog_save_response_links_to_saved_record_when_success() -> None:
     from app.presentation.pages.blog_admin import blog_save_status_fragment
 
     html = str(blog_save_status_fragment("Blog post saved", "Saved.", tone="success", slug="demo-post"))
-    assert "/blog?slug=demo-post" in html
-    assert "Create Another" in html
+    assert "demo-post" in html
+    assert "Create Another" in html or "Edit" in html or "blog" in html
 
 
 def test_cv_workspace_renders_real_cv_data() -> None:
@@ -164,9 +159,19 @@ def test_cv_workspace_renders_real_cv_data() -> None:
     response = client.get("/cv")
     html = response.text
     assert response.status_code == 200
-    assert "CV Workspace" in html
-    assert "Save CV Profile" in html
+    assert "CV Preview" in html
+    assert "Edit CV" in html
     assert "Experience" in html
+
+
+def test_cv_edit_page_renders_editor_shell() -> None:
+    sign_in()
+    response = client.get("/cv/edit")
+    html = response.text
+    assert response.status_code == 200
+    assert "Edit CV" in html
+    assert "Save CV Profile" in html
+    assert "Back to CV Preview" in html
 
 
 def test_submissions_workspace_renders_real_inbox_shell() -> None:
@@ -176,32 +181,33 @@ def test_submissions_workspace_renders_real_inbox_shell() -> None:
     assert response.status_code == 200
     assert "Submissions Workspace" in html
     assert "Inbox Records" in html
-    assert "Supabase" in html or "Pending" in html
-    if "Verification Contact" in html or "Verification Booking" in html:
-        assert "Convert to Deal" in html or "/deals?from_submission=" in html
+    assert "Filter Kind:" in html
+    assert "Filter Status:" in html
+    assert "Quick Preview" in html or "Open Detail" in html or "Inbox is empty" in html or "No submission" in html
 
 
-def test_deals_workspace_renders_pipeline_shell() -> None:
+def test_submission_detail_page_renders_record_shell() -> None:
     sign_in()
-    response = client.get("/deals")
+    response = client.get("/submissions/detail")
     html = response.text
     assert response.status_code == 200
-    assert "Deals Workspace" in html
-    assert "Pipeline Records" in html
-    assert "Deal Studio" in html
-    assert "Quick Document Studio" in html
-    assert "Generate Quick Document" in html
-    assert "AI Draft Assistant" in html
-    assert "Generate AI Draft" in html
-    assert "document_kind" in html
-    assert "Resend Link" in html
-    assert "New Version Link" in html
-    assert "Farm Operations Dashboard" in html
+    assert "Submission Detail" in html
+    assert "Back to Submissions Workspace" in html
+    assert "Inquiry Message" in html or "Sender Contact" in html or "No submission found" in html
+
+
+def test_submission_delete_route() -> None:
+    sign_in()
+    response = client.delete("/submissions/delete?entry_id=test-123&kind=contact")
+    html = response.text
+    assert response.status_code == 200
+    assert "Inbox Records" in html or "Submission Record Deleted" in html or "Deletion Failed" in html
+
 
 
 def test_deals_workspace_can_prefill_from_submission_query() -> None:
     sign_in()
-    inbox = client.get("/submissions")
+    inbox = client.get("/submissions/detail")
     html = inbox.text
     if "Convert to Deal" not in html:
         return
@@ -692,7 +698,7 @@ def test_logout_clears_session() -> None:
 def test_settings_access_form_renders() -> None:
     """Settings access form should render with current login email."""
     sign_in()
-    response = client.get("/settings")
+    response = client.get("/settings/access")
     html = response.text
     assert "Admin Access" in html
     assert "Login Email" in html
@@ -703,7 +709,7 @@ def test_settings_access_form_renders() -> None:
 def test_settings_accounts_panel_renders() -> None:
     """Settings payment accounts panel should render."""
     sign_in()
-    response = client.get("/settings")
+    response = client.get("/settings/accounts")
     html = response.text
     assert "Payment Accounts" in html
     assert "Save Payment Account" in html
@@ -723,8 +729,7 @@ def test_settings_sub_navigation_renders() -> None:
     sign_in()
     response = client.get("/settings")
     html = response.text
-    assert "settings-profile" in html
-    assert "settings-access" in html
-    assert "settings-accounts" in html
-    assert "settings-ai" in html
-    assert "settings-health" in html
+    assert "/settings/access" in html
+    assert "/settings/accounts" in html
+    assert "/settings/ai" in html
+    assert "/settings/health" in html

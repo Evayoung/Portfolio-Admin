@@ -1,9 +1,9 @@
-"""CV workspace for Neo Admin."""
+"""CV workspace for Neo Admin — split into interactive preview and dedicated editor."""
 
 from __future__ import annotations
 
-from fasthtml.common import Button, Div, Form, H2, H3, Input, P, Span, Strong, Textarea
-from faststrap import Badge, Card, Col, EmptyState, Modal, Row, SEO
+from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Li, P, Span, Strong, Textarea, Ul
+from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Progress, Row, SEO, Spinner, StatusBadge
 
 from app.config import settings
 from app.infrastructure.cv_repository import (
@@ -64,8 +64,8 @@ def _simple_item_modal(modal_id, title, items, endpoint, add_label, instructions
         Div(
             Input(type="text", cls="form-control admin-form-control", data_field="label",
                   value=label, placeholder=add_label),
-            Button("x", type="button", cls="btn btn-outline-danger btn-sm flex-shrink-0",
-                   onclick="removeCvItem(this)", style="height:2.4rem;"),
+            Button("×", type="button", cls="btn admin-danger-btn btn-sm flex-shrink-0",
+                   onclick="removeCvItem(this)", aria_label="Remove item", style="height:2.4rem;"),
             cls="cv-item-row d-flex gap-2 align-items-center",
             data_item_row="",
         )
@@ -109,8 +109,8 @@ def _work_history_modal(items) -> Modal:
                           value=item.organisation, placeholder="Organisation"), cls="col-md-4"),
                 Div(Input(type="text", cls="form-control admin-form-control", data_field="period",
                           value=item.period, placeholder="Period"), cls="col-md-2"),
-                Div(Button("x", type="button", cls="btn btn-outline-danger btn-sm",
-                           onclick="removeCvItem(this)"), cls="col-md-2 d-flex align-items-end"),
+                Div(Button("×", type="button", cls="btn admin-danger-btn btn-sm flex-shrink-0",
+                           onclick="removeCvItem(this)", aria_label="Remove entry"), cls="col-md-2 d-flex align-items-end"),
                 cls="row g-2",
             ),
             Div(
@@ -159,8 +159,8 @@ def _education_modal(items) -> Modal:
                       value=item.institution, placeholder="Institution"), cls="col-md-4"),
             Div(Input(type="text", cls="form-control admin-form-control", data_field="period",
                       value=item.period, placeholder="Period"), cls="col-md-2"),
-            Div(Button("x", type="button", cls="btn btn-outline-danger btn-sm",
-                       onclick="removeCvItem(this)"), cls="col-md-2 d-flex align-items-end"),
+            Div(Button("×", type="button", cls="btn admin-danger-btn btn-sm",
+                       onclick="removeCvItem(this)", aria_label="Remove entry"), cls="col-md-2 d-flex align-items-end"),
             cls="row g-2",
         )
         note_row = Div(
@@ -208,8 +208,8 @@ def _certifications_modal(items) -> Modal:
                       value=item.year, placeholder="Year"), cls="col-md-2"),
             Div(Input(type="text", cls="form-control admin-form-control", data_field="credential_url",
                       value=item.credential_url, placeholder="URL"), cls="col-md-2"),
-            Div(Button("x", type="button", cls="btn btn-outline-danger btn-sm",
-                       onclick="removeCvItem(this)"), cls="col-md-1 d-flex align-items-end"),
+            Div(Button("×", type="button", cls="btn admin-danger-btn btn-sm",
+                       onclick="removeCvItem(this)", aria_label="Remove certification"), cls="col-md-1 d-flex align-items-end"),
             cls="row g-2", data_item_row="",
         )
         for item in items
@@ -248,8 +248,8 @@ def _tools_modal(items) -> Modal:
                       value=item.label, placeholder="Category label"), cls="col-md-4"),
             Div(Input(type="text", cls="form-control admin-form-control", data_field="tools",
                       value=", ".join(item.tools), placeholder="Tool1, Tool2, ..."), cls="col-md-6"),
-            Div(Button("x", type="button", cls="btn btn-outline-danger btn-sm",
-                       onclick="removeCvItem(this)"), cls="col-md-2 d-flex align-items-end"),
+            Div(Button("×", type="button", cls="btn admin-danger-btn btn-sm",
+                       onclick="removeCvItem(this)", aria_label="Remove tool group"), cls="col-md-2 d-flex align-items-end"),
             cls="row g-2", data_item_row="",
         )
         for item in items
@@ -290,8 +290,8 @@ def _languages_modal(items) -> Modal:
                       value=item[1], placeholder="Level (e.g. Fluent)"), cls="col-md-4"),
             Div(Input(type="number", cls="form-control admin-form-control", data_field="proficiency_score",
                       value=str(item[2]), placeholder="0-100", min="0", max="100"), cls="col-md-2"),
-            Div(Button("x", type="button", cls="btn btn-outline-danger btn-sm",
-                       onclick="removeCvItem(this)"), cls="col-md-2 d-flex align-items-end"),
+            Div(Button("×", type="button", cls="btn admin-danger-btn btn-sm",
+                       onclick="removeCvItem(this)", aria_label="Remove language"), cls="col-md-2 d-flex align-items-end"),
             cls="row g-2", data_item_row="",
         )
         for item in items
@@ -402,9 +402,56 @@ _TEMPLATES = {
 _TEMPLATE_BLOCK = NotStr("".join(str(v) for v in _TEMPLATES.values()))
 
 
-# ── Main page ──
+# ── Preview helpers ──
 
-def cv_workspace_page() -> tuple:
+def _work_item_preview(item) -> Div:
+    """Render a single work history entry in the CV preview — mirrors public cv_page.py."""
+    return Div(
+        Div(
+            Div(cls="cv-timeline-dot"),
+            cls="cv-timeline-track",
+        ),
+        Div(
+            Div(
+                Div(
+                    H3(item.title, cls="cv-role-title"),
+                    Span(item.period, cls="cv-period-pill"),
+                    cls="d-flex justify-content-between align-items-start flex-wrap gap-2",
+                ),
+                Div(
+                    Icon("building", cls="me-1 small"),
+                    Strong(item.organisation),
+                    Span(" | ", cls="text-muted"),
+                    Span(item.location, cls="text-muted small"),
+                    cls="cv-org-line mt-1",
+                ),
+                Ul(
+                    *[Li(bullet, cls="cv-bullet") for bullet in item.bullets],
+                    cls="cv-bullet-list mt-3",
+                ),
+                cls="cv-work-body",
+            ),
+            cls="cv-work-content",
+        ),
+        cls="cv-timeline-entry",
+    )
+
+
+def _tool_category_preview(cat) -> Div:
+    """Render a single tool category block in the CV preview — mirrors public cv_page.py."""
+    return Div(
+        H4(cat.label, cls="cv-tool-category"),
+        Div(
+            *[Span(tool, cls="cv-tool-badge") for tool in cat.tools],
+            cls="cv-tool-pills",
+        ),
+        cls="cv-tool-block",
+    )
+
+
+# ── Page functions ──
+
+def cv_preview_page() -> tuple:
     meta = get_cv_meta()
     summary = get_cv_workspace_summary()
     work_history = list_work_history()
@@ -415,6 +462,282 @@ def cv_workspace_page() -> tuple:
     core_skills = list_core_skills()
     competencies = list_competencies()
 
+    # ── Action bar ──
+    action_bar = Div(
+        Div(
+            A(
+                Icon("pencil", cls="me-2"),
+                "Edit CV",
+                Spinner(size="sm", cls="admin-back-spinner ms-2"),
+                href="/cv/edit",
+                hx_get="/cv/edit",
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                hx_indicator="#cv-edit-btn",
+                id="cv-edit-btn",
+                cls="btn admin-module-btn",
+            ),
+            A(
+                Icon("download", cls="me-2"),
+                "Download PDF",
+                href="/resume/download/pdf",
+                target="_blank",
+                cls="btn admin-muted-btn",
+            ),
+            cls="d-flex align-items-center gap-3",
+        ),
+        cls="d-flex justify-content-between align-items-center mb-4",
+    )
+
+    # ── CV Preview Card — mirrors public portfolio layout ──
+    preview_card = Card(
+        Div(
+            # Header band
+            Div(
+                H2(meta.name, cls="admin-section-title mb-1"),
+                P(meta.role, cls="admin-module-copy text-muted mb-3"),
+                Div(
+                    Span(Icon("geo-alt", cls="me-1"), meta.location, cls="cv-contact-chip"),
+                    Span(Icon("telephone", cls="me-1"), meta.phone, cls="cv-contact-chip"),
+                    Span(Icon("envelope", cls="me-1"), meta.email, cls="cv-contact-chip"),
+                    A(Span(Icon("github", cls="me-1"), "GitHub", cls="cv-contact-chip"),
+                      href=meta.github, target="_blank", cls="cv-contact-link"),
+                    A(Span(Icon("linkedin", cls="me-1"), "LinkedIn", cls="cv-contact-chip"),
+                      href=meta.linkedin, target="_blank", cls="cv-contact-link"),
+                    cls="cv-contact-grid mt-2 mb-0",
+                ),
+                cls="admin-detail-block p-4 mb-4",
+            ),
+            # Body: main column + sidebar
+            Row(
+                # Left — main CV content (lg=8)
+                Col(
+                    # Professional Summary
+                    Div(
+                        H3("Professional Summary", cls="admin-subsection-title mb-2"),
+                        P(meta.summary, cls="admin-module-copy"),
+                        cls="admin-detail-block p-3 mb-4",
+                    ),
+                    # Work History
+                    Div(
+                        H3("Experience", cls="admin-subsection-title mb-3"),
+                        Div(
+                            *[_work_item_preview(item) for item in work_history],
+                            cls="cv-timeline",
+                        ),
+                        cls="mb-4",
+                    ),
+                    # Education + Certs row
+                    Row(
+                        Col(
+                            Div(
+                                H3("Education", cls="admin-subsection-title mb-3"),
+                                Div(
+                                    *[
+                                        Div(
+                                            Div(cls="cv-timeline-dot cv-timeline-dot-edu"),
+                                            Div(
+                                                H4(edu.degree, cls="cv-role-title"),
+                                                P(edu.institution, cls="cv-org-line"),
+                                                Span(edu.period, cls="cv-period-pill"),
+                                                P(edu.note, cls="cv-edu-note mt-2") if edu.note else "",
+                                                cls="cv-work-body",
+                                            ),
+                                            cls="cv-timeline-entry",
+                                        )
+                                        for edu in education
+                                    ],
+                                    cls="cv-timeline",
+                                ),
+                                cls="mb-4",
+                            ),
+                            Div(
+                                H3("Certifications", cls="admin-subsection-title mb-3"),
+                                Div(
+                                    *[
+                                        Div(
+                                            Div(Icon("award", cls="cv-cert-icon"), cls="cv-cert-icon-box"),
+                                            Div(
+                                                Strong(cert.name),
+                                                P(f"{cert.issuer} | {cert.year}", cls="small text-muted mb-0"),
+                                            ),
+                                            cls="cv-cert-row",
+                                        )
+                                        for cert in certifications
+                                    ],
+                                    cls="cv-cert-list",
+                                ),
+                            ),
+                            span=12, lg=7,
+                        ),
+                        Col(
+                            Div(
+                                H3("Tools & Technologies", cls="admin-subsection-title mb-3"),
+                                Div(
+                                    *[_tool_category_preview(cat) for cat in tool_categories],
+                                    cls="cv-tools-grid",
+                                ),
+                            ),
+                            span=12, lg=5, cls="mt-4 mt-lg-0",
+                        ),
+                        cls="g-4",
+                    ),
+                    span=12, lg=8,
+                ),
+                # Right sidebar (lg=4)
+                Col(
+                    Div(
+                        # Core Skills
+                        Card(
+                            H3("Core Skills", cls="cv-sidebar-title"),
+                            Ul(
+                                *[Li(skill, cls="cv-skill-item") for skill in core_skills],
+                                cls="cv-skill-list",
+                            ),
+                            cls="cv-sidebar-card mb-4",
+                        ),
+                        # Competencies
+                        Card(
+                            H3("Competencies", cls="cv-sidebar-title"),
+                            Div(
+                                *[Badge(c, variant="secondary", cls="me-1 mb-1") for c in competencies],
+                                cls="d-flex flex-wrap gap-1",
+                            ),
+                            cls="cv-sidebar-card mb-4",
+                        ),
+                        # Languages with Progress bars
+                        Card(
+                            H3("Languages", cls="cv-sidebar-title"),
+                            *[
+                                Div(
+                                    Div(
+                                        Span(lang, cls="fw-semibold small"),
+                                        Span(level, cls="small text-muted"),
+                                        cls="d-flex justify-content-between mb-1",
+                                    ),
+                                    Progress(value=pct, variant="info", height="8px"),
+                                    cls="mb-3",
+                                )
+                                for lang, level, pct in languages
+                            ],
+                            cls="cv-sidebar-card",
+                        ),
+                        cls="cv-sidebar",
+                    ),
+                    span=12, lg=4, cls="mt-4 mt-lg-0",
+                ),
+                cls="g-4",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
+    )
+
+    return (
+        *SEO(
+            title=f"{settings.app_name} | CV Preview",
+            description="Interactive CV preview — live admin view of the structured resume profile.",
+            url=f"{settings.base_url}/cv",
+        ),
+        *page_frame(
+            Row(
+                summary_card("Work Items", str(summary.work_items), "Current experience entries in the structured CV timeline."),
+                summary_card("Certifications", str(summary.certifications), "Current credential entries in the structured CV data."),
+                summary_card("Tool Groups", str(summary.tool_groups), f"Live source: {summary.source}."),
+                cls="g-4",
+            ),
+            SectionWrap(
+                "CV Preview",
+                Div(action_bar, preview_card),
+            ),
+            current="/cv",
+            title="CV Preview",
+        ),
+    )
+
+
+def cv_edit_page() -> tuple:
+    """Dedicated CV editor page \u2014 two-column layout: snapshot card (lg=5) + editor form (lg=7).
+    All 7 section modals are rendered at page_frame() root to avoid z-index stacking context issues.
+    """
+    meta = get_cv_meta()
+    summary = get_cv_workspace_summary()
+    work_history = list_work_history()
+    education = list_education()
+    certifications = list_certifications()
+    tool_categories = list_tool_categories()
+    languages = list_languages()
+    core_skills = list_core_skills()
+    competencies = list_competencies()
+
+    # ── HTMX back-link with Faststrap Spinner (Pattern 2) ──
+    back_link = A(
+        Icon("arrow-left", cls="me-2"),
+        "Back to CV Preview",
+        Spinner(size="sm", cls="admin-back-spinner ms-2"),
+        href="/cv",
+        hx_get="/cv",
+        hx_target="body",
+        hx_swap="innerHTML",
+        hx_push_url="true",
+        hx_indicator="#cv-back-link",
+        id="cv-back-link",
+        cls="admin-back-link mb-3",
+    )
+
+    # ── CV Snapshot Hero Card (Left Column lg=5 — Pattern 7) ──
+    snapshot_card = Card(
+        Div(
+            H3(meta.name, cls="admin-section-title mb-1"),
+            P(meta.role, cls="admin-module-copy text-muted mb-4"),
+            # Contact block
+            Div(
+                H3("Contact", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(Span("Email", cls="admin-field-label"), Strong(meta.email)),
+                    Div(Span("Phone", cls="admin-field-label"), Strong(meta.phone)),
+                    Div(Span("Location", cls="admin-field-label"), Strong(meta.location)),
+                    Div(Span("WhatsApp", cls="admin-field-label"), Strong(meta.whatsapp)),
+                    cls="admin-field-grid admin-detail-block p-3",
+                ),
+                cls="mb-4",
+            ),
+            # Links block
+            Div(
+                H3("Links", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(Span("GitHub", cls="admin-field-label"), Strong(meta.github, cls="text-break")),
+                    Div(Span("LinkedIn", cls="admin-field-label"), Strong(meta.linkedin, cls="text-break")),
+                    cls="admin-field-grid admin-detail-block p-3",
+                ),
+                cls="mb-4",
+            ),
+            # Data snapshot block
+            Div(
+                H3("Data Snapshot", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(Span("Experience Roles", cls="admin-field-label"), Strong(str(summary.work_items))),
+                    Div(Span("Certifications", cls="admin-field-label"), Strong(str(summary.certifications))),
+                    Div(Span("Tool Groups", cls="admin-field-label"), Strong(str(summary.tool_groups))),
+                    Div(
+                        Span("Sync Status", cls="admin-field-label"),
+                        StatusBadge(
+                            "Live sync on" if service_role_is_configured() else "Setup needed",
+                            status="success" if service_role_is_configured() else "warning",
+                            show_dot=True,
+                            pill=True,
+                            cls="admin-badge-sm ms-2",
+                        ),
+                    ),
+                    cls="admin-field-grid admin-detail-block p-3",
+                ),
+            ),
+        ),
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
+    )
+
+    # ── Editor Form (preserved exactly, modals removed from here) ──
     editor_form = Form(
         Row(
             Col(floating_field("Full Name", "name", meta.name, placeholder="Olorundare Micheal Babawale", required=True), span=12, md=6),
@@ -437,8 +760,7 @@ def cv_workspace_page() -> tuple:
             cls="g-3 mt-1",
         ),
         Div(textarea_field("Professional Summary", "summary", meta.summary, rows=7, required=True, placeholder="CV summary"), cls="mt-3"),
-
-        # Section management cards (replace structured textareas)
+        # Section management cards
         _manage_card("Core Skills", len(core_skills), "skill", "core-skills-modal"),
         _manage_card("Competencies", len(competencies), "item", "competencies-modal"),
         _manage_card("Experience", len(work_history), "role", "work-history-modal"),
@@ -446,7 +768,6 @@ def cv_workspace_page() -> tuple:
         _manage_card("Certifications", len(certifications), "certification", "certifications-modal"),
         _manage_card("Tools & Technologies", len(tool_categories), "group", "tools-modal"),
         _manage_card("Languages", len(languages), "language", "languages-modal"),
-
         Div(
             loading_action_button("Save CV Profile", endpoint="/cv/save", target="#cv-save-result"),
             Span(
@@ -464,149 +785,52 @@ def cv_workspace_page() -> tuple:
         cls="admin-cv-form",
     )
 
-    insight_panel = Card(
+    # ── Editor Form Panel (Right Column lg=7) ──
+    form_panel = Card(
         Div(
-            Div(
-                Span("Current profile", cls="admin-kicker"),
-                H2(meta.name, cls="admin-section-title mb-2"),
-                P(meta.summary, cls="admin-module-copy mb-0"),
-                cls="admin-detail-copy",
+            H3("CV Editor", cls="admin-subsection-title"),
+            P(
+                "Update the profile, skills, experience, education, certifications, tools, and languages "
+                "that power both the interactive CV and the branded download.",
+                cls="admin-module-copy mb-4",
             ),
-            Div(
-                Badge(summary.source, cls="text-bg-secondary admin-metric-delta"),
-                Badge("Live sync on" if service_role_is_configured() else "Setup needed", cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta"),
-                cls="d-flex flex-wrap gap-2 mt-3",
-            ),
-            Div(
-                Row(
-                    Col(
-                        Div(
-                            H3("Profile Snapshot", cls="admin-subsection-title"),
-                            Div(
-                                Div(Span("Role", cls="admin-field-label"), Strong(meta.role)),
-                                Div(Span("Email", cls="admin-field-label"), Strong(meta.email)),
-                                Div(Span("Phone", cls="admin-field-label"), Strong(meta.phone)),
-                                Div(Span("Location", cls="admin-field-label"), Strong(meta.location)),
-                                cls="admin-field-grid",
-                            ),
-                            cls="admin-detail-block",
-                        ),
-                        span=12,
-                        md=6,
-                    ),
-                    Col(
-                        Div(
-                            H3("Profile Links", cls="admin-subsection-title"),
-                            Div(
-                                Div(Span("GitHub", cls="admin-field-label"), Strong(meta.github)),
-                                Div(Span("LinkedIn", cls="admin-field-label"), Strong(meta.linkedin, cls="text-wrap-wrap")),
-                                Div(Span("WhatsApp", cls="admin-field-label"), Strong(meta.whatsapp)),
-                                cls="admin-field-grid",
-                            ),
-                            cls="admin-detail-block",
-                        ),
-                        span=12,
-                        md=6,
-                        cls="mt-4 mt-md-0",
-                    ),
-                    cls="g-4 mt-1",
-                ),
-                cls="mt-4",
-            ),
-            Div(
-                H3("CV Editor", cls="admin-subsection-title"),
-                P("Update the profile, skills, experience, education, certifications, tools, and languages that power both the interactive CV and the branded download.", cls="admin-module-copy"),
-                editor_form,
-                # Section management modals (render after editor_form so they work with Bootstrap JS)
-                _simple_item_modal("core-skills-modal", "Core Skills", core_skills,
-                    "/cv/section/core_skills/save", "Skill",
-                    "Manage core skills. Add, edit, or remove individual skills.", "cs-template", _TEMPLATES["cs"]),
-                _simple_item_modal("competencies-modal", "Competencies", competencies,
-                    "/cv/section/competencies/save", "Competency",
-                    "Manage competencies. Add, edit, or remove individual competencies.", "cp-template", _TEMPLATES["cp"]),
-                _work_history_modal(work_history),
-                _education_modal(education),
-                _certifications_modal(certifications),
-                _tools_modal(tool_categories),
-                _languages_modal(languages),
-                _TEMPLATE_BLOCK,
-                cls="admin-detail-block mt-4",
-            ),
+            editor_form,
             cls="admin-panel-stack",
         ),
-        cls="admin-surface-card h-100",
-    )
-
-    reference_panels = Row(
-        Col(
-            _stack_panel(
-                "Experience",
-                [f"{item.title} | {item.organisation} | {item.period}" for item in work_history],
-            ),
-            span=12,
-            lg=6,
-            cls="d-none d-lg-block",
-        ),
-        Col(
-            _stack_panel(
-                "Education & Certifications",
-                [f"{item.degree} | {item.institution}" for item in education] + [f"{item.name} | {item.issuer}" for item in certifications],
-            ),
-            span=12,
-            lg=6,
-            cls="mt-4 mt-lg-0 d-lg-block",
-        ),
-        cls="g-4",
-    )
-    reference_panels_two = Row(
-        Col(
-            _stack_panel(
-                "Tools & Technologies",
-                [f"{item.label}: {', '.join(item.tools[:4])}" for item in tool_categories],
-            ),
-            span=12,
-            lg=6,
-            cls="d-lg-block",
-        ),
-        Col(
-            _stack_panel(
-                "Languages",
-                [f"{label} | {level} | {score}%" for label, level, score in languages],
-            ),
-            span=12,
-            lg=6,
-            cls="mt-4 mt-lg-0 d-lg-block",
-        ),
-        cls="g-4 mt-1",
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
     )
 
     return (
         *SEO(
-            title=f"{settings.app_name} | CV Content",
-            description="CV content workspace for managing the structured resume profile and brand-facing details.",
-            url=f"{settings.base_url}/cv",
+            title=f"{settings.app_name} | Edit CV",
+            description="CV editor — update profile, skills, experience, education, certifications, tools, and languages.",
+            url=f"{settings.base_url}/cv/edit",
         ),
         *page_frame(
+            back_link,
             Row(
-                summary_card("Work Items", str(summary.work_items), "Current experience entries in the structured CV timeline."),
-                summary_card("Certifications", str(summary.certifications), "Current credential entries in the structured CV data."),
-                summary_card("Tool Groups", str(summary.tool_groups), f"Live source: {summary.source}."),
+                Col(snapshot_card, span=12, lg=5),
+                Col(form_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
                 cls="g-4",
             ),
-            SectionWrap(
-                "CV Workspace",
-                Row(
-                    Col(insight_panel, span=12, lg=7),
-                    Col(
-                        Div(reference_panels, reference_panels_two, cls="admin-cv-side-stack"),
-                        span=12,
-                        lg=5,
-                        cls="mt-4 mt-lg-0",
-                    ),
-                    cls="g-4",
-                ),
-            ),
+            # ── All 7 section modals at ROOT level ──
+            # Rendered here (not inside any Fx card) to escape CSS transform stacking context.
+            _simple_item_modal("core-skills-modal", "Core Skills", core_skills,
+                "/cv/section/core_skills/save", "Skill",
+                "Manage core skills. Add, edit, or remove individual skills.", "cs-template", _TEMPLATES["cs"]),
+            _simple_item_modal("competencies-modal", "Competencies", competencies,
+                "/cv/section/competencies/save", "Competency",
+                "Manage competencies. Add, edit, or remove individual competencies.", "cp-template", _TEMPLATES["cp"]),
+            _work_history_modal(work_history),
+            _education_modal(education),
+            _certifications_modal(certifications),
+            _tools_modal(tool_categories),
+            _languages_modal(languages),
+            _TEMPLATE_BLOCK,
             current="/cv",
-            title="CV Content",
+            title="Edit CV",
         ),
     )
+
+
+

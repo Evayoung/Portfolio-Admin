@@ -58,10 +58,10 @@ a {
 }
 
 .admin-page-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  margin: 0.5rem 0 0.75rem;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--admin-space-block);
 }
 
 .admin-section-title {

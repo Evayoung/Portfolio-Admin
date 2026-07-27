@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, H2, H3, P, Span, Strong
-from faststrap import Card, Col, Icon, MetricCard, Row, SEO
+from faststrap import Card, Col, Fx, Icon, MetricCard, Row, SEO
 from faststrap.presets import AutoRefresh, LazyLoad
 
 from app.config import settings
@@ -18,6 +18,29 @@ from app.infrastructure.submission_repository import get_submission_workspace_su
 from app.presentation.page_helpers import overview_metric_card, SectionWrap
 from app.presentation.shell import page_frame
 
+"""
+def _module_card(item) -> Col:
+    return Col(
+        Card(
+            Div(
+                Div(
+                    Div(
+                        Div(Icon(item.icon, cls="admin-module-icon"), cls="admin-module-icon-box"),
+                        Span(item.count, cls="admin-module-count"),
+                    ),
+                    Div(H3(item.title, cls="admin-module-title"), P(item.description, cls="admin-module-copy")),
+                    cls="d-flex flex-row  justify-content-between",
+                ),
+                A("Open Workspace", href=item.href, cls="btn admin-module-btn mt-3"),
+                cls="admin-module-card-body",
+            ),
+            cls="admin-surface-card h-100",
+        ),
+        span=12,
+        md=6,
+        xl=4,
+    )
+"""
 
 def _module_card(item) -> Col:
     return Col(
@@ -30,7 +53,7 @@ def _module_card(item) -> Col:
                 A("Open Workspace", href=item.href, cls="btn admin-module-btn mt-3"),
                 cls="admin-module-card-body",
             ),
-            cls="admin-surface-card h-100",
+            cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card h-100"],
         ),
         span=12,
         md=6,
@@ -126,7 +149,9 @@ def overview_page() -> tuple:
         hx_swap="outerHTML",
     )
 
-    # Pipeline revenue strip — MetricCard row from live deal data
+    # Pipeline revenue strip — MetricCard row from live deal data.
+    # Lives below the workspace-status card so the page opens with one
+    # metric crown (the live AutoRefresh ring), not two competing rows.
     revenue_strip = Row(
         Col(MetricCard("Active Deals", str(deal_summary.total), cls="admin-surface-card h-100"), span=6, md=3),
         Col(MetricCard("Documents Issued", str(deal_summary.proposals + deal_summary.quotes + deal_summary.invoices), cls="admin-surface-card h-100"), span=6, md=3),
@@ -145,16 +170,15 @@ def overview_page() -> tuple:
         ),
         *page_frame(
             metrics,
-            revenue_strip,
             SectionWrap("Content Modules", modules),
             LazyLoad(
                 endpoint="/dashboard/workspace-status",
                 placeholder=Div(
                     Div(cls="placeholder-glow"),
-                    cls="admin-surface-card",
-                    style="height:12rem;",
+                    cls="admin-surface-card placeholder-height-sm",
                 ),
             ),
+            SectionWrap("Deal Revenue", revenue_strip),
             current="/",
             title="Overview",
         ),

@@ -34,7 +34,7 @@ class Settings:
     github_access_token: str = os.getenv("GITHUB_ACCESS_TOKEN", "")
     supabase_schema_path: str = "app/infrastructure/sql/001_initial_schema.sql"
     use_cdn: bool = bool(os.getenv("VERCEL"))
-    port: int = int(os.getenv("PORT", "5063"))
+    port: int = int(os.getenv("PORT", "5064"))
     # Email notifications (Resend API — optional)
     resend_api_key: str = os.getenv("RESEND_API_KEY", "")
     admin_notify_email: str = os.getenv("ADMIN_NOTIFY_EMAIL", "") or os.getenv("NEO_ADMIN_LOGIN_EMAIL", "")

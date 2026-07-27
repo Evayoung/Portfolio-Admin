@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 
 from fasthtml.common import A, Div, H2, H3, Input, P, Span, Textarea
-from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, MetricCard, ToggleGroup
+from faststrap import Alert, Button, Card, Col, FilterBar, FloatingLabel, FormGroup, Fx, MetricCard, ToggleGroup
 
 from faststrap.components.feedback.modern_toast import ModernToast
 from faststrap.presets import LoadingButton
@@ -54,6 +54,31 @@ def action_link(label: str, href: str, *, variant: str = "primary", target: str 
         **external_kwargs,
     )
 
+def icon_action_button(label: str, *, icon: str = "", variant: str = "primary", cls: str = "", **kwargs) -> Button:
+    """Render a compact icon + label button using .admin-icon-btn.
+
+    Args:
+        label: Visible text (or aria-label when icon-only).
+        icon: Bootstrap Icon class string, e.g. "bi bi-plus-circle".
+        variant: "primary" | "secondary" | "success" | "warning" | "danger".
+        cls: Extra CSS classes to append.
+        **kwargs: Forwarded to Button() (type, hx_*, etc.).
+    """
+    variant_cls = {
+        "primary": "admin-module-btn",
+        "secondary": "admin-install-btn",
+        "danger": "admin-danger-btn",
+        "success": "btn-outline-success",
+        "warning": "btn-outline-warning",
+    }.get(variant, "admin-module-btn")
+
+    icon_html = f'<i class="{icon}"></i> ' if icon else ""
+    return Button(
+        f"{icon_html}{label}",
+        cls=f"btn admin-icon-btn {variant_cls} {cls}".strip(),
+        **kwargs,
+    )
+
 
 def summary_card(
     label: str,
@@ -83,7 +108,7 @@ def summary_card(
                 P(note, cls="admin-module-copy mb-0"),
                 cls="admin-metric-card-body",
             ),
-            cls="admin-surface-card h-100",
+            cls=[Fx.base, Fx.slide_up, "admin-surface-card h-100"],
         ),
         **col_kwargs,
     )
@@ -98,7 +123,7 @@ def overview_metric_card(item) -> Col:
             item.value,
             delta=item.delta,
             delta_type=_TONE_TO_TREND.get(item.tone, "neutral"),
-            cls="admin-surface-card h-100 admin-overview-metric",
+            cls=[Fx.base, Fx.slide_up, "admin-surface-card h-100 admin-overview-metric"],
         ),
         span=12,
         md=6,

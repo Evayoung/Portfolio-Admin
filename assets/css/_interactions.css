@@ -1,757 +1,444 @@
-/* ============================================================
-   _interactions.css — Buttons, Nav Links, Form Controls
-   ============================================================ */
+/* ── Icon buttons ────────────────────────────────────────
+   Compact action buttons used across admin action rows.
+   Pairs with .admin-module-btn / .admin-install-btn / btn-outline-* for variants.
+   Icon is optional — when used, render a Bootstrap Icon <i class="bi ..."> first,
+   then the label span. Both are vertically centered via flex + gap.
+*/
 
-/* ── Sidebar navigation links ──────────────────────────── */
-
-.admin-sidebar-nav .nav-link {
-  color: rgba(238, 246, 255, 0.76);
-  border-radius: 6px;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.admin-sidebar-nav .nav-link:hover,
-.admin-sidebar-nav .nav-link:focus-visible,
-.admin-sidebar-nav .nav-link.active {
-  color: #fff;
-  background: rgba(45, 184, 232, 0.12);
-  transform: translateX(0.1rem);
-}
-
-.admin-sidebar-nav .nav-link i {
-  font-size: 1rem;
-}
-
-.admin-sidebar-nav .nav-link .admin-nav-label {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-/* ── Nav link (both sidebar and drawer) ────────────────── */
-
-.admin-nav-link {
-  display: flex;
+.admin-icon-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 0.8rem;
-  color: rgba(238, 246, 255, 0.76);
-  padding: 0.85rem 0.95rem;
-  border-radius: 6px;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.admin-nav-link:hover,
-.admin-nav-link.active {
-  color: #fff;
-  background: rgba(45, 184, 232, 0.12);
-  transform: translateX(0.1rem);
-}
-
-.admin-nav-icon {
-  font-size: 1rem;
-}
-
-.admin-nav-label {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-/* ── Nav/action buttons ────────────────────────────────── */
-
-.admin-nav-btn,
-.admin-install-btn,
-.admin-module-btn {
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
   border-radius: 8px;
-  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  text-align: center;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
-.admin-nav-btn,
-.admin-module-btn {
+.admin-icon-btn .bi {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Variant composition — keep the existing button look but tighten it */
+.admin-icon-btn.admin-module-btn,
+.admin-icon-btn.admin-install-btn {
   background: rgba(45, 184, 232, 0.16);
   border: 1px solid rgba(45, 184, 232, 0.24);
   color: #fff;
 }
 
-.admin-nav-btn:hover,
-.admin-install-btn:hover,
-.admin-module-btn:hover {
+.admin-icon-btn.btn-outline-success,
+.admin-icon-btn.btn-outline-warning,
+.admin-icon-btn.btn-outline-danger {
+  background: transparent;
+}
+
+.admin-icon-btn:hover,
+.admin-icon-btn:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
-}
-
-.admin-install-btn {
-  background: rgba(243, 165, 61, 0.12);
-  border: 1px solid rgba(243, 165, 61, 0.26);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  background: rgba(45, 184, 232, 0.22);
+  border-color: rgba(45, 184, 232, 0.32);
   color: #fff;
-}
-
-/* ── Filter chips ──────────────────────────────────────── */
-
-.admin-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.5rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: 8px;
-  border: 1px solid rgba(130, 183, 214, 0.16);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(238, 246, 255, 0.82);
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-.admin-filter-chip.active {
-  background: rgba(45, 184, 232, 0.14);
-  border-color: rgba(45, 184, 232, 0.26);
-  color: #fff;
-}
-
-/* ── Radio pills ───────────────────────────────────────── */
-
-.admin-radio-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.6rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid rgba(130, 183, 214, 0.16);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(238, 246, 255, 0.84);
-  cursor: pointer;
   text-decoration: none;
-  box-shadow: none !important;
 }
 
-.admin-radio-pill.active,
-.admin-radio-pill[aria-pressed="true"] {
-  background: rgba(45, 184, 232, 0.14);
-  border-color: rgba(45, 184, 232, 0.28);
-  color: #fff;
+.admin-icon-btn:focus-visible {
+  outline: 2px solid var(--admin-primary, #2db8e8);
+  outline-offset: 2px;
 }
 
-.admin-radio-pill:hover,
-.admin-radio-pill:focus-visible {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(130, 183, 214, 0.22);
-}
-
-/* ── Form controls ─────────────────────────────────────── */
-
-.admin-form-control {
-  min-height: 3rem;
-  border-radius: 6px;
-  border: 1px solid rgba(130, 183, 214, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  box-shadow: none !important;
-}
-
-.admin-form-control::placeholder {
-  color: rgba(151, 171, 192, 0.72);
-}
-
-.admin-form-control:focus {
-  border-color: rgba(45, 184, 232, 0.42);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-.admin-form-textarea {
-  min-height: 7.5rem;
-  resize: vertical;
-}
-
-/* ── Filter actions ────────────────────────────────────── */
-
-.admin-filter-actions .btn {
-  min-width: 5.25rem;
-  border-radius: 8px;
-}
-
-/* ── Save alert ────────────────────────────────────────── */
-
-.admin-save-alert {
-  border-radius: 8px;
-  border-width: 1px;
-}
-
-/* ── Bottom nav active state ───────────────────────────── */
-
-.admin-bottom-link.active,
-.admin-bottom-nav .nav-link.active {
-  background: rgba(45, 184, 232, 0.14);
-  color: #fff;
-}
-
-/* ── Project card link ─────────────────────────────────── */
-
-.admin-project-card-link {
-  display: block;
-  color: inherit;
-  transition: transform 0.2s ease;
-}
-
-.admin-project-card-link:hover {
-  transform: translateY(-0.12rem);
-}
-
-.admin-project-card-link.admin-is-selected {
-  position: relative;
-}
-
-/* ── Mobile action ─────────────────────────────────────── */
-
-.admin-mobile-action {
-  width: 2.5rem;
-  height: 2.5rem;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  border: 1px solid rgba(45, 184, 232, 0.18);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--admin-text);
-}
-
-/* ── Project flag (Featured/Draft badge) ───────────────── */
-
-.admin-project-flag {
-  border-radius: 999px;
-}
-
-
-/* ── HTMX loading indicator ────────────────────────────── */
-
-button.htmx-request {
+.admin-icon-btn[disabled],
+.admin-icon-btn.is-disabled {
+  opacity: 0.55;
   pointer-events: none;
-  opacity: 0.7;
-  position: relative;
 }
 
-button.htmx-request::after {
-  content: "";
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  margin-left: 0.5rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+/* Icon-only variant — square, label available via aria-label */
+.admin-icon-btn.admin-icon-btn-only {
+  padding: 0.45rem 0.55rem;
+}
+
+.admin-icon-btn.admin-icon-btn-only .bi {
+  font-size: 1.05rem;
+}
+
+/* Compact action row — used for document card action strips */
+.admin-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--admin-space-control, 0.5rem);
+  align-items: center;
+}
+
+/* Danger / destructive action button */
+.admin-danger-btn {
+  background: rgba(255, 114, 126, 0.12);
+  border: 1px solid rgba(255, 114, 126, 0.28);
+  color: #ff727e;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+.admin-danger-btn:hover,
+.admin-danger-btn:focus-visible {
+  background: rgba(255, 114, 126, 0.20);
+  border-color: rgba(255, 114, 126, 0.42);
+  color: #ff8e97;
+  text-decoration: none;
+}
+
+/* Muted action button (Sign Out, secondary-destructive) */
+.admin-muted-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(130, 183, 214, 0.18);
+  color: rgba(238, 246, 255, 0.6);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+.admin-muted-btn:hover {
+  color: rgba(238, 246, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+[data-bs-theme="light"] .admin-danger-btn {
+  background: rgba(220, 38, 38, 0.06);
+  border-color: rgba(220, 38, 38, 0.22);
+  color: #dc2626;
+}
+[data-bs-theme="light"] .admin-muted-btn {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.12);
+  color: #64748b;
+}
+
+/* Filter chip & Navigation loading spinner (inside hx-get links) */
+.admin-filter-loading-spinner,
+.admin-card-loading-spinner,
+.admin-nav-spinner {
+  display: none;
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid rgba(45,184,232,0.3);
+  border-top-color: var(--admin-primary);
   border-radius: 50%;
   animation: admin-spin 0.6s linear infinite;
   vertical-align: middle;
+  margin-left: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* Show spinner when the link is the htmx indicator */
+.htmx-request .admin-filter-loading-spinner,
+.htmx-request .admin-card-loading-spinner,
+.htmx-request .admin-nav-spinner,
+.htmx-request.admin-filter-loading-spinner,
+.htmx-request.admin-card-loading-spinner,
+.htmx-request.admin-nav-spinner {
+  display: inline-block !important;
+}
+
+
+/* Dim the chip while loading */
+.admin-filter-chip.htmx-request,
+.admin-pipeline-stage.htmx-request {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 @keyframes admin-spin {
   to { transform: rotate(360deg); }
 }
 
-/* ── Global loading bar (top of page) ──────────────────── */
+/* Panel loading state — editor panel dims while htmx is in flight */
+.admin-editor-panel.htmx-request,
+.admin-editor-panel .htmx-indicator {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
 
+/* Global loading bar at top of page */
 .admin-loading-bar {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
   height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--admin-primary), var(--admin-secondary));
   z-index: 9999;
-  pointer-events: none;
+  transition: width 0.3s ease, opacity 0.3s ease;
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-.htmx-request > .admin-loading-bar,
-.htmx-request.admin-loading-bar {
+.admin-loading-bar.htmx-request {
+  width: 70%;
   opacity: 1;
 }
 
-.admin-loading-bar::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, var(--bs-info, #0dcaf0), var(--bs-primary, #0d6efd), transparent);
-  border-radius: 0 2px 2px 0;
-  animation: admin-loading-bar-slide 1.2s ease-in-out infinite;
+.admin-loading-bar.htmx-settling {
+  width: 100%;
+  opacity: 0;
+  transition: width 0.2s ease, opacity 0.4s ease 0.1s;
 }
 
-@keyframes admin-loading-bar-slide {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(350%); }
-}
-
-/* ── Button loading state (port from datascience_admin) ── */
-
-.btn.is-loading {
+/* Self-indicating button — shows spinner on itself when in htmx request */
+.htmx-request.htmx-indicator-self {
+  opacity: 0.55;
+  pointer-events: none;
   position: relative;
-  pointer-events: none;
-  opacity: 0.75;
 }
 
-.btn.is-loading::after {
-  content: "";
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: admin-btn-spin 0.6s linear infinite;
-}
-
-@keyframes admin-btn-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Deal card loading state ───────────────────────────── */
-
-.deal-card .deal-card-link {
-  position: relative;
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  transition: opacity 0.2s ease;
-}
-
-.admin-card-loading-spinner {
-  display: none;
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: inherit;
-  z-index: 2;
-  align-items: center;
-  justify-content: center;
-}
-
-.admin-card-loading-spinner::after {
-  content: "";
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2.5px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--bs-info, #0dcaf0);
-  border-radius: 50%;
-  animation: admin-spin 0.6s linear infinite;
-}
-
-.deal-card.htmx-request .admin-card-loading-spinner {
-  display: flex;
-}
-
-.deal-card.htmx-request .deal-card-link {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* ── Filter chip loading state ─────────────────────────── */
-
-.admin-filter-chip {
-  position: relative;
-  transition: opacity 0.15s ease;
-}
-
-.admin-filter-loading-spinner {
-  display: none;
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--bs-info, #0dcaf0);
-  border-radius: 50%;
-  animation: admin-spin 0.6s linear infinite;
-  margin-left: 0.35rem;
-  vertical-align: middle;
-}
-
-.admin-filter-chip.htmx-request .admin-filter-loading-spinner {
-  display: inline-block;
-}
-
-.admin-filter-chip.htmx-request {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* ── Link loading states (Back to Pipeline, etc.) ──────── */
-
-a.htmx-request {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* ── Tech row ──────────────────────────────────────────── */
-
-.admin-tech-row {
+/* Filter Toggle Button Group */
+.admin-filter-toggle-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 0.95rem;
+  gap: 0.35rem;
+  background: rgba(18, 35, 56, 0.4);
+  padding: 0.35rem;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 183, 214, 0.12);
 }
 
-/* ── Light theme overrides ─────────────────────────────── */
-
-[data-bs-theme="light"] .admin-sidebar-nav .nav-link {
-  color: #475569;
+.admin-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 7px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: rgba(238, 246, 255, 0.7);
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-[data-bs-theme="light"] .admin-sidebar-nav .nav-link:hover,
-[data-bs-theme="light"] .admin-sidebar-nav .nav-link:focus-visible,
-[data-bs-theme="light"] .admin-sidebar-nav .nav-link.active {
-  color: #0f172a;
-  background: rgba(2, 132, 199, 0.08);
+.admin-toggle-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+  text-decoration: none;
 }
 
-[data-bs-theme="light"] .admin-nav-link {
-  color: #475569;
-}
-
-[data-bs-theme="light"] .admin-nav-link:hover,
-[data-bs-theme="light"] .admin-nav-link.active {
-  color: #0f172a;
-  background: rgba(2, 132, 199, 0.08);
-}
-
-[data-bs-theme="light"] .admin-nav-btn,
-[data-bs-theme="light"] .admin-module-btn {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-  color: #0369a1;
-}
-
-[data-bs-theme="light"] .admin-nav-btn:hover,
-[data-bs-theme="light"] .admin-install-btn:hover,
-[data-bs-theme="light"] .admin-module-btn:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-[data-bs-theme="light"] .admin-install-btn {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
-}
-
-[data-bs-theme="light"] .admin-filter-chip {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.02);
-  color: #475569;
-}
-
-[data-bs-theme="light"] .admin-filter-chip.active {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-  color: #0369a1;
-}
-
-[data-bs-theme="light"] .admin-radio-pill {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.02);
-  color: #475569;
-}
-
-[data-bs-theme="light"] .admin-radio-pill.active,
-[data-bs-theme="light"] .admin-radio-pill[aria-pressed="true"] {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-  color: #0369a1;
-}
-
-[data-bs-theme="light"] .admin-radio-pill:hover,
-[data-bs-theme="light"] .admin-radio-pill:focus-visible {
-  color: #0f172a;
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.16);
-}
-
-[data-bs-theme="light"] .admin-form-control {
-  border-color: rgba(0, 0, 0, 0.12);
-  background: #ffffff;
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-form-control::placeholder {
-  color: #94a3b8;
-}
-
-[data-bs-theme="light"] .admin-form-control:focus {
-  border-color: #0284c7;
-  background: #ffffff;
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-form-textarea {
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-save-alert {
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-[data-bs-theme="light"] .admin-module-copy {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .admin-project-copy {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .admin-project-meta {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .admin-project-title {
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-section-title {
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-subsection-title {
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-page-title {
-  color: #0f172a;
-}
-
-[data-bs-theme="light"] .admin-save-note {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .admin-mobile-title {
-  color: #1e293b;
-}
-
-[data-bs-theme="light"] .admin-brand-title {
-  color: #0f172a;
-}
-
-[data-bs-theme="light"] .admin-brand-subtitle {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .admin-mobile-action {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-bs-theme="light"] .admin-tech-pill {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.04);
-  color: #475569;
-}
-
-[data-bs-theme="light"] .admin-bottom-link.active,
-[data-bs-theme="light"] .admin-bottom-nav .nav-link.active {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-/* ── Line Items Editor ──────────────────────────────────── */
-
-.line-items-table {
-  margin-bottom: 0;
-}
-
-.line-items-table thead th {
-  border-bottom: 1px solid rgba(130, 183, 214, 0.16);
-  color: rgba(238, 246, 255, 0.72);
-  font-size: 0.82rem;
+.admin-toggle-btn.active {
+  color: #ffffff !important;
+  background: var(--admin-primary, #2db8e8) !important;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 0.5rem 0.4rem;
+  box-shadow: 0 0 14px rgba(45, 184, 232, 0.35);
+  border-color: var(--admin-primary, #2db8e8);
 }
 
-.line-items-table tbody td {
-  padding: 0.25rem 0.2rem;
-  vertical-align: middle;
-  border-bottom: 1px solid rgba(130, 183, 214, 0.08);
+[data-bs-theme="light"] .admin-filter-toggle-group {
+  background: rgba(241, 245, 249, 0.8);
+  border-color: rgba(203, 213, 225, 0.6);
 }
 
-.line-items-table tbody tr:last-child td {
-  border-bottom: none;
+[data-bs-theme="light"] .admin-toggle-btn {
+  color: #475569;
 }
 
-.line-items-table .form-control-sm {
-  min-height: 2.2rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.85rem;
+[data-bs-theme="light"] .admin-toggle-btn.active {
+  color: #ffffff !important;
+  background: #0284c7 !important;
+  border-color: #0284c7;
 }
 
-.line-items-table tfoot td {
-  padding: 0.5rem 0.4rem;
-  border-top: 2px solid rgba(45, 184, 232, 0.2);
-  font-weight: 700;
-  font-size: 0.9rem;
+/* Workflow status selector pills */
+.admin-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 7px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: rgba(238, 246, 255, 0.75);
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.admin-status-pill:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+.admin-status-pill-warning.active {
+  background: rgba(243, 165, 61, 0.2) !important;
+  color: #f3a53d !important;
+  border-color: rgba(243, 165, 61, 0.5) !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(243, 165, 61, 0.3);
+}
+
+.admin-status-pill-info.active {
+  background: rgba(45, 184, 232, 0.2) !important;
+  color: #2db8e8 !important;
+  border-color: rgba(45, 184, 232, 0.5) !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(45, 184, 232, 0.3);
+}
+
+.admin-status-pill-success.active {
+  background: rgba(40, 199, 111, 0.2) !important;
+  color: #28c76f !important;
+  border-color: rgba(40, 199, 111, 0.5) !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(40, 199, 111, 0.3);
+}
+
+.admin-status-pill-danger.active {
+  background: rgba(234, 84, 85, 0.2) !important;
+  color: #ea5455 !important;
+  border-color: rgba(234, 84, 85, 0.5) !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(234, 84, 85, 0.3);
+}
+
+.admin-status-pill-secondary.active {
+  background: rgba(130, 183, 214, 0.2) !important;
+  color: #dceafd !important;
+  border-color: rgba(130, 183, 214, 0.5) !important;
+  font-weight: 600;
+}
+
+
+/* Compact status badges — downscaled from oversized pills */
+.admin-badge-sm {
+  font-size: 0.725rem !important;
+  font-weight: 600 !important;
+  padding: 0.25rem 0.6rem !important;
+  border-radius: 20px !important;
+  letter-spacing: 0.02em;
+}
+
+/* Hero snapshot preview card in editor */
+.admin-hero-preview-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--admin-border, rgba(130, 183, 214, 0.18));
+  background: var(--admin-surface-strong, rgba(18, 35, 56, 0.95));
+}
+
+.admin-hero-preview-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-hero-preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.25rem;
+  background: linear-gradient(0deg, rgba(11, 17, 32, 0.92) 0%, rgba(11, 17, 32, 0.4) 70%, transparent 100%);
   color: #fff;
 }
 
-.line-items-editor .li-add-row {
-  font-size: 0.85rem;
-}
-
-.li-delete {
-  line-height: 1;
-  font-size: 1.1rem;
-  padding: 0.1rem 0.4rem;
-}
-
-.li-total-value {
-  color: var(--admin-accent, #2db8e8);
-}
-
-/* ── Financials preview table styles ─────────────────────── */
-
-.admin-finance-desc {
-  color: var(--admin-muted);
-  font-size: 0.82rem;
-}
-
-.admin-finance-qty {
-  text-align: center;
-}
-
-.admin-finance-amount {
-  text-align: right;
-  font-weight: 600;
-}
-
-.admin-finance-total-row td {
-  text-align: right;
-  font-weight: 700;
-  background: rgba(45, 184, 232, 0.08);
-}
-
-.admin-finance-total-amount {
-  text-align: right;
-  font-weight: 700;
-  color: var(--admin-primary);
-  background: rgba(45, 184, 232, 0.08);
-}
-
-.admin-finance-table {
-  font-size: 0.83rem;
-}
-
-.admin-finance-preview {
-  border-left: 3px solid rgba(45, 184, 232, 0.4);
-  padding-left: 0.75rem;
-}
-
-/* Light theme overrides */
-[data-bs-theme="light"] .line-items-table thead th {
-  color: #64748b;
-}
-
-[data-bs-theme="light"] .line-items-table tfoot td {
-  color: #0f172a;
-  border-top-color: rgba(2, 132, 199, 0.2);
-}
-
-[data-bs-theme="light"] .li-total-value {
-  color: #0284c7;
-}
-
-/* ── CV Section management cards & modal items ──────────── */
-
-.cv-section-card {
-  border: 1px solid rgba(130, 183, 214, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
+/* Back navigation link */
+.admin-back-link {
+  display: inline-flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.cv-section-card-title {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  font-size: 0.95rem;
+  gap: 0.5rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #dceafd;
-  margin: 0;
+  color: var(--admin-primary, #2db8e8);
+  text-decoration: none;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
-.cv-section-card-count {
-  font-size: 0.78rem;
-  color: rgba(151, 171, 192, 0.84);
+.admin-back-link:hover {
+  color: #ffffff;
+  transform: translateX(-2px);
+  text-decoration: none;
 }
 
-.cv-item-row {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(130, 183, 214, 0.08);
-  border-radius: 6px;
-  padding: 0.65rem;
+/* Branded Modal Surface — matches card surface identity & background tone */
+.modal-content {
+  background: var(--admin-surface-card, #122338) !important;
+  border: 1px solid var(--admin-border, rgba(130, 183, 214, 0.18)) !important;
+  color: var(--admin-text, #ffffff) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(16px);
 }
 
-.cv-item-row .form-control,
-.cv-item-row .admin-form-control {
-  font-size: 0.88rem;
+.modal-header,
+.modal-footer {
+  border-color: var(--admin-border, rgba(130, 183, 214, 0.18)) !important;
 }
 
-.cv-items-container {
-  display: grid;
-  gap: 0.55rem;
-  max-height: 50vh;
-  overflow-y: auto;
+.modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-.cv-section-modal-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(130, 183, 214, 0.12);
-  margin-top: 1rem;
+[data-bs-theme="light"] .modal-content {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
-.cv-bullets-field {
-  min-height: 2.4rem;
-  font-size: 0.85rem;
+[data-bs-theme="light"] .modal-header .btn-close {
+  filter: none;
 }
 
-/* Light theme overrides */
-[data-bs-theme="light"] .cv-section-card {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.08);
+/* Back-link loading spinner — hidden by default, visible on HTMX request */
+.admin-back-spinner {
+  display: none;
+  width: 0.85rem;
+  height: 0.85rem;
+  vertical-align: middle;
+  opacity: 0.8;
 }
 
-[data-bs-theme="light"] .cv-section-card-title {
-  color: #1e293b;
+.htmx-request .admin-back-spinner {
+  display: inline-block;
 }
 
-[data-bs-theme="light"] .cv-item-row {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.08);
+/* ── Global Modal Z-Index Fix ─────────────────────────────────────────────
+   Bootstrap modals nested inside Fx.* animation cards (which apply CSS
+   transform/will-change) get trapped in a lower stacking context.
+   These overrides ensure every Bootstrap modal and backdrop always render
+   above ALL page content. !important is required to beat Bootstrap's cascade.
+*/
+.modal {
+  z-index: 1060 !important;
+}
+.modal-backdrop {
+  z-index: 1055 !important;
+}
+.modal-dialog {
+  transform: none !important;
+  position: relative;
 }
 
-/* ── Package group display ──────────────────────────────── */
-
-.admin-pkg-breakdown {
-  margin-top: 0.75rem;
-}
-
-.admin-pkg-group {
-  border: 1px solid rgba(130, 183, 214, 0.12);
-  border-radius: 6px;
-  padding: 0.65rem 0.85rem;
-  margin-bottom: 0.5rem;
-  background: rgba(45, 184, 232, 0.04);
-}
-
-.admin-pkg-group:last-child {
-  margin-bottom: 0;
-}
-
-[data-bs-theme="light"] .admin-pkg-group {
-  background: rgba(2, 132, 199, 0.04);
-  border-color: rgba(0, 0, 0, 0.08);
-}
