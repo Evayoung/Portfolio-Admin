@@ -21,20 +21,6 @@ def deal_save_status_fragment(title: str, message: str, tone: str = "info") -> D
     return status_alert(title, message, tone)
 
 
-def _filter_link(label: str, href: str, *, active: bool) -> A:
-    return A(
-        label,
-        Span(cls="admin-filter-loading-spinner"),
-        href=href,
-        hx_get=href,
-        hx_target="body",
-        hx_swap="innerHTML",
-        hx_push_url="true",
-        aria_label=f"Filter: {label}",
-        cls=f"admin-filter-chip{' active' if active else ''}",
-    )
-
-
 def _money(value: int) -> str:
     return f"\u20a6{value:,.0f}"
 
@@ -70,11 +56,13 @@ def _status_color(status: str) -> str:
 
 
 def _deal_card(item: AdminDeal) -> Card:
-    """Render a deal card for the pipeline list grid with HTMX loading."""
+    """Render a deal card for the pipeline list grid with HTMX loading — matches Blog/Projects pattern."""
     docs = item.documents
-    doc_count = len(docs)
     latest = item.latest_document
     latest_status = latest.status.replace("_", " ").title() if latest else "No docs"
+    card_id = f"deal-card-{item.deal_id}"
+    href = f"/deals/{item.deal_id}"
+    preview_modal_id = f"deal-preview-modal-{item.deal_id}"
 
     # Document kind badges
     doc_badges = []
@@ -90,15 +78,18 @@ def _deal_card(item: AdminDeal) -> Card:
                 )
             )
 
-
-    card_content = Div(
+    card_body = Div(
         Div(
             Span(item.stage.replace("_", " ").title(), cls="admin-project-category"),
             Badge(latest_status, cls=f"bg-{_status_color(latest.status) if latest else 'secondary'} bg-opacity-10 text-{_status_color(latest.status) if latest else 'secondary'}"),
             cls="d-flex align-items-center gap-2 flex-wrap",
         ),
         Span(_money(item.amount_ngn), cls="admin-project-meta"),
-        H3(item.project_title, cls="admin-project-title"),
+        H3(
+            item.project_title,
+            Span(cls="admin-card-loading-spinner"),
+            cls="admin-project-title d-flex justify-content-between align-items-center",
+        ),
         P(item.summary[:120] + ("..." if len(item.summary) > 120 else ""), cls="admin-project-copy"),
         Div(
             Span(item.client_name, cls="admin-project-meta"),
@@ -110,18 +101,121 @@ def _deal_card(item: AdminDeal) -> Card:
 
     return Card(
         A(
-            card_content,
-            Span(cls="admin-card-loading-spinner"),
-            href=f"/deals/{item.deal_id}",
-            hx_get=f"/deals/{item.deal_id}",
+            card_body,
+            href=href,
+            hx_get=href,
             hx_target="body",
             hx_swap="innerHTML",
             hx_push_url="true",
-            hx_indicator=f"#deal-card-{item.deal_id}",
-            cls="deal-card-link",
+            hx_indicator=f"#{card_id}",
+            cls="admin-project-card-link",
         ),
-        id=f"deal-card-{item.deal_id}",
-        cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card admin-project-card deal-card"],
+        # Card quick action bar — mirrors Blog/Projects pattern
+        Div(
+            Button(
+                Icon("eye", cls="me-1"),
+                "Quick Preview",
+                type="button",
+                cls="btn admin-muted-btn btn-sm",
+                data_bs_toggle="modal",
+                data_bs_target=f"#{preview_modal_id}",
+            ),
+            A(
+                Icon("arrow-right", cls="me-1"),
+                "Open Deal",
+                href=href,
+                hx_get=href,
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                hx_indicator=f"#{card_id}",
+                cls="btn admin-icon-btn admin-module-btn btn-sm",
+            ),
+            cls="d-flex justify-content-between align-items-center pt-3 mt-3 border-top border-secondary border-opacity-10",
+        ),
+        id=card_id,
+        cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card admin-project-card h-100"],
+    )
+
+
+def _deal_quick_preview_modal(item: AdminDeal) -> Modal:
+    """Quick Preview modal for a deal — mirrors Blog/Projects root-level preview pattern."""
+    modal_id = f"deal-preview-modal-{item.deal_id}"
+    docs = item.documents
+    latest = item.latest_document
+    doc_counts = {"proposal": 0, "quote": 0, "invoice": 0}
+    for doc in docs:
+        doc_counts[doc.kind] = doc_counts.get(doc.kind, 0) + 1
+
+    stage_color = _status_color(item.stage)
+    latest_color = _status_color(latest.status) if latest else "secondary"
+
+    return Modal(
+        Div(
+            # Stage + Status header strip
+            Div(
+                Badge(item.stage.replace("_", " ").title(), cls=f"bg-{stage_color} bg-opacity-10 text-{stage_color} fs-6 me-2"),
+                Badge(latest.status.replace("_", " ").title() if latest else "No Docs",
+                      cls=f"bg-{latest_color} bg-opacity-10 text-{latest_color} fs-6"),
+                cls="d-flex flex-wrap gap-1 mb-3",
+            ),
+            H2(item.project_title, cls="admin-section-title mb-1 fs-3"),
+            P(item.client_name, cls="admin-project-meta mb-3"),
+            # Key financials block
+            Div(
+                Div(
+                    Div(Span("Amount", cls="admin-field-label fw-bold"), Strong(_money(item.amount_ngn))),
+                    Div(Span("Deposit", cls="admin-field-label fw-bold"), Strong(f"{item.deposit_percent}%")),
+                    Div(Span("Service", cls="admin-field-label fw-bold"), Strong(item.service_type or "Not set")),
+                    Div(Span("Company", cls="admin-field-label fw-bold"), Strong(item.company or "Independent")),
+                    cls="admin-field-grid",
+                ),
+                cls="admin-detail-block p-3 mb-4",
+            ),
+            # Document breakdown
+            Div(
+                Span("Documents", cls="admin-field-label mb-2 d-block fw-bold"),
+                Div(
+                    Div(Span("Proposals", cls="admin-project-meta"), Strong(str(doc_counts["proposal"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Quotes", cls="admin-project-meta"), Strong(str(doc_counts["quote"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Invoices", cls="admin-project-meta"), Strong(str(doc_counts["invoice"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Total", cls="admin-project-meta fw-bold"), Strong(str(len(docs))),
+                        cls="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-10"),
+                    cls="admin-field-grid",
+                ),
+                cls="admin-detail-block p-3 mb-4",
+            ),
+            # Summary excerpt
+            Div(
+                Span("Project Brief", cls="admin-field-label mb-2 d-block fw-bold"),
+                P(item.summary[:400] + ("..." if len(item.summary) > 400 else "") or "No summary provided.",
+                  cls="admin-module-copy text-muted fst-italic mb-0"),
+                cls="admin-detail-block p-3 mb-3",
+            ),
+            # Footer CTAs
+            Div(
+                A(
+                    Icon("arrow-right-circle", cls="me-1"),
+                    "Open Deal →",
+                    href=f"/deals/{item.deal_id}",
+                    hx_get=f"/deals/{item.deal_id}",
+                    hx_target="body",
+                    hx_swap="innerHTML",
+                    hx_push_url="true",
+                    cls="btn admin-module-btn",
+                ),
+                Button("Close Preview", type="button", cls="btn admin-muted-btn", data_bs_dismiss="modal"),
+                cls="d-flex justify-content-between align-items-center mt-4 pt-3 border-top border-secondary border-opacity-10",
+            ),
+        ),
+        modal_id=modal_id,
+        title=f"Deal Preview: {item.project_title}",
+        size="lg",
+        scrollable=True,
+        centered=True,
     )
 
 
@@ -214,14 +308,14 @@ def _quick_document_form() -> Form:
 
 
 def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", search: str = "") -> tuple:
-    """Pipeline list page — clean, minimal, focused on the deal cards."""
+    """Pipeline list page — responsive grid, quick preview modals, unified filter bar."""
     all_items = list_deals()
     items = all_items
     if stage != "all" or document_kind != "all" or search:
         items = list_deals(stage=stage, document_kind=document_kind, search=search)
     summary = get_deal_workspace_summary()
 
-    # Pipeline stage strip with counts — this IS the stage filter.
+    # ── Pipeline stage strip with counts ────────────────────────────────────
     stage_counts = {s: sum(1 for i in all_items if i.stage == s) for s, _ in _stage_options()}
     pipeline_strip = Div(
         *[
@@ -241,45 +335,74 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         cls="admin-pipeline-strip",
     )
 
-    # Refinement: document kind only (stage lives on the pipeline strip above).
-    document_links = Div(
-        _filter_link("All Docs", f"/deals?stage={stage}&document_kind=all&search={search}", active=document_kind == "all"),
-        _filter_link("Proposals", f"/deals?stage={stage}&document_kind=proposal&search={search}", active=document_kind == "proposal"),
-        _filter_link("Quotes", f"/deals?stage={stage}&document_kind=quote&search={search}", active=document_kind == "quote"),
-        _filter_link("Invoices", f"/deals?stage={stage}&document_kind=invoice&search={search}", active=document_kind == "invoice"),
-        cls="admin-filter-row",
+    # ── Document-kind refinement — branded admin-toggle-btn style ───────────
+    doc_kind_options = [
+        ("all", "All Docs"),
+        ("proposal", "Proposals"),
+        ("quote", "Quotes"),
+        ("invoice", "Invoices"),
+    ]
+    document_kind_filter = Div(
+        *[
+            A(
+                label,
+                Span(cls="admin-filter-loading-spinner"),
+                href=f"/deals?stage={stage}&document_kind={dk}&search={search}",
+                hx_get=f"/deals?stage={stage}&document_kind={dk}&search={search}",
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                aria_label=f"Filter by {label}",
+                cls=f"btn admin-toggle-btn{' active' if document_kind == dk else ''}",
+            )
+            for dk, label in doc_kind_options
+        ],
+        cls="admin-filter-toggle-group flex-wrap",
     )
+
+    # ── Search bar ──────────────────────────────────────────────────────────
     search_form = search_filter_bar(
         endpoint="/deals",
         placeholder="Search client, company, project, or summary",
         search_value=search,
         hidden_fields={"stage": stage, "document_kind": document_kind},
-        form_cls="admin-search-form admin-filter-bar",
+        form_cls="admin-search-form admin-filter-bar mb-4",
         hx_target="body",
         hx_swap="innerHTML",
         push_url=True,
     )
 
-    # One control cluster: stage strip (primary) → doc-kind (refine) → search (lookup).
+    # ── Combined filter cluster: stage strip → doc-kind → search ───────────
     deals_controls = Div(
         pipeline_strip,
-        document_links,
+        Div(
+            document_kind_filter,
+            cls="d-flex flex-wrap align-items-center mb-3 mt-3",
+        ),
         search_form,
         cls="admin-deals-controls",
     )
 
-    # Deal cards in responsive grid
-    deal_grid = Div(
-        *[_deal_card(item) for item in items],
-        cls="row g-4 admin-deal-grid",
+    # ── Deal cards in responsive grid (matches Blog/Projects) ───────────────
+    deal_grid = Row(
+        *[Col(_deal_card(item), span=12, md=6, lg=4) for item in items],
+        cls="g-4",
     ) if items else EmptyState(
         icon="briefcase",
         title="No deals match this view",
-        description="Try a different pipeline stage or create a new deal from the editor.",
+        description="Try a different pipeline stage or create a new deal from the Quick Document form.",
+        action=Button(
+            Icon("plus-lg", cls="me-1"),
+            "Quick Document",
+            type="button",
+            cls="btn admin-module-btn mt-3",
+            data_bs_toggle="modal",
+            data_bs_target="#quickDocModal",
+        ),
         cls="py-5",
     )
 
-    # Quick document modal
+    # ── Quick document modal ─────────────────────────────────────────────────
     quick_doc_modal = Modal(
         _quick_document_form(),
         modal_id="quickDocModal",
@@ -288,18 +411,31 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         centered=True,
     )
 
-    # Main content panel
+    # ── Root-level quick preview modals (one per deal card) ─────────────────
+    preview_modals = [_deal_quick_preview_modal(item) for item in items]
+
+    # ── Main content panel ──────────────────────────────────────────────────
     list_panel = Card(
         Div(
             Div(
-                H2("Pipeline Records", cls="admin-section-title"),
-                P("Track every client from lead to payment. Click any deal to view documents, responses, and generate next steps.", cls="admin-module-copy mb-0"),
-                cls="mb-3",
+                Div(
+                    H2("Pipeline Records", cls="admin-section-title"),
+                    P("Track every client from lead to payment. Click any deal to view documents, responses, and generate next steps.", cls="admin-module-copy mb-0"),
+                ),
+                Div(
+                    Button(
+                        Icon("plus-lg", cls="me-1"),
+                        Span("Quick Document"),
+                        type="button",
+                        cls="btn admin-module-btn",
+                        data_bs_toggle="modal",
+                        data_bs_target="#quickDocModal",
+                    ),
+                    cls="d-flex flex-wrap gap-2 mt-3 mt-md-0",
+                ),
+                cls="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4",
             ),
             deals_controls,
-            Div(
-                cls="d-flex justify-content-between align-items-center mt-4 mb-3",
-            ),
             deal_grid,
             cls="admin-panel-stack",
         ),
@@ -322,22 +458,10 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
             ),
             SectionWrap(
                 "Deals Pipeline",
-                Div(
-                    list_panel,
-                    Div(
-                        Button(
-                            "Quick Document",
-                            type="button",
-                            cls="btn admin-install-btn",
-                            data_bs_toggle="modal",
-                            data_bs_target="#quickDocModal",
-                        ),
-                            cls="mt-3 text-end",
-                        ),
-                    cls="",
-                ),
+                list_panel,
             ),
             quick_doc_modal,
+            *preview_modals,
             current="/deals",
             title="Deals",
         ),

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, H4, Input, Label, Option, P, Script, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
-from faststrap import Badge, Card, Col, EmptyState, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner, StatusBadge
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -905,6 +905,83 @@ def _edit_tab(selected: AdminDeal) -> Div:
     )
 
 
+def _deal_snapshot_card(selected: AdminDeal) -> Card:
+    """Persistent deal snapshot panel — shown alongside all three tab views, mirrors Blog/Projects snapshot card."""
+    docs = selected.documents
+    doc_counts = {"proposal": 0, "quote": 0, "invoice": 0}
+    for doc in docs:
+        doc_counts[doc.kind] = doc_counts.get(doc.kind, 0) + 1
+
+    stage_color = _status_color(selected.stage)
+    latest = selected.latest_document
+    latest_color = _status_color(latest.status) if latest else "secondary"
+
+    return Card(
+        Div(
+            # Stage & Latest Doc Status
+            Div(
+                Badge(selected.stage.replace("_", " ").title(),
+                      cls=f"bg-{stage_color} bg-opacity-10 text-{stage_color} me-2"),
+                Badge(latest.status.replace("_", " ").title() if latest else "No Docs",
+                      cls=f"bg-{latest_color} bg-opacity-10 text-{latest_color}"),
+                cls="d-flex flex-wrap gap-1 mb-3",
+            ),
+            H2(selected.project_title, cls="admin-section-title mb-1 fs-5"),
+            P(selected.client_name, cls="admin-project-meta mb-3"),
+
+            # Key financials
+            Div(
+                H3("Financials", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(Span("Amount", cls="admin-field-label"), Strong(_money(selected.amount_ngn))),
+                    Div(Span("Deposit", cls="admin-field-label"), Strong(f"{selected.deposit_percent}%")),
+                    Div(Span("Service", cls="admin-field-label"), Strong(selected.service_type or "Not set")),
+                    Div(Span("Company", cls="admin-field-label"), Strong(selected.company or "Independent")),
+                    cls="admin-field-grid",
+                ),
+                cls="admin-detail-block p-3 mb-4",
+            ),
+
+            # Document breakdown
+            Div(
+                H3("Documents", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(Span("Proposals", cls="admin-field-label"), Strong(str(doc_counts["proposal"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Quotes", cls="admin-field-label"), Strong(str(doc_counts["quote"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Invoices", cls="admin-field-label"), Strong(str(doc_counts["invoice"])),
+                        cls="d-flex justify-content-between"),
+                    Div(Span("Total", cls="admin-field-label fw-bold"), Strong(str(len(docs))),
+                        cls="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-10"),
+                    cls="admin-field-grid",
+                ),
+                cls="admin-detail-block p-3 mb-4",
+            ),
+
+            # Sync status
+            Div(
+                H3("Sync Status", cls="admin-subsection-title mb-2"),
+                Div(
+                    Div(
+                        Span("Live Sync", cls="admin-field-label"),
+                        StatusBadge(
+                            "Live sync on" if service_role_is_configured() else "Setup needed",
+                            status="success" if service_role_is_configured() else "warning",
+                            show_dot=True,
+                            pill=True,
+                            cls="admin-badge-sm",
+                        ),
+                    ),
+                    cls="admin-field-grid",
+                ),
+                cls="admin-detail-block p-3",
+            ),
+        ),
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
+    )
+
+
 def deal_detail_page(*, deal_id: str = "", view: str = "overview") -> tuple:
     """Deal detail page routed by view: overview | documents | edit."""
     selected = get_deal_with_documents(deal_id) if deal_id else None
@@ -932,15 +1009,39 @@ def deal_detail_page(*, deal_id: str = "", view: str = "overview") -> tuple:
     renderer = view_map.get(view, _overview_tab)
     view_content = renderer(selected)
 
-    # Navigation pills (not tabs) — simple nav between the 3 views
+    # ── HTMX-wired nav pills (no full-page reload on tab switch) ────────────
+    def _nav_pill(label: str, target_view: str) -> A:
+        pill_href = f"/deals/{deal_id}?view={target_view}"
+        return A(
+            label,
+            href=pill_href,
+            hx_get=pill_href,
+            hx_target="body",
+            hx_swap="innerHTML",
+            hx_push_url="true",
+            cls=f"admin-filter-chip{' active' if view == target_view else ''}",
+        )
+
     nav_pills = Div(
-        A("Overview", href=f"/deals/{deal_id}?view=overview",
-          cls=f"admin-filter-chip{' active' if view == 'overview' else ''}"),
-        A("Documents", href=f"/deals/{deal_id}?view=documents",
-          cls=f"admin-filter-chip{' active' if view == 'documents' else ''}"),
-        A("Edit", href=f"/deals/{deal_id}?view=edit",
-          cls=f"admin-filter-chip{' active' if view == 'edit' else ''}"),
+        _nav_pill("Overview", "overview"),
+        _nav_pill("Documents", "documents"),
+        _nav_pill("Edit", "edit"),
         cls="d-flex flex-wrap gap-2 mb-4",
+    )
+
+    # ── HTMX-wired back link with Spinner (matches Blog/Projects pattern) ───
+    back_link = A(
+        Icon("arrow-left", cls="me-2"),
+        "Back to Pipeline",
+        Spinner(size="sm", cls="admin-back-spinner ms-2"),
+        href="/deals",
+        hx_get="/deals",
+        hx_target="body",
+        hx_swap="innerHTML",
+        hx_push_url="true",
+        hx_indicator="#deal-back-link",
+        id="deal-back-link",
+        cls="admin-back-link mb-3",
     )
 
     return (
@@ -950,36 +1051,35 @@ def deal_detail_page(*, deal_id: str = "", view: str = "overview") -> tuple:
             url=f"{settings.base_url}/deals/{deal_id}",
         ),
         *page_frame(
-            # Header with back link and deal summary
+            back_link,
+            # Deal header — project title, client meta, stage badge, workflow pipeline
             Div(
-                A(
-                    "\u2190 Back to Pipeline",
-                    href="/deals",
-                    hx_get="/deals",
-                    hx_target="body",
-                    hx_swap="innerHTML",
-                    hx_push_url="true",
-                    cls="admin-back-link",
-                ),
                 Div(
+                    H2(selected.project_title, cls="admin-section-title mb-1"),
                     Div(
-                        H2(selected.project_title, cls="admin-section-title mb-1"),
-                        Div(
-                            Span(selected.client_name, cls="admin-project-meta"),
-                            Badge(selected.stage.replace("_", " ").title(),
-                                  cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2"),
-                            Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
-                            cls="d-flex align-items-center gap-2 flex-wrap",
-                        ),
-                        cls="",
+                        Span(selected.client_name, cls="admin-project-meta"),
+                        Badge(selected.stage.replace("_", " ").title(),
+                              cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2"),
+                        Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
+                        cls="d-flex align-items-center gap-2 flex-wrap",
                     ),
-                    cls="d-flex flex-column flex-lg-row justify-content-between gap-3",
                 ),
                 _workflow_pipeline(selected),
                 cls="mb-4",
             ),
             nav_pills,
-            view_content,
+            # Two-column layout: Snapshot card (left) + tab content (right)
+            Row(
+                Col(_deal_snapshot_card(selected), span=12, lg=4),
+                Col(
+                    Card(
+                        view_content,
+                        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
+                    ),
+                    span=12, lg=8, cls="mt-4 mt-lg-0",
+                ),
+                cls="g-4",
+            ),
             current="/deals",
             title=selected.project_title,
         ),
