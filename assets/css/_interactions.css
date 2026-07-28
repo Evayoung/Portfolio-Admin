@@ -152,15 +152,18 @@
   flex-shrink: 0;
 }
 
-/* Show spinner when the link is the htmx indicator */
-.htmx-request .admin-filter-loading-spinner,
-.htmx-request .admin-card-loading-spinner,
-.htmx-request .admin-nav-spinner,
+/* Show spinner when the specific link or indicator itself is in htmx request state */
+.admin-filter-chip.htmx-request .admin-filter-loading-spinner,
+.admin-project-card-link.htmx-request .admin-card-loading-spinner,
+a.admin-nav-link.htmx-request .admin-nav-spinner,
+a.admin-bottom-link.htmx-request .admin-nav-spinner,
+a.htmx-request .admin-nav-spinner,
 .htmx-request.admin-filter-loading-spinner,
 .htmx-request.admin-card-loading-spinner,
 .htmx-request.admin-nav-spinner {
   display: inline-block !important;
 }
+
 
 
 /* Dim the chip while loading */

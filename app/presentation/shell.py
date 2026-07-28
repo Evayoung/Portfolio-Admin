@@ -174,6 +174,9 @@ def _nav_item_label(label: str) -> Span:
 def _sidebar_nav_item(label: str, href: str, icon: str, current: str, *, prefix: str = "desk") -> SidebarNavItem:
     """Render a Faststrap SidebarNavItem with HTMX navigation and live loading spinner indicator."""
     nav_id = f"nav-link-{prefix}-{label.lower().replace(' ', '-').replace('/', '-')}"
+    extra_kwargs = {}
+    if prefix == "mob":
+        extra_kwargs["data_bs_dismiss"] = "offcanvas"
     return SidebarNavItem(
         _nav_item_label(label),
         href=href,
@@ -187,7 +190,9 @@ def _sidebar_nav_item(label: str, href: str, icon: str, current: str, *, prefix:
         hx_swap="innerHTML",
         hx_push_url="true",
         hx_indicator=f"#{nav_id}",
+        **extra_kwargs,
     )
+
 
 
 def _sidebar_group_nav(current: str, group: dict) -> Div:

@@ -227,3 +227,29 @@ function initLoadingBar() {
   });
 }
 
+/* ── HTMX Cleanup Guard — removes leftover Bootstrap backdrops and restores body scroll ── */
+function initHtmxCleanup() {
+  function cleanupScrollLock() {
+    document.querySelectorAll(".offcanvas.show, .modal.show").forEach((el) => {
+      if (window.bootstrap?.Offcanvas) {
+        const inst = window.bootstrap.Offcanvas.getInstance(el);
+        if (inst) inst.hide();
+      }
+      if (window.bootstrap?.Modal) {
+        const inst = window.bootstrap.Modal.getInstance(el);
+        if (inst) inst.hide();
+      }
+    });
+
+    document.querySelectorAll(".offcanvas-backdrop, .modal-backdrop").forEach((el) => el.remove());
+
+    document.body.classList.remove("modal-open", "offcanvas-open");
+    document.body.style.overflow = "";
+    document.body.style.paddingRight = "";
+  }
+
+  document.body.addEventListener("htmx:beforeSwap", cleanupScrollLock);
+  document.body.addEventListener("htmx:historyRestore", cleanupScrollLock);
+}
+
+
