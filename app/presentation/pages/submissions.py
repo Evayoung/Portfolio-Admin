@@ -50,79 +50,82 @@ def _status_options(kind: str) -> tuple[tuple[str, str, str, str], ...]:
 
 
 
-def _submission_card(item, *, kind: str, status: str, search: str) -> Card:
-    """Render a single inbox record card with Pattern 3 HTMX loading spinner, Quick Preview, and Delete action."""
-    detail_href = f"/submissions/detail?entry_id={item.entry_id}&kind={item.kind}&status={status}&search={search}"
-    card_id = f"sub-card-{item.entry_id}"
-    status_tone = _status_tone(item.status)
+def _submission_card(item, *, kind: str, status: str, search: str, selected_id: str = "") -> Div:
+    """Render a compact inbox row that opens its record in the detail pane."""
+    from urllib.parse import urlencode
 
+    detail_href = "/submissions?" + urlencode({"kind": kind, "status": status, "search": search, "entry_id": item.entry_id})
+    return Div(
+        A(
+            Div(
+                Div(
+                    Strong(item.name or "Unnamed inquiry", cls="admin-workspace-item-title"),
+                    Span(item.created_at or "Awaiting timestamp", cls="admin-workspace-item-date"),
+                    cls="d-flex justify-content-between align-items-start gap-2",
+                ),
+                Div(
+                    Span(item.kind.title(), cls="admin-workspace-doc-kind admin-workspace-doc-info"),
+                    Span(item.status.replace("_", " ").title(), cls=f"admin-workspace-status admin-workspace-status-{_status_tone(item.status)}"),
+                    cls="d-flex gap-2 flex-wrap mt-1",
+                ),
+                Span(item.email or "No email", cls="admin-workspace-contact"),
+                P(item.message[:100] + ("…" if len(item.message) > 100 else ""), cls="admin-project-copy mt-2 mb-0"),
+            ),
+            href=detail_href,
+            cls="text-decoration-none d-block",
+            aria_current="true" if item.entry_id == selected_id else None,
+        ),
+        Button(
+            Icon("trash"),
+            type="button",
+            cls="btn admin-danger-btn btn-sm mt-2",
+            data_bs_toggle="modal",
+            data_bs_target=f"#delete-confirm-modal-{item.entry_id}",
+            aria_label=f"Delete submission from {item.name or 'unnamed inquiry'}",
+        ),
+        cls=f"admin-workspace-item{' is-selected' if item.entry_id == selected_id else ''}{' admin-is-new-item' if item.status == 'new' else ''}",
+    )
+
+
+def _submission_detail_panel(item, *, kind: str, status: str, search: str) -> Card:
+    if not item:
+        return Card(
+            EmptyState(icon="inbox", title="Select an inquiry", description="Choose a submission from the inbox to review its message, update its status, or add notes.", cls="py-5"),
+            cls="admin-surface-card h-100 admin-workspace-detail",
+        )
     return Card(
         Div(
-            A(
+            Div(
                 Div(
-                    Div(
-                        Div(
-                            StatusBadge(item.kind.title(), status="info", pill=True, cls="admin-badge-sm me-2"),
-                            StatusBadge(item.status.replace("_", " ").title(), status=status_tone, show_dot=True, pill=True, cls="admin-badge-sm"),
-                            cls="d-flex align-items-center gap-2 flex-wrap",
-                        ),
-                        Span(item.created_at or "Awaiting timestamp", cls="admin-project-meta"),
-                        cls="d-flex justify-content-between align-items-start gap-2",
-                    ),
-                    H3(
-                        item.name or "Unnamed inquiry",
-                        Span(cls="admin-card-loading-spinner"),
-                        cls="admin-project-title d-flex justify-content-between align-items-center mt-2",
-                    ),
-                    P(item.message[:160] + ("..." if len(item.message) > 160 else ""), cls="admin-project-copy"),
-                    Div(
-                        Span(item.email, cls="admin-project-meta"),
-                        Span(item.service or item.subject or "General inquiry", cls="admin-project-meta"),
-                        cls="d-flex justify-content-between flex-wrap gap-2 mt-3",
-                    ),
-                    cls="admin-project-card-body",
+                    StatusBadge(item.kind.title(), status="info", pill=True, cls="admin-badge-sm me-2"),
+                    StatusBadge(item.status.replace("_", " ").title(), status=_status_tone(item.status), show_dot=True, pill=True, cls="admin-badge-sm"),
+                    cls="d-flex gap-2 flex-wrap mb-2",
                 ),
-                href=detail_href,
-                hx_get=detail_href,
-                hx_target="body",
-                hx_swap="innerHTML",
-                hx_push_url="true",
-                hx_indicator=f"#{card_id}",
-                cls="admin-project-card-link",
+                H3(item.name or "Unnamed inquiry", cls="admin-section-title mb-1"),
+                P(f"{item.email or 'No email'} · {item.created_at or 'Awaiting timestamp'}", cls="admin-module-copy mb-0"),
+                cls="admin-workspace-detail-head",
             ),
             Div(
-                Button(
-                    Icon("trash"),
-                    type="button",
-                    cls="btn admin-danger-btn btn-sm me-auto",
-                    data_bs_toggle="modal",
-                    data_bs_target=f"#delete-confirm-modal-{item.entry_id}",
-                    aria_label=f"Delete submission {item.entry_id}",
-                ),
-                Button(
-                    Icon("eye", cls="me-1"),
-                    "Quick Preview",
-                    type="button",
-                    cls="btn admin-muted-btn btn-sm me-2",
-                    data_bs_toggle="modal",
-                    data_bs_target=f"#preview-modal-{item.entry_id}",
-                ),
-                A(
-                    Icon("arrow-right", cls="me-1"),
-                    "Open Detail",
-                    href=detail_href,
-                    hx_get=detail_href,
-                    hx_target="body",
-                    hx_swap="innerHTML",
-                    hx_push_url="true",
-                    hx_indicator=f"#{card_id}",
-                    cls="btn admin-module-btn btn-sm",
-                ),
-                cls="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-10 mt-3",
+                H4("Message", cls="admin-subsection-title mb-2"),
+                Div(item.message or "No message provided.", cls="admin-message-block admin-detail-block p-3"),
+                cls="mb-4",
             ),
+            Div(
+                Div(Span("Phone", cls="admin-field-label"), Strong(item.phone or "Not provided")),
+                Div(Span("Subject / Service", cls="admin-field-label"), Strong(item.subject or item.service or "General inquiry")),
+                Div(Span("Budget / Timeline", cls="admin-field-label"), Strong(" / ".join(p for p in (item.budget, item.timeline) if p) or "Not specified")),
+                cls="admin-field-grid admin-detail-block p-3 mb-4",
+            ),
+            Div(H4("Notes history", cls="admin-subsection-title mb-2"), _notes_history_timeline(item.notes), cls="mb-4"),
+            H4("Update workflow", cls="admin-subsection-title mb-2"),
+            _editor_form(item, kind=kind, status=status, search=search),
+            Div(
+                Button(Icon("briefcase", cls="me-2"), "Convert to Deal", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#convert-modal-{item.entry_id}"),
+                cls="mt-3",
+            ),
+            cls="admin-panel-stack",
         ),
-        id=card_id,
-        cls=[Fx.base, Fx.fade_in, f"admin-surface-card admin-project-card h-100{' admin-is-new-item' if item.status == 'new' else ''}"],
+        cls="admin-surface-card admin-workspace-detail",
     )
 
 
@@ -139,7 +142,7 @@ def _delete_confirm_modal(item, *, kind: str, status: str, search: str) -> Confi
         hx_confirm_method="delete",
         hx_confirm_url=delete_url,
         hx_target="#submissions-list-panel",
-        hx_swap="outerHTML",
+        hx_swap="innerHTML",
     )
 
 
@@ -346,20 +349,21 @@ def _filter_toggle_buttons(kind: str, status: str, search: str) -> Row:
     )
 
 
-def _submissions_list_panel(items, *, kind: str, status: str, search: str, summary) -> Card:
+def _submissions_list_panel(items, *, kind: str, status: str, search: str, summary, selected_id: str = "") -> Card:
     """Render the submissions list panel — reusable for full page and live search."""
     search_form = search_filter_bar(
-        endpoint="/submissions/search",
-        placeholder="Search sender, message, email, or status (live)",
+        endpoint="/submissions",
+        placeholder="Search sender, message, email, or status",
         search_value=search,
         hidden_fields={
             "kind": kind,
             "status": status,
         },
         form_cls="admin-search-form admin-filter-bar mb-4",
-        hx_target="#submissions-list-panel",
-        hx_swap="outerHTML",
-        mode="auto",
+        hx_target="body",
+        hx_swap="innerHTML",
+        push_url=True,
+        mode="apply",
     )
     return Card(
         Div(
@@ -374,21 +378,9 @@ def _submissions_list_panel(items, *, kind: str, status: str, search: str, summa
             ),
             _filter_toggle_buttons(kind, status, search),
             search_form,
-            Row(
-                *[
-                    Col(
-                        _submission_card(
-                            item,
-                            kind=kind,
-                            status=status,
-                            search=search,
-                        ),
-                        span=12,
-                        md=6,
-                    )
-                    for item in items
-                ],
-                cls="g-4 mt-2",
+            Div(
+                *[_submission_card(item, kind=kind, status=status, search=search, selected_id=selected_id) for item in items],
+                cls="admin-workspace-list mt-2",
             )
             if items
             else EmptyState(
@@ -400,18 +392,28 @@ def _submissions_list_panel(items, *, kind: str, status: str, search: str, summa
             cls="admin-panel-stack",
         ),
         id="submissions-list-panel",
-        cls="admin-surface-card h-100",
+        cls="admin-surface-card h-100 admin-workspace-list-panel",
     )
 
 
-def submissions_workspace_page(*, kind: str = "all", status: str = "all", search: str = "") -> tuple:
+def submissions_workspace_page(*, kind: str = "all", status: str = "all", search: str = "", entry_id: str = "") -> tuple:
     """Submissions Workspace List Page (GET /submissions)."""
     items = list_submissions(kind=kind, status=status, search=search)
     summary = get_submission_workspace_summary()
 
-    list_panel = _submissions_list_panel(items, kind=kind, status=status, search=search, summary=summary)
-    preview_modals = [_quick_preview_modal(item) for item in items]
+    selected = next((item for item in items if item.entry_id == entry_id), items[0] if items else None)
+    list_panel = _submissions_list_panel(items, kind=kind, status=status, search=search, summary=summary, selected_id=selected.entry_id if selected else "")
     delete_modals = [_delete_confirm_modal(item, kind=kind, status=status, search=search) for item in items]
+    detail_panel = _submission_detail_panel(selected, kind=kind, status=status, search=search)
+    convert_modal = None
+    if selected:
+        convert_modal = Modal(
+            Div(
+                P(f"Convert {selected.name or 'this inquiry'} into a deal and continue in the Deals workspace.", cls="admin-module-copy mb-3"),
+                A("Proceed to Deals", href=f"/deals?from_submission={selected.entry_id}&from_kind={selected.kind}", cls="btn admin-module-btn"),
+            ),
+            modal_id=f"convert-modal-{selected.entry_id}", title="Convert to Deal", size="md", centered=True,
+        )
 
     return (
         *SEO(
@@ -420,17 +422,15 @@ def submissions_workspace_page(*, kind: str = "all", status: str = "all", search
             url=f"{settings.base_url}/submissions",
         ),
         *page_frame(
-            Row(
-                summary_card("Inbox Total", str(summary.total), "Combined contact and booking records currently available."),
-                summary_card("Open Items", str(summary.new_items), "New and active records that still need attention."),
-                summary_card("Booking Requests", str(summary.booking_items), f"Live source: {summary.source}."),
-                cls="g-4",
-            ),
             SectionWrap(
                 "Submissions Workspace",
-                list_panel,
+                Row(
+                    Col(list_panel, span=12, lg=5),
+                    Col(detail_panel, span=12, lg=7),
+                    cls="g-4 admin-submissions-workspace",
+                ),
             ),
-            *preview_modals,
+            convert_modal if convert_modal else "",
             *delete_modals,
             current="/submissions",
             title="Submissions Workspace",
@@ -627,7 +627,7 @@ def submission_detail_page(*, entry_id: str = "", kind: str = "all", status: str
             back_link,
             Row(
                 Col(snapshot_card, span=12, lg=5),
-                Col(detail_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                Col(detail_panel, span=12, lg=7),
                 cls="g-4",
             ),
             convert_modal,

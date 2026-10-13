@@ -14,6 +14,42 @@ This is an implementation plan, not a proposal to replace the application archit
 - Long forms remain focused and usable on mobile. Desktop split panes collapse to a list-then-detail flow on narrow screens; they do not shrink into unusable columns.
 - Existing public pages, URLs, data ownership, accessibility labels, and empty/loading/error feedback remain intact.
 
+## Implementation progress
+
+**Started 2026-10-13.** The first implementation pass now covers the core workspace pattern and localized P3 refinements:
+
+- Deals: client/project list and selected document workspace, combined document kind/status filtering, broader search, and return-to-workspace after quick document creation.
+- Projects and Blog: query-restorable list/detail selection with inline editing or preview, while retaining focused editor routes.
+- AI Assistant: input and generated-draft panels side by side.
+- Settings: grouped profile form and removal of duplicated profile summary panels from other settings pages.
+- Submissions: selectable inbox and in-context review/update panel.
+- Media: compact asset rows with primary Open/Copy actions and grouped management actions.
+- Dashboard: removed the repeated deal metric strip.
+- CV: added section jump links to the existing section managers.
+
+Python compilation, diff whitespace checks, and local markup rendering have passed for Deals filters/selection plus Submissions, Media, CV, AI Assistant, and Profile Settings. Deals review confirmed that combined kind/status filters match a single document and search finds client email and document numbers. Keyboard focus within selectable rows now receives the same highlight as pointer hover. A real-browser review across desktop/mobile and history navigation is still required before calling the redesign complete.
+
+### Playwright visual review — 2026-10-13
+
+- Reviewed the redesigned admin pages in Chrome driven by Playwright at 1440 px and 390 px widths. The changed views have no page-level horizontal overflow at the narrow viewport; all seven paired workspaces stack on mobile and their paired columns now align at the top on desktop.
+- Fixed two browser-visible layout issues: Submissions had inherited the Deals grid class and stacked its desktop panels; right columns in several `g-4` rows canceled Bootstrap's top gutter and sat above their paired panels.
+- Styled the shared radio toggles and filter chips so the selected option is visible, added `aria-current="page"` to the active Settings section, and hid the Media upload indicator until HTMX marks it as in progress.
+- Browser navigation confirmed that Deals filter selection survives refresh, and Projects/Blog selection survives refresh and browser back/forward.
+- The review server ran with dotenv loading disabled, dummy credentials, and no external service keys. The external HTMX CDN was blocked in the initial pass; during the continuation the bundled Faststrap HTMX script loaded and list/filter GET updates worked. No live data was changed.
+
+### Verification continuation - 2026-10-13
+
+- Rechecked all changed admin routes in Chrome at 1440 px and 390 px. No page-level horizontal overflow or browser JavaScript errors. Project and Blog row selection updates the URL, and Deals filter selection clears the prior deal selection in the URL.
+- Fixed an AI Assistant regression found during a safe local POST: the result renderer imported from `deals.py` had been removed during the page split, causing HTTP 500. It now uses the shared document-draft fragment and returns the configured-provider guidance when no provider is available.
+- Updated stale smoke-test assertions for the new Settings, Projects, and Blog layouts. PDF extraction checks now use `pypdf`, declared in `requirements.txt`; PDF route/content checks are included in the final local run.
+- No live Supabase writes or external AI requests were made. End-to-end save/publish/delete, media upload, and successful AI generation still need verification in an explicitly configured environment. Two seeded editorial images resolve to missing local asset paths during browser review.
+
+### Phase status
+
+- **Phase 0:** Architecture and routes inspected during implementation; route/query/write behavior is covered by focused smoke checks. A consolidated inventory remains useful for handoff but does not block the UI work.
+- **Phases 1-4:** Redesign slices implemented across Deals, Projects, Blog, AI Assistant, Settings, Submissions, Media, Dashboard, and CV.
+- **Phase 5:** Desktop/mobile visual pass, selection/history checks, public document checks, and PDF checks completed locally. Configured-service success flows and manual keyboard/contrast review remain outstanding.
+
 ## Scope and priority
 
 | Priority | Area | Level | Outcome |

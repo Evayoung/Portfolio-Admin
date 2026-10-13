@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Fx, Modal, Row, SEO
+from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO
 from faststrap.components.feedback.confirm import ConfirmDialog
 
 from app.config import settings
@@ -130,30 +130,36 @@ def _asset_card(asset, modals: list) -> Card:
     modals.append(_asset_delete_modal(asset))
     return Card(
         Div(
-            Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb") if is_image and asset.public_url else "",
             Div(
-                Span(asset.kind.title(), cls="admin-project-category"),
-                Badge(asset.created_at or "Recent", cls="text-bg-secondary admin-project-flag"),
-                cls="d-flex justify-content-between align-items-start gap-2",
-            ),
-            H3(asset.title, cls="admin-project-title"),
-            P(asset.alt_text or asset.storage_path, cls="admin-project-copy"),
-            Div(
-                Span(asset.content_type, cls="admin-project-meta"),
-                Span(f"{size_kb} KB", cls="admin-project-meta"),
-                cls="d-flex justify-content-between flex-wrap gap-2 mt-3",
+                Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb") if is_image and asset.public_url else Div(Icon("file-earmark"), cls="admin-media-thumb admin-media-file-thumb"),
+                Div(
+                    Div(Span(asset.kind.title(), cls="admin-project-category"), Span(asset.created_at or "Recent", cls="admin-project-meta"), cls="d-flex justify-content-between gap-2"),
+                    H3(asset.title, cls="admin-project-title mb-1"),
+                    P(asset.alt_text or asset.storage_path, cls="admin-project-copy mb-1"),
+                    Span(f"{asset.content_type} · {size_kb} KB", cls="admin-project-meta"),
+                    cls="min-w-0 flex-grow-1",
+                ),
+                cls="d-flex gap-3 align-items-start",
             ),
             Div(
-                A("Open Asset", href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-install-btn"),
-                Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=asset.public_url, data_copy_label="Copy URL"),
-                Button("Edit", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#edit-{asset.asset_id}"),
-                Button("Replace", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target=f"#replace-{asset.asset_id}"),
-                Button("Delete", type="button", cls="btn admin-danger-btn", data_bs_toggle="modal", data_bs_target=f"#delete-{asset.asset_id}"),
-                cls="d-flex flex-wrap gap-2 mt-3",
+                A(Icon("box-arrow-up-right", cls="me-1"), "Open", href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-muted-btn btn-sm") if asset.public_url else "",
+                Button(Icon("clipboard", cls="me-1"), "Copy URL", type="button", cls="btn admin-module-btn btn-sm", data_copy_target=asset.public_url, data_copy_label="Copy URL") if asset.public_url else "",
+                Div(
+                    Button("Manage", type="button", cls="btn admin-muted-btn btn-sm dropdown-toggle", data_bs_toggle="dropdown", aria_expanded="false"),
+                    Div(
+                        Button("Edit details", type="button", cls="dropdown-item", data_bs_toggle="modal", data_bs_target=f"#edit-{asset.asset_id}"),
+                        Button("Replace file", type="button", cls="dropdown-item", data_bs_toggle="modal", data_bs_target=f"#replace-{asset.asset_id}"),
+                        Div(cls="dropdown-divider"),
+                        Button("Delete", type="button", cls="dropdown-item text-danger", data_bs_toggle="modal", data_bs_target=f"#delete-{asset.asset_id}"),
+                        cls="dropdown-menu dropdown-menu-end",
+                    ),
+                    cls="dropdown ms-auto",
+                ),
+                cls="d-flex align-items-center gap-2 mt-3 pt-3 border-top border-secondary border-opacity-10",
             ),
             cls="admin-project-card-body",
         ),
-        cls=[Fx.base, Fx.fade_in, Fx.hover_lift, "admin-surface-card admin-project-card h-100"],
+        cls=[Fx.base, Fx.fade_in, "admin-surface-card admin-media-asset-card h-100"],
     )
 
 
@@ -274,7 +280,7 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
             "Media Workspace",
             Row(
                 Col(library_panel, span=12, lg=7),
-                Col(upload_panel, span=12, lg=5, cls="mt-4 mt-lg-0"),
+                Col(upload_panel, span=12, lg=5),
                 cls="g-4",
             ),
         ),

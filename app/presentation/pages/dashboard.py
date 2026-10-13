@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fasthtml.common import A, Div, H2, H3, P, Span, Strong
-from faststrap import Card, Col, Fx, Icon, MetricCard, Row, SEO
+from faststrap import Card, Col, Fx, Icon, Row, SEO
 from faststrap.presets import AutoRefresh, LazyLoad
 
 from app.config import settings
@@ -139,25 +139,12 @@ def _workspace_status_partial() -> Div:
 
 
 def overview_page() -> tuple:
-    deal_summary = get_deal_workspace_summary()
-
     metrics = AutoRefresh(
         endpoint="/dashboard/metrics",
         target="this",
         interval=30000,
         content=_metrics_ring(),
         hx_swap="outerHTML",
-    )
-
-    # Pipeline revenue strip — MetricCard row from live deal data.
-    # Lives below the workspace-status card so the page opens with one
-    # metric crown (the live AutoRefresh ring), not two competing rows.
-    revenue_strip = Row(
-        Col(MetricCard("Active Deals", str(deal_summary.total), cls="admin-surface-card h-100"), span=6, md=3),
-        Col(MetricCard("Documents Issued", str(deal_summary.proposals + deal_summary.quotes + deal_summary.invoices), cls="admin-surface-card h-100"), span=6, md=3),
-        Col(MetricCard("Proposals", str(deal_summary.proposals), cls="admin-surface-card h-100"), span=6, md=3),
-        Col(MetricCard("Invoices", str(deal_summary.invoices), cls="admin-surface-card h-100"), span=6, md=3),
-        cls="g-4",
     )
 
     modules = Row(*[_module_card(item) for item in MODULES], cls="g-4")
@@ -178,7 +165,6 @@ def overview_page() -> tuple:
                     cls="admin-surface-card placeholder-height-sm",
                 ),
             ),
-            SectionWrap("Deal Revenue", revenue_strip),
             current="/",
             title="Overview",
         ),

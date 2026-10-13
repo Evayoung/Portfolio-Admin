@@ -45,7 +45,7 @@ except ImportError:
 def setup_project_routes(app: Any) -> None:
     @app.get("/projects")
     def projects(slug: str = "", category: str = "all", featured: str = "0", search: str = "") -> Any:
-        return projects_page(category=category, featured=featured, search=search)
+        return projects_page(category=category, featured=featured, search=search, slug=slug)
 
     @app.get("/projects/edit")
     def project_edit(slug: str = "", category: str = "all", featured: str = "0", search: str = "", new: str = "") -> Any:

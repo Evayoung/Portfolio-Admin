@@ -19,8 +19,8 @@ except ImportError:
 
 def setup_blog_routes(app: Any) -> None:
     @app.get("/blog")
-    def blog(category: str = "all", search: str = "") -> Any:
-        return blog_workspace_page(category=category, search=search)
+    def blog(category: str = "all", search: str = "", slug: str = "") -> Any:
+        return blog_workspace_page(category=category, search=search, slug=slug)
 
     @app.get("/blog/edit")
     def blog_edit(slug: str = "", category: str = "all", search: str = "", new: str = "") -> Any:

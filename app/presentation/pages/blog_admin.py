@@ -278,65 +278,137 @@ def _editor_form(selected, *, category: str = "all", search: str = "") -> Form:
     )
 
 
-def blog_workspace_page(*, category: str = "all", search: str = "") -> tuple:
+def blog_workspace_page(*, category: str = "all", search: str = "", slug: str = "") -> tuple:
     posts = list_blog_posts(category=category, search=search)
     summary = get_blog_workspace_summary()
+    selected = next((item for item in posts if item.slug == slug), None)
+    if selected is None and posts:
+        selected = posts[0]
+    selected_slug = selected.slug if selected else ""
 
-    toggle_bar = _filter_toggle_buttons(category=category, search=search)
+    def blog_href(*, next_category=category, next_search=search, next_slug=selected_slug):
+        return "/blog?" + urlencode({
+            "category": next_category,
+            "search": next_search,
+            "slug": next_slug,
+        })
+
+    category_filter = Div(
+        *[
+            A(
+                label,
+                href=blog_href(next_category=value),
+                hx_get=blog_href(next_category=value),
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                cls=f"btn admin-toggle-btn{' active' if value == category else ''}",
+            )
+            for value, label in list_blog_categories()
+        ],
+        cls="admin-filter-toggle-group flex-wrap mb-3",
+    )
     search_form = search_filter_bar(
         endpoint="/blog",
         placeholder="Search title, slug, summary, or tags",
         search_value=search,
-        hidden_fields={"category": category},
-        form_cls="admin-search-form admin-filter-bar mb-4",
+        hidden_fields={"category": category, "slug": selected_slug},
+        form_cls="admin-search-form admin-filter-bar mb-3",
         hx_target="body",
         hx_swap="innerHTML",
         push_url=True,
     )
 
-    grid_content = Row(
-        *[Col(_post_card(item, category=category, search=search), span=12, md=6, lg=4) for item in posts],
-        cls="g-4",
-    ) if posts else EmptyState(
-        icon="journal-richtext",
-        title="No blog posts match this filter",
-        description="Try a different category or search term, or write a new article.",
-        action=A(
-            Icon("plus-lg", cls="me-1"),
-            "Write New Post",
-            href="/blog/edit?new=1",
-            cls="btn admin-module-btn mt-3",
-        ),
-        cls="py-5",
-    )
+    post_rows = []
+    for post in posts:
+        row_href = blog_href(next_slug=post.slug)
+        post_rows.append(
+            A(
+                Div(
+                    Div(
+                        H3(post.title, cls="admin-workspace-item-title"),
+                        P(post.category.replace("-", " ").title(), cls="admin-workspace-item-client mb-0"),
+                        cls="min-w-0",
+                    ),
+                    Badge("Published" if post.published != "Draft" else "Draft", cls=f"admin-workspace-status {'admin-workspace-status-success' if post.published != 'Draft' else 'admin-workspace-status-secondary'}"),
+                    cls="d-flex justify-content-between align-items-start gap-2",
+                ),
+                Div(
+                    Span(f"{post.read_minutes} min read", cls="admin-workspace-item-stage"),
+                    Span(f"{len(post.tags)} tags", cls="admin-workspace-item-date"),
+                    cls="d-flex justify-content-between align-items-center gap-2 mt-2",
+                ),
+                href=row_href,
+                hx_get=row_href,
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                aria_current="true" if selected_slug == post.slug else None,
+                cls=f"admin-workspace-item{' is-selected' if selected_slug == post.slug else ''}",
+            )
+        )
 
-    main_panel = Card(
+    list_panel = Div(
         Div(
             Div(
-                Div(
-                    H2("Editorial Posts", cls="admin-section-title"),
-                    P("Manage articles, categories, and publication state across the portfolio.", cls="admin-module-copy mb-0"),
-                ),
-                A(
-                    Icon("plus-lg", cls="me-2"),
-                    Span("Write Article"),
-                    href="/blog/edit?new=1",
-                    cls="btn admin-module-btn",
-                ),
-                cls="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4",
+                H2("Articles", cls="admin-subsection-title mb-0"),
+                Span(f"{len(posts)} shown", cls="admin-workspace-item-count"),
+                cls="d-flex justify-content-between align-items-center gap-2 mb-2",
             ),
-            toggle_bar,
-            search_form,
-            grid_content,
+            Div(*post_rows, cls="admin-workspace-list") if post_rows else EmptyState(
+                icon="journal-richtext",
+                title="No articles match this view",
+                description="Adjust the category or search, or write a new article.",
+                action=A("Write Article", href="/blog/edit?new=1", cls="btn admin-module-btn mt-3"),
+                cls="py-4",
+            ),
             cls="admin-panel-stack",
         ),
-        id="blog-list-panel",
-        cls="admin-surface-card h-100",
+        cls="admin-surface-card admin-workspace-list-panel h-100",
     )
 
-    # Root-level modals outside cards to avoid z-index/backdrop clipping
-    preview_modals = [_quick_preview_modal(p) for p in posts]
+    if selected:
+        article_editor = Div(
+            Div(
+                Div(
+                    Span("EDITORIAL CONTENT", cls="admin-kicker"),
+                    H2(selected.title, cls="admin-section-title mb-1"),
+                    P(selected.summary, cls="admin-module-copy mb-0"),
+                ),
+                Div(
+                    Button("Preview", type="button", cls="btn admin-muted-btn btn-sm", data_bs_toggle="modal", data_bs_target=f"#preview-modal-{selected.slug}"),
+                    A("Open focused editor", href=f"/blog/edit?slug={selected.slug}", cls="btn admin-module-btn btn-sm"),
+                    cls="d-flex flex-wrap gap-2 mt-3",
+                ),
+                cls="admin-workspace-detail-head",
+            ),
+            Div(
+                H3("Edit article", cls="admin-subsection-title"),
+                _editor_form(selected, category=category, search=search),
+                _blog_category_create_modal(),
+                cls="admin-panel-stack",
+            ),
+            cls="admin-surface-card admin-workspace-detail h-100",
+        )
+        selected_preview = _quick_preview_modal(selected)
+    else:
+        article_editor = Div(
+            EmptyState(
+                icon="journal-richtext",
+                title="Select an article to edit",
+                description="Choose an article from the list, or start a new draft.",
+                action=A("Write Article", href="/blog/edit?new=1", cls="btn admin-module-btn mt-3"),
+                cls="py-5",
+            ),
+            cls="admin-surface-card admin-workspace-detail h-100",
+        )
+        selected_preview = ""
 
+    workspace = Row(
+        Col(list_panel, span=12, lg=4),
+        Col(article_editor, span=12, lg=8),
+        cls="g-4 align-items-start",
+    )
     return (
         *SEO(
             title=f"{settings.app_name} | Blog",
@@ -344,17 +416,20 @@ def blog_workspace_page(*, category: str = "all", search: str = "") -> tuple:
             url=f"{settings.base_url}/blog",
         ),
         *page_frame(
-            Row(
-                summary_card("Posts", str(summary.total), "Current editorial records available in the workspace."),
-                summary_card("Categories", str(summary.categories), "Distinct public-facing post categories."),
-                summary_card("Published", str(summary.published), f"Live source: {summary.source}."),
-                cls="g-4",
+            Div(
+                Div(
+                    Div(
+                        H2("Editorial workspace", cls="admin-section-title mb-1"),
+                        P(f"{summary.total} articles · {summary.published} published · {summary.categories} categories", cls="admin-module-copy mb-0"),
+                    ),
+                    A(Icon("plus-lg", cls="me-1"), "Write Article", href="/blog/edit?new=1", cls="btn admin-module-btn"),
+                    cls="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3",
+                ),
+                category_filter,
+                search_form,
+                workspace,
+                selected_preview,
             ),
-            SectionWrap(
-                "Blog Workspace",
-                main_panel,
-            ),
-            *preview_modals,
             current="/blog",
             title="Blog",
         ),
@@ -492,7 +567,7 @@ def blog_edit_page(*, slug: str = "", category: str = "all", search: str = "", n
             back_link,
             Row(
                 Col(snapshot_card, span=12, lg=5),
-                Col(form_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                Col(form_panel, span=12, lg=7),
                 cls="g-4",
             ),
             current="/blog",

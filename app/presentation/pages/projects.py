@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, Option, P, Select, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Progress, Row, SEO, Spinner, StatusBadge
 
@@ -394,14 +396,155 @@ def _projects_list_panel(projects, selected, *, category: str, featured_only: bo
     )
 
 
-def projects_page(*, category: str = "all", featured: str = "0", search: str = "") -> tuple:
-    """Projects Workspace Page — Grid listing, search, category filters, root-level quick preview modals."""
+def projects_page(*, category: str = "all", featured: str = "0", search: str = "", slug: str = "") -> tuple:
     featured_only = featured == "1"
     projects = list_projects(category=category, featured_only=featured_only, search=search)
     summary = get_project_workspace_summary()
+    selected = next((item for item in projects if item.slug == slug), None)
+    if selected is None and projects:
+        selected = projects[0]
+    selected_slug = selected.slug if selected else ""
 
-    list_panel = _projects_list_panel(projects, None, category=category, featured_only=featured_only, search=search, summary=summary)
-    preview_modals = [_quick_preview_modal(p) for p in projects]
+    def projects_href(*, next_category=category, next_featured=featured, next_search=search, next_slug=selected_slug):
+        return "/projects?" + urlencode({
+            "category": next_category,
+            "featured": next_featured,
+            "search": next_search,
+            "slug": next_slug,
+        })
+
+    category_filter = Div(
+        *[
+            A(
+                label,
+                href=projects_href(next_category=value),
+                hx_get=projects_href(next_category=value),
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                cls=f"btn admin-toggle-btn{' active' if value == category else ''}",
+            )
+            for value, label in list_project_categories()
+        ],
+        A(
+            Icon("star-fill" if featured_only else "star", cls="me-1"),
+            "Featured only",
+            href=projects_href(next_featured="0" if featured_only else "1"),
+            hx_get=projects_href(next_featured="0" if featured_only else "1"),
+            hx_target="body",
+            hx_swap="innerHTML",
+            hx_push_url="true",
+            aria_label="Toggle featured projects only",
+            cls=f"btn admin-toggle-btn{' active' if featured_only else ''}",
+        ),
+        cls="admin-filter-toggle-group flex-wrap mb-3",
+    )
+    search_form = search_filter_bar(
+        endpoint="/projects",
+        placeholder="Search project title, client-facing summary, or slug",
+        search_value=search,
+        hidden_fields={"category": category, "featured": featured, "slug": selected_slug},
+        form_cls="admin-search-form admin-filter-bar mb-3",
+        hx_target="body",
+        hx_swap="innerHTML",
+        push_url=True,
+    )
+
+    project_rows = []
+    for project in projects:
+        row_href = projects_href(next_slug=project.slug)
+        project_rows.append(
+            A(
+                Div(
+                    Div(
+                        H3(project.title, cls="admin-workspace-item-title"),
+                        P(project.category.replace("-", " ").title(), cls="admin-workspace-item-client mb-0"),
+                        cls="min-w-0",
+                    ),
+                    Badge("Published" if project.published else "Draft", cls=f"admin-workspace-status {'admin-workspace-status-success' if project.published else 'admin-workspace-status-secondary'}"),
+                    cls="d-flex justify-content-between align-items-start gap-2",
+                ),
+                Div(
+                    Span("Featured" if project.featured else "Standard", cls="admin-workspace-item-stage"),
+                    Span(", ".join(project.tech[:3]) or "No tech tags", cls="admin-workspace-item-date"),
+                    cls="d-flex justify-content-between align-items-center gap-2 mt-2",
+                ),
+                href=row_href,
+                hx_get=row_href,
+                hx_target="body",
+                hx_swap="innerHTML",
+                hx_push_url="true",
+                aria_current="true" if selected_slug == project.slug else None,
+                cls=f"admin-workspace-item{' is-selected' if selected_slug == project.slug else ''}",
+            )
+        )
+
+    list_panel = Div(
+        Div(
+            Div(
+                H2("Portfolio projects", cls="admin-subsection-title mb-0"),
+                Span(f"{len(projects)} shown", cls="admin-workspace-item-count"),
+                cls="d-flex justify-content-between align-items-center gap-2 mb-2",
+            ),
+            Div(*project_rows, cls="admin-workspace-list") if project_rows else EmptyState(
+                icon="kanban",
+                title="No projects match this view",
+                description="Adjust the category, featured filter, or search; create a project if the list is empty.",
+                action=A("Create Project", href="/projects/edit?new=1", cls="btn admin-module-btn mt-3"),
+                cls="py-4",
+            ),
+            cls="admin-panel-stack",
+        ),
+        cls="admin-surface-card admin-workspace-list-panel h-100",
+    )
+
+    if selected:
+        project_detail = Div(
+            Div(
+                Div(
+                    Span("PORTFOLIO PROJECT", cls="admin-kicker"),
+                    H2(selected.title, cls="admin-section-title mb-1"),
+                    P(selected.summary, cls="admin-module-copy mb-0"),
+                    cls="min-w-0",
+                ),
+                Div(
+                    Badge(selected.category.replace("-", " ").title(), cls="admin-workspace-status admin-workspace-status-info"),
+                    Badge("Featured" if selected.featured else "Not featured", cls="admin-workspace-status admin-workspace-status-warning" if selected.featured else "admin-workspace-status-secondary"),
+                    Badge("Published" if selected.published else "Draft", cls="admin-workspace-status admin-workspace-status-success" if selected.published else "admin-workspace-status-secondary"),
+                    cls="d-flex flex-wrap gap-2 mt-3",
+                ),
+                Div(
+                    A("Open focused editor", href=f"/projects/edit?slug={selected.slug}", cls="btn admin-muted-btn btn-sm"),
+                    A("Media Library", href="/media?kind=image", cls="btn admin-muted-btn btn-sm"),
+                    cls="d-flex flex-wrap gap-2 mt-3",
+                ),
+                cls="admin-workspace-detail-head",
+            ),
+            Div(
+                H3("Edit project", cls="admin-subsection-title"),
+                _editor_form(selected, category=category, featured_only=featured_only, search=search),
+                _category_create_modal(),
+                cls="admin-panel-stack",
+            ),
+            cls="admin-surface-card admin-workspace-detail h-100",
+        )
+    else:
+        project_detail = Div(
+            EmptyState(
+                icon="kanban",
+                title="Select a project to edit",
+                description="Choose a portfolio record from the list, or create a new project.",
+                action=A("Create Project", href="/projects/edit?new=1", cls="btn admin-module-btn mt-3"),
+                cls="py-5",
+            ),
+            cls="admin-surface-card admin-workspace-detail h-100",
+        )
+
+    workspace = Row(
+        Col(list_panel, span=12, lg=4),
+        Col(project_detail, span=12, lg=8),
+        cls="g-4 align-items-start",
+    )
 
     return (
         *SEO(
@@ -410,17 +553,19 @@ def projects_page(*, category: str = "all", featured: str = "0", search: str = "
             url=f"{settings.base_url}/projects",
         ),
         *page_frame(
-            Row(
-                summary_card("Projects", str(summary.total), "Current portfolio records available in the workspace."),
-                summary_card("Featured", str(summary.featured), "Flagged for homepage or primary discovery surfaces."),
-                summary_card("Categories", str(summary.categories), f"Live source: {summary.source}."),
-                cls="g-4",
+            Div(
+                Div(
+                    Div(
+                        H2("Portfolio projects", cls="admin-section-title mb-1"),
+                        P(f"{summary.total} records · {summary.featured} featured · {summary.categories} categories", cls="admin-module-copy mb-0"),
+                    ),
+                    A(Icon("plus-lg", cls="me-1"), "New Project", href="/projects/edit?new=1", cls="btn admin-module-btn"),
+                    cls="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3",
+                ),
+                category_filter,
+                search_form,
+                workspace,
             ),
-            SectionWrap(
-                "Projects Workspace",
-                list_panel,
-            ),
-            *preview_modals,  # Modals rendered at root level outside cards to avoid z-index/backdrop clipping!
             current="/projects",
             title="Projects",
         ),
@@ -565,7 +710,7 @@ def project_edit_page(*, slug: str = "", category: str = "all", featured: str = 
             back_link,
             Row(
                 Col(snapshot_card, span=12, lg=5),
-                Col(form_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                Col(form_panel, span=12, lg=7),
                 cls="g-4",
             ),
             current="/projects",

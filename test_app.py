@@ -80,9 +80,8 @@ def test_settings_workspace_renders_live_profile_shell() -> None:
     response = client.get("/settings")
     html = response.text
     assert response.status_code == 200
-    assert "Settings Workspace" in html
-    assert "Settings Editor" in html
-    assert "Public identity" in html
+    assert "Profile Settings" in html
+    assert "Public profile" in html
     assert "/settings/access" in html
     assert "/settings/accounts" in html
 
@@ -92,9 +91,8 @@ def test_projects_workspace_renders_real_project_data() -> None:
     response = client.get("/projects")
     html = response.text
     assert response.status_code == 200
-    assert "Projects Workspace" in html
+    assert "Portfolio projects" in html
     assert "BackendForge - Multi-Agent FastAPI Builder" in html
-    assert "Project Records" in html
     assert "New Project" in html
     assert "Media Library" in html
 
@@ -122,7 +120,7 @@ def test_blog_workspace_renders_real_blog_data() -> None:
     response = client.get("/blog")
     html = response.text
     assert response.status_code == 200
-    assert "Blog Workspace" in html
+    assert "Editorial workspace" in html
     assert "BackendForge: What Happens When 18 AI Agents Write Your FastAPI Backend" in html
     assert "Write Article" in html or "Write New Post" in html
 
@@ -135,6 +133,16 @@ def test_blog_workspace_can_open_blank_create_mode() -> None:
     assert "Create New Article" in html
     assert "Save Post" in html
     assert "Open Media Library" in html
+
+
+def test_ai_assistant_route_reports_missing_provider_without_server_error() -> None:
+    sign_in()
+    response = client.post(
+        "/ai-assistant/generate",
+        data={"draft_kind": "proposal", "context_text": "Safe local review request"},
+    )
+    assert response.status_code == 200
+    assert "No AI provider is configured" in response.text
 
 
 def test_blog_editor_survives_empty_category_source(monkeypatch) -> None:
@@ -431,7 +439,7 @@ def test_quick_document_success_redirects_to_document_workspace(monkeypatch) -> 
         },
     )
     assert response.status_code == 200
-    assert response.headers["HX-Redirect"] == "/deals/deal-new?view=documents"
+    assert response.headers["HX-Redirect"] == "/deals?deal_id=deal-new"
 
 
 def test_document_sections_parser_ignores_malformed_items() -> None:
@@ -467,7 +475,7 @@ def test_deal_document_pdf_route_serves_pdf() -> None:
 
 
 def _pdf_text(path: Path) -> str:
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     reader = PdfReader(str(path))
     return "\n".join(page.extract_text() or "" for page in reader.pages)

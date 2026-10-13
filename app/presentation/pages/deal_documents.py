@@ -314,6 +314,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Span(document.kind.title(), cls="admin-project-category"),
                 Badge(document.status.replace("_", " ").title(), cls=f"bg-{status_color} bg-opacity-10 text-{status_color}"),
                 Span(document.document_number, cls="admin-project-meta ms-2"),
+                Span(f"Updated {document.updated_at}" if document.updated_at else "", cls="admin-project-meta ms-2"),
                 cls="d-flex align-items-center gap-2 flex-wrap",
             ),
             cls="d-flex justify-content-between align-items-start",
@@ -427,7 +428,7 @@ def _generate_next_cta(selected: AdminDeal, source_doc) -> Div | None:
         )
 
 
-def _documents_tab(selected: AdminDeal) -> Div:
+def documents_tab(selected: AdminDeal, *, newest_first: bool = False) -> Div:
     """Documents tab — each document with timeline and generate-next CTAs."""
     docs = selected.documents
     if not docs:
@@ -438,8 +439,8 @@ def _documents_tab(selected: AdminDeal) -> Div:
             cls="py-4",
         )
 
-    # Sort documents chronologically (oldest first for workflow display)
-    sorted_docs = sorted(docs, key=lambda d: d.updated_at)
+    # Keep workflow pages chronological while allowing collection previews to show recent work first.
+    sorted_docs = sorted(docs, key=lambda d: d.updated_at, reverse=newest_first)
 
     cards = []
     for doc in sorted_docs:
@@ -535,7 +536,7 @@ def deal_documents_page(*, deal_id: str = "", view: str = "documents") -> tuple:
                 Col(_deal_snapshot_card(selected), span=12, lg=4),
                 Col(
                     Card(
-                        _documents_tab(selected),
+                        documents_tab(selected),
                         cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
                     ),
                     span=12, lg=8, cls="mt-4 mt-lg-0",

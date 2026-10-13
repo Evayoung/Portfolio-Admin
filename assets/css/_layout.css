@@ -652,6 +652,187 @@
   margin-bottom: 0.75rem;
 }
 
+/* Client and project document workspace */
+.admin-deals-workspace {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-workspace-list-panel,
+.admin-workspace-detail {
+  min-width: 0;
+}
+
+.admin-workspace-list-panel .admin-panel-stack,
+.admin-workspace-detail {
+  padding: 1rem;
+}
+
+.admin-workspace-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: min(70vh, 54rem);
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.admin-workspace-item {
+  display: block;
+  padding: 0.85rem;
+  color: inherit;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.admin-workspace-item:hover,
+.admin-workspace-item:focus-visible,
+.admin-workspace-item:focus-within {
+  color: inherit;
+  text-decoration: none;
+  background: rgba(45, 184, 232, 0.07);
+  border-color: rgba(45, 184, 232, 0.42);
+}
+
+.admin-workspace-item.is-selected {
+  background: rgba(45, 184, 232, 0.1);
+  border-color: rgba(45, 184, 232, 0.58);
+  box-shadow: inset 3px 0 0 var(--admin-primary);
+}
+
+.admin-workspace-item-title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--admin-text);
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.admin-workspace-item-client,
+.admin-workspace-item-date,
+.admin-workspace-item-count,
+.admin-workspace-contact {
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+}
+
+.admin-workspace-item-stage {
+  color: var(--admin-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-workspace-status,
+.admin-workspace-doc-kind {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-workspace-status-success,
+.admin-workspace-doc-success { color: #5bd39a; }
+.admin-workspace-status-primary,
+.admin-workspace-doc-primary { color: #56b8f5; }
+.admin-workspace-status-info,
+.admin-workspace-doc-info { color: #52c6df; }
+.admin-workspace-status-warning,
+.admin-workspace-doc-warning { color: #f3c45d; }
+.admin-workspace-status-danger,
+.admin-workspace-doc-danger { color: #ff7c86; }
+.admin-workspace-status-secondary { color: var(--admin-muted); }
+.admin-workspace-doc-secondary { color: var(--admin-muted); }
+
+.admin-workspace-detail-head {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-workspace-client-name {
+  color: var(--admin-text);
+  font-weight: 650;
+}
+
+.admin-workspace-contact-link {
+  color: var(--admin-secondary);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-workspace-documents {
+  padding-top: 1rem;
+}
+
+.admin-workspace-documents .deal-document-card {
+  padding: 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.admin-workspace-documents .deal-document-card + .deal-document-card,
+.admin-workspace-documents .deal-generate-next {
+  margin-top: 0.75rem;
+}
+
+.admin-media-asset-card .admin-media-thumb {
+  width: 96px;
+  min-width: 96px;
+  height: 72px;
+  aspect-ratio: auto;
+  object-fit: cover;
+  margin: 0;
+}
+
+.admin-media-file-thumb {
+  display: grid;
+  place-items: center;
+  color: var(--admin-muted);
+  font-size: 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+  .admin-pipeline-strip {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-pipeline-stage {
+    flex: 0 0 auto;
+    min-width: 5.5rem;
+  }
+
+  .admin-workspace-list {
+    max-height: 24rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-workspace-list-panel .admin-panel-stack,
+  .admin-workspace-detail {
+    padding: 0.8rem;
+  }
+
+  .admin-workspace-list {
+    max-height: 19rem;
+  }
+
+  .admin-workspace-item {
+    padding: 0.72rem;
+  }
+}
+
 /* ── Inbox header ──────────────────────────────────────── */
 
 .admin-inbox-header {

@@ -13,7 +13,7 @@ from app.infrastructure.github_repository import get_github_stats
 from app.infrastructure.payment_account_repository import delete_payment_account, list_payment_accounts, save_payment_account
 from app.infrastructure.settings_repository import get_site_profile
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
-from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, summary_card, textarea_field
+from app.presentation.page_helpers import SectionWrap, floating_field, loading_action_button, status_alert, textarea_field
 from app.presentation.shell import page_frame
 
 
@@ -47,6 +47,7 @@ def settings_tab_bar(active_tab: str = "profile") -> Div:
                 label,
                 href=href,
                 aria_label=f"Settings Section: {label}",
+                aria_current="page" if active_tab == tab_id else None,
                 cls=f"admin-filter-chip{' active' if active_tab == tab_id else ''}",
             )
             for label, href, tab_id in tabs
@@ -275,107 +276,59 @@ def _accounts_panel(edit_account=None) -> Card:
     )
 
 
-def _summary_row(profile):
-    return Row(
-        summary_card("Profile Source", profile.source.title(), "Where identity data is being loaded from."),
-        summary_card("Brand Label", profile.site_name.replace(" Portfolio", ""), "Drives the public short-name brand treatment."),
-        summary_card("Public URL", profile.site_url.replace("https://", ""), "Primary domain used in SEO and public links."),
-        cls="g-4",
-    )
-
-
 def settings_profile_page() -> tuple:
     profile = get_site_profile()
-    identity_panel = Card(
+    profile_form = Form(
         Div(
-            Div(
-                Span("Public identity", cls="admin-kicker"),
-                H2(profile.full_name, cls="admin-section-title mb-2"),
-                P("This workspace manages the profile and metadata the public portfolio uses for branding, contact details, and SEO defaults.", cls="admin-module-copy mb-0"),
-                cls="admin-detail-copy",
+            H3("Identity and website", cls="admin-subsection-title"),
+            Row(
+                Col(floating_field("Full Name", "full_name", profile.full_name, placeholder="Your public display name", required=True), span=12, md=7),
+                Col(floating_field("Role", "role", profile.role, placeholder="Your professional role", required=True), span=12, md=5),
+                cls="g-3",
             ),
-            Div(
-                Badge(profile.source.title(), cls="text-bg-secondary admin-metric-delta"),
-                Badge("Write enabled" if service_role_is_configured() else "Read-only for now", cls=f"{'text-bg-success' if service_role_is_configured() else 'text-bg-warning'} admin-metric-delta"),
-                cls="d-flex flex-wrap gap-2 mt-3",
+            Row(
+                Col(floating_field("Site Label", "site_name", profile.site_name, placeholder="Portfolio name", required=True), span=12, md=6),
+                Col(floating_field("Site URL", "site_url", profile.site_url, input_type="url", placeholder="https://your-domain.com", required=True), span=12, md=6),
+                cls="g-3 mt-1",
             ),
-            Div(
-                Row(
-                    Col(
-                        Div(
-                            H3("Current Profile", cls="admin-subsection-title"),
-                            Div(
-                                Div(Span("Display Name", cls="admin-field-label"), Strong(profile.full_name)),
-                                Div(Span("Role", cls="admin-field-label"), Strong(profile.role)),
-                                Div(Span("Site Label", cls="admin-field-label"), Strong(profile.site_name)),
-                                Div(Span("Site URL", cls="admin-field-label"), Strong(profile.site_url)),
-                                cls="admin-field-grid",
-                            ),
-                            cls="admin-detail-block",
-                        ),
-                        span=12,
-                        md=6,
-                    ),
-                    Col(
-                        Div(
-                            H3("Contact & SEO", cls="admin-subsection-title"),
-                            Div(
-                                Div(Span("Email", cls="admin-field-label"), Strong(profile.email)),
-                                Div(Span("Phone", cls="admin-field-label"), Strong(profile.phone)),
-                                Div(Span("Location", cls="admin-field-label"), Strong(profile.location)),
-                                Div(Span("SEO Title", cls="admin-field-label"), Strong(profile.seo_title)),
-                                cls="admin-field-grid",
-                            ),
-                            cls="admin-detail-block",
-                        ),
-                        span=12,
-                        md=6,
-                        cls="mt-4 mt-md-0",
-                    ),
-                    cls="g-4 mt-1",
-                ),
-                cls="mt-4",
-            ),
-            cls="admin-panel-stack",
+            cls="admin-form-section",
         ),
-        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
-    )
-
-    form = Form(
-        Row(
-            Col(floating_field("Full Name", "full_name", profile.full_name, placeholder="Olorundare Micheal Babawale", required=True), span=12, md=7),
-            Col(floating_field("Role", "role", profile.role, placeholder="Full-Stack & AI Systems Architect", required=True), span=12, md=5, cls="mt-3 mt-md-0"),
-            cls="g-3",
-        ),
-        Row(
-            Col(floating_field("Site Label", "site_name", profile.site_name, placeholder="Micheal Olorundare Portfolio", required=True), span=12, md=6),
-            Col(floating_field("Site URL", "site_url", profile.site_url, input_type="url", placeholder="https://your-domain.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3 mt-1",
-        ),
-        Row(
-            Col(floating_field("Email", "email", profile.email, input_type="email", placeholder="name@example.com"), span=12, md=6),
-            Col(floating_field("Phone", "phone", profile.phone, placeholder="+234..."), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3 mt-1",
-        ),
-        Row(
-            Col(floating_field("WhatsApp", "whatsapp", profile.whatsapp, placeholder="+234..."), span=12, md=6),
-            Col(floating_field("Location", "location", profile.location, placeholder="Ilorin, Nigeria"), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3 mt-1",
-        ),
-        Row(
-            Col(floating_field("GitHub URL", "github", profile.github, input_type="url", placeholder="https://github.com/..."), span=12, md=6),
-            Col(floating_field("LinkedIn URL", "linkedin", profile.linkedin, input_type="url", placeholder="https://linkedin.com/in/..."), span=12, md=6, cls="mt-3 mt-md-0"),
-            cls="g-3 mt-1",
-        ),
-        textarea_field("SEO Title", "seo_title", profile.seo_title, rows=2, required=True, placeholder="Portfolio SEO title"),
-        textarea_field("SEO Description", "seo_description", profile.seo_description, rows=5, required=True, placeholder="Default meta description"),
         Div(
-            loading_action_button("Save Settings", endpoint="/settings/save", target="#settings-save-result"),
+            H3("Contact details", cls="admin-subsection-title"),
+            Row(
+                Col(floating_field("Email", "email", profile.email, input_type="email", placeholder="name@example.com"), span=12, md=6),
+                Col(floating_field("Phone", "phone", profile.phone, placeholder="+234..."), span=12, md=6),
+                cls="g-3",
+            ),
+            Row(
+                Col(floating_field("WhatsApp", "whatsapp", profile.whatsapp, placeholder="+234..."), span=12, md=6),
+                Col(floating_field("Location", "location", profile.location, placeholder="Ilorin, Nigeria"), span=12, md=6),
+                cls="g-3 mt-1",
+            ),
+            cls="admin-form-section",
+        ),
+        Div(
+            H3("Public links", cls="admin-subsection-title"),
+            Row(
+                Col(floating_field("GitHub URL", "github", profile.github, input_type="url", placeholder="https://github.com/..."), span=12, md=6),
+                Col(floating_field("LinkedIn URL", "linkedin", profile.linkedin, input_type="url", placeholder="https://linkedin.com/in/..."), span=12, md=6),
+                cls="g-3",
+            ),
+            cls="admin-form-section",
+        ),
+        Div(
+            H3("Search preview", cls="admin-subsection-title"),
+            textarea_field("SEO Title", "seo_title", profile.seo_title, rows=2, required=True, placeholder="Portfolio SEO title"),
+            textarea_field("SEO Description", "seo_description", profile.seo_description, rows=4, required=True, placeholder="Short description used in search and sharing previews"),
+            cls="admin-form-section",
+        ),
+        Div(
+            loading_action_button("Save Profile", endpoint="/settings/save", target="#settings-save-result"),
             Span(
-                "Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving",
+                f"Source: {profile.source.title()} | " + ("Live sync enabled" if service_role_is_configured() else "Add the service-role key to enable saving"),
                 cls="admin-save-note",
             ),
-            cls="admin-form-actions mt-4",
+            cls="admin-form-actions mt-3",
         ),
         Div(id="settings-save-result", cls="mt-3"),
         action="/settings/save",
@@ -385,34 +338,23 @@ def settings_profile_page() -> tuple:
         hx_swap="innerHTML",
         cls="admin-settings-form",
     )
-
-    editor_panel = Card(
-        Div(
-            H3("Settings Editor", cls="admin-subsection-title"),
-            P("The site label powers the public short-name brand, while the profile and contact fields sync into the public portfolio and CV surfaces.", cls="admin-module-copy"),
-            form,
-            cls="admin-panel-stack",
-        ),
-        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
-    )
-
     return (
         *SEO(
             title=f"{settings.app_name} | Profile Settings",
-            description="Settings workspace for managing public identity, profile links, and SEO defaults.",
+            description="Manage the public profile, contact information, links, and search metadata.",
             url=f"{settings.base_url}/settings",
         ),
         *page_frame(
-            _summary_row(profile),
-            SectionWrap(
-                "Settings Workspace",
-                Div(
-                    settings_tab_bar("profile"),
-                    Row(
-                        Col(identity_panel, span=12, lg=5, cls="d-none d-lg-block"),
-                        Col(editor_panel, span=12, lg=7),
-                        cls="g-4",
+            Div(
+                settings_tab_bar("profile"),
+                Card(
+                    Div(
+                        H2("Public profile", cls="admin-section-title mb-1"),
+                        P("Update the information used across your portfolio, CV, contact surfaces, and search previews.", cls="admin-module-copy mb-4"),
+                        profile_form,
+                        cls="admin-panel-stack",
                     ),
+                    cls="admin-surface-card",
                 ),
             ),
             current="/settings",
@@ -420,9 +362,7 @@ def settings_profile_page() -> tuple:
         ),
     )
 
-
 def settings_access_page() -> tuple:
-    profile = get_site_profile()
     access = get_admin_access_profile()
 
     access_form = Form(
@@ -468,7 +408,6 @@ def settings_access_page() -> tuple:
             url=f"{settings.base_url}/settings/access",
         ),
         *page_frame(
-            _summary_row(profile),
             SectionWrap(
                 "Settings Workspace",
                 Div(
@@ -483,7 +422,6 @@ def settings_access_page() -> tuple:
 
 
 def settings_accounts_page() -> tuple:
-    profile = get_site_profile()
     return (
         *SEO(
             title=f"{settings.app_name} | Payment Accounts",
@@ -491,7 +429,6 @@ def settings_accounts_page() -> tuple:
             url=f"{settings.base_url}/settings/accounts",
         ),
         *page_frame(
-            _summary_row(profile),
             SectionWrap(
                 "Settings Workspace",
                 Div(
@@ -506,7 +443,6 @@ def settings_accounts_page() -> tuple:
 
 
 def settings_ai_page() -> tuple:
-    profile = get_site_profile()
     return (
         *SEO(
             title=f"{settings.app_name} | AI Provider Settings",
@@ -514,7 +450,6 @@ def settings_ai_page() -> tuple:
             url=f"{settings.base_url}/settings/ai",
         ),
         *page_frame(
-            _summary_row(profile),
             SectionWrap(
                 "Settings Workspace",
                 Div(
@@ -529,7 +464,6 @@ def settings_ai_page() -> tuple:
 
 
 def settings_health_page() -> tuple:
-    profile = get_site_profile()
     github = get_github_stats()
     active_provider = get_active_provider()
 
@@ -576,7 +510,6 @@ def settings_health_page() -> tuple:
             url=f"{settings.base_url}/settings/health",
         ),
         *page_frame(
-            _summary_row(profile),
             SectionWrap(
                 "Settings Workspace",
                 Div(

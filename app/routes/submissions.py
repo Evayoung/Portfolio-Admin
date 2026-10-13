@@ -18,8 +18,8 @@ except ImportError:
 
 def setup_submission_routes(app: Any) -> None:
     @app.get("/submissions")
-    def submissions(kind: str = "all", status: str = "all", search: str = "") -> Any:
-        return submissions_workspace_page(kind=kind, status=status, search=search)
+    def submissions(kind: str = "all", status: str = "all", search: str = "", entry_id: str = "") -> Any:
+        return submissions_workspace_page(kind=kind, status=status, search=search, entry_id=entry_id)
 
     @app.get("/submissions/detail")
     def submission_detail(entry_id: str = "", kind: str = "all", status: str = "all", search: str = "") -> Any:
@@ -57,10 +57,7 @@ def setup_submission_routes(app: Any) -> None:
         current_search: str = "",
     ) -> Any:
         result = delete_submission(entry_id=entry_id, kind=kind)
-        items = list_submissions(kind=current_kind, status=current_status, search=current_search)
-        summary = get_submission_workspace_summary()
-        panel = _submissions_list_panel(items, kind=current_kind, status=current_status, search=current_search, summary=summary)
         toast = toast_fragment("Submission Record Deleted" if result.success else "Deletion Failed", result.message, variant="success" if result.success else "danger")
-        return (panel, toast)
+        return (Response("", status_code=200, headers={"HX-Refresh": "true"}), toast)
 
 

@@ -307,12 +307,26 @@ def _load_deals() -> tuple[AdminDeal, ...]:
     return _load_local_deals()
 
 
-def list_deals(*, stage: str = "all", document_kind: str = "all", search: str = "") -> tuple[AdminDeal, ...]:
+def list_deals(
+    *,
+    stage: str = "all",
+    document_kind: str = "all",
+    document_status: str = "all",
+    search: str = "",
+) -> tuple[AdminDeal, ...]:
     items = _load_deals()
     if stage != "all":
         items = tuple(item for item in items if item.stage == stage)
-    if document_kind != "all":
-        items = tuple(item for item in items if any(document.kind == document_kind for document in item.documents))
+    if document_kind != "all" or document_status != "all":
+        items = tuple(
+            item
+            for item in items
+            if any(
+                (document_kind == "all" or document.kind == document_kind)
+                and (document_status == "all" or document.status == document_status)
+                for document in item.documents
+            )
+        )
     if search.strip():
         query = search.strip().lower()
         items = tuple(
@@ -320,8 +334,15 @@ def list_deals(*, stage: str = "all", document_kind: str = "all", search: str = 
             for item in items
             if query in item.client_name.lower()
             or query in item.company.lower()
+            or query in item.client_email.lower()
             or query in item.project_title.lower()
             or query in item.summary.lower()
+            or any(
+                query in document.title.lower()
+                or query in document.document_number.lower()
+                or query in document.status.lower()
+                for document in item.documents
+            )
         )
     return items
 

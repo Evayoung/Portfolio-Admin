@@ -52,7 +52,15 @@ except ImportError:
 
 def setup_deal_routes(app: Any) -> None:
     @app.get("/deals")
-    def deals(stage: str = "all", document_kind: str = "all", search: str = "", from_submission: str = "", from_kind: str = "all") -> Any:
+    def deals(
+        stage: str = "all",
+        document_kind: str = "all",
+        document_status: str = "all",
+        search: str = "",
+        deal_id: str = "",
+        from_submission: str = "",
+        from_kind: str = "all",
+    ) -> Any:
         prefill = {}
         if from_submission.strip():
             submission = get_submission(from_submission, kind=from_kind)
@@ -73,7 +81,9 @@ def setup_deal_routes(app: Any) -> None:
         return deals_workspace_page(
             stage=stage,
             document_kind=document_kind,
+            document_status=document_status,
             search=search,
+            deal_id=deal_id,
             prefill=prefill,
             open_quick=bool(prefill),
         )
@@ -219,7 +229,7 @@ def setup_deal_routes(app: Any) -> None:
             due_date=due_date,
         )
         if result.success and result.deal_id:
-            return Response("", status_code=200, headers={"HX-Redirect": f"/deals/{result.deal_id}?view=documents"})
+            return Response("", status_code=200, headers={"HX-Redirect": f"/deals?deal_id={result.deal_id}"})
         title_text = "Quick document not created"
         return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone))
 

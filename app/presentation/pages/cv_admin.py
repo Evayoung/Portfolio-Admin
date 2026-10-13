@@ -39,7 +39,7 @@ def _stack_panel(title: str, lines: list[str]) -> Card:
 
 # ── Section management cards (replace textareas in the editor) ──
 
-def _manage_card(title: str, count: int, noun: str, modal_id: str) -> Div:
+def _manage_card(title: str, count: int, noun: str, modal_id: str, section_id: str) -> Div:
     plural = noun if count == 1 else noun + "s"
     return Div(
         Div(
@@ -52,6 +52,7 @@ def _manage_card(title: str, count: int, noun: str, modal_id: str) -> Div:
                    data_bs_toggle="modal", data_bs_target=f"#{modal_id}"),
             cls="d-flex justify-content-between align-items-center gap-2",
         ),
+        id=section_id,
         cls="cv-section-card mt-3",
     )
 
@@ -579,7 +580,7 @@ def cv_preview_page() -> tuple:
                                     cls="cv-tools-grid",
                                 ),
                             ),
-                            span=12, lg=5, cls="mt-4 mt-lg-0",
+                            span=12, lg=5,
                         ),
                         cls="g-4",
                     ),
@@ -625,7 +626,7 @@ def cv_preview_page() -> tuple:
                         ),
                         cls="cv-sidebar",
                     ),
-                    span=12, lg=4, cls="mt-4 mt-lg-0",
+                    span=12, lg=4,
                 ),
                 cls="g-4",
             ),
@@ -761,13 +762,13 @@ def cv_edit_page() -> tuple:
         ),
         Div(textarea_field("Professional Summary", "summary", meta.summary, rows=7, required=True, placeholder="CV summary"), cls="mt-3"),
         # Section management cards
-        _manage_card("Core Skills", len(core_skills), "skill", "core-skills-modal"),
-        _manage_card("Competencies", len(competencies), "item", "competencies-modal"),
-        _manage_card("Experience", len(work_history), "role", "work-history-modal"),
-        _manage_card("Education", len(education), "entry", "education-modal"),
-        _manage_card("Certifications", len(certifications), "certification", "certifications-modal"),
-        _manage_card("Tools & Technologies", len(tool_categories), "group", "tools-modal"),
-        _manage_card("Languages", len(languages), "language", "languages-modal"),
+        _manage_card("Core Skills", len(core_skills), "skill", "core-skills-modal", "cv-section-core-skills"),
+        _manage_card("Competencies", len(competencies), "item", "competencies-modal", "cv-section-competencies"),
+        _manage_card("Experience", len(work_history), "role", "work-history-modal", "cv-section-experience"),
+        _manage_card("Education", len(education), "entry", "education-modal", "cv-section-education"),
+        _manage_card("Certifications", len(certifications), "certification", "certifications-modal", "cv-section-certifications"),
+        _manage_card("Tools & Technologies", len(tool_categories), "group", "tools-modal", "cv-section-tools"),
+        _manage_card("Languages", len(languages), "language", "languages-modal", "cv-section-languages"),
         Div(
             loading_action_button("Save CV Profile", endpoint="/cv/save", target="#cv-save-result"),
             Span(
@@ -794,6 +795,18 @@ def cv_edit_page() -> tuple:
                 "that power both the interactive CV and the branded download.",
                 cls="admin-module-copy mb-4",
             ),
+            Div(
+                Span("Jump to section", cls="admin-field-label me-2"),
+                *[
+                    A(label, href=f"#cv-section-{slug}", cls="btn admin-toggle-btn btn-sm")
+                    for slug, label in (
+                        ("core-skills", "Core skills"), ("competencies", "Competencies"),
+                        ("experience", "Experience"), ("education", "Education"),
+                        ("certifications", "Certifications"), ("tools", "Tools"), ("languages", "Languages"),
+                    )
+                ],
+                cls="d-flex align-items-center flex-wrap gap-2 mb-3",
+            ),
             editor_form,
             cls="admin-panel-stack",
         ),
@@ -810,7 +823,7 @@ def cv_edit_page() -> tuple:
             back_link,
             Row(
                 Col(snapshot_card, span=12, lg=5),
-                Col(form_panel, span=12, lg=7, cls="mt-4 mt-lg-0"),
+                Col(form_panel, span=12, lg=7),
                 cls="g-4",
             ),
             # ── All 7 section modals at ROOT level ──
