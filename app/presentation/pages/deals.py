@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
+from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Script, Select, Span, Strong, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO
 
 from app.config import settings
@@ -219,20 +219,23 @@ def _deal_quick_preview_modal(item: AdminDeal) -> Modal:
     )
 
 
-def _quick_document_form() -> Form:
+def _quick_document_form(prefill: dict[str, str] | None = None) -> Form:
     """Quick document creation form for standalone invoices/quotes."""
     accounts = list_payment_accounts()
+    values = prefill or {}
+    initial_title = values.get("project_title", "")
+    initial_summary = values.get("summary", "")
     return Form(
         Div(
             P("Client", cls="admin-form-section-title"),
             Row(
-                Col(floating_field("Client Name", "client_name", "", placeholder="Client or contact name", required=True), span=12, md=6),
-                Col(floating_field("Client Email", "client_email", "", input_type="email", placeholder="client@example.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
+                Col(floating_field("Client Name", "client_name", values.get("client_name", ""), placeholder="Client or contact name", required=True), span=12, md=6),
+                Col(floating_field("Client Email", "client_email", values.get("client_email", ""), input_type="email", placeholder="client@example.com", required=True), span=12, md=6, cls="mt-3 mt-md-0"),
                 cls="g-3",
             ),
             Row(
-                Col(floating_field("Client Phone", "client_phone", "", placeholder="+234..."), span=12, md=6),
-                Col(floating_field("Company", "company", "", placeholder="Optional company"), span=12, md=6, cls="mt-3 mt-md-0"),
+                Col(floating_field("Client Phone", "client_phone", values.get("client_phone", ""), placeholder="+234..."), span=12, md=6),
+                Col(floating_field("Company", "company", values.get("company", ""), placeholder="Optional company"), span=12, md=6, cls="mt-3 mt-md-0"),
                 cls="g-3 mt-3",
             ),
             cls="admin-form-section mt-0",
@@ -262,9 +265,9 @@ def _quick_document_form() -> Form:
                 ),
                 cls="g-3",
             ),
-            floating_field("Project / Work Title", "project_title", "", placeholder="Logo cleanup, landing page, consultation", required=True),
-            floating_field("Document Title", "document_title", "", placeholder="Invoice for consultation", required=True),
-            textarea_field("Short Summary", "summary", "", rows=3, placeholder="Short context for the work, payment, or approval request."),
+            floating_field("Project / Work Title", "project_title", initial_title, placeholder="Logo cleanup, landing page, consultation", required=True),
+            floating_field("Document Title", "document_title", values.get("document_title", initial_title), placeholder="Invoice for consultation", required=True),
+            textarea_field("Short Summary", "summary", initial_summary, rows=3, placeholder="Short context for the work, payment, or approval request."),
             cls="admin-form-section",
         ),
         Div(
@@ -307,7 +310,14 @@ def _quick_document_form() -> Form:
     )
 
 
-def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", search: str = "") -> tuple:
+def deals_workspace_page(
+    *,
+    stage: str = "all",
+    document_kind: str = "all",
+    search: str = "",
+    prefill: dict[str, str] | None = None,
+    open_quick: bool = False,
+) -> tuple:
     """Pipeline list page — responsive grid, quick preview modals, unified filter bar."""
     all_items = list_deals()
     items = all_items
@@ -390,7 +400,7 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
     ) if items else EmptyState(
         icon="briefcase",
         title="No deals match this view",
-        description="Try a different pipeline stage or create a new deal from the Quick Document form.",
+        description="Try a different workflow filter or create a quick proposal, quotation, or invoice.",
         action=Button(
             Icon("plus-lg", cls="me-1"),
             "Quick Document",
@@ -404,12 +414,15 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
 
     # ── Quick document modal ─────────────────────────────────────────────────
     quick_doc_modal = Modal(
-        _quick_document_form(),
+        _quick_document_form(prefill),
         modal_id="quickDocModal",
         title="Quick Document",
         size="lg",
         centered=True,
     )
+    quick_doc_autopen = Script(
+        "document.addEventListener('DOMContentLoaded',function(){var m=document.getElementById('quickDocModal');if(m&&window.bootstrap){bootstrap.Modal.getOrCreateInstance(m).show();}});"
+    ) if open_quick else ""
 
     # ── Root-level quick preview modals (one per deal card) ─────────────────
     preview_modals = [_deal_quick_preview_modal(item) for item in items]
@@ -419,8 +432,8 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
         Div(
             Div(
                 Div(
-                    H2("Pipeline Records", cls="admin-section-title"),
-                    P("Track every client from lead to payment. Click any deal to view documents, responses, and generate next steps.", cls="admin-module-copy mb-0"),
+                    H2("Project Document Workspaces", cls="admin-section-title"),
+                    P("Each record groups all client documents for a project, whether it follows the full workflow or only needs one invoice or quote.", cls="admin-module-copy mb-0"),
                 ),
                 Div(
                     Button(
@@ -445,22 +458,23 @@ def deals_workspace_page(*, stage: str = "all", document_kind: str = "all", sear
     return (
         *SEO(
             title=f"{settings.app_name} | Deals",
-            description="Client pipeline workspace for proposals, quotations, and invoices.",
+            description="Client project workspaces for proposals, quotations, invoices, links, and payment responses.",
             url=f"{settings.base_url}/deals",
         ),
         *page_frame(
             Row(
-                summary_card("Client Deals", str(summary.total), "Every client record keeps proposal, quote, and invoice context together."),
+                summary_card("Project Workspaces", str(summary.total), "Every client/project record keeps related documents together."),
                 summary_card("Proposals", str(summary.proposals), "Early-stage structured scopes ready for review."),
                 summary_card("Quotes", str(summary.quotes), "Fixed-scope pricing records with expiry support."),
                 summary_card("Invoices", str(summary.invoices), "Payment requests tied back to approved work.", xl=3),
                 cls="g-4",
             ),
             SectionWrap(
-                "Deals Pipeline",
+                "Deals Workspace",
                 list_panel,
             ),
             quick_doc_modal,
+            quick_doc_autopen,
             *preview_modals,
             current="/deals",
             title="Deals",

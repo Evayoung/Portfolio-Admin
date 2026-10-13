@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.domain.models import AdminDeal
+from app.domain.deal_content import parse_document_sections
 from app.infrastructure.payment_account_repository import get_default_payment_account, get_payment_account
 from app.infrastructure.settings_repository import get_site_profile
 
@@ -158,9 +158,16 @@ def _build_option_table(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> T
     return table
 
 
-def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> tuple[list, int, bool]:
+def _build_line_item_flowables(
+    deal: AdminDeal,
+    styles: dict[str, ParagraphStyle],
+    *,
+    raw_items_text: str | None = None,
+    fallback_total: int | None = None,
+) -> tuple[list, int, bool]:
     import re
-    items = _line_items(deal.line_items_text)
+    items = _line_items(raw_items_text if raw_items_text is not None else deal.line_items_text)
+    fallback_amount = fallback_total if fallback_total is not None else deal.amount_ngn
 
     # Group line items by package prefix
     groups = {}
@@ -185,7 +192,7 @@ def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle
 
     # Standard single total layout
     if len(groups) <= 1 and "Standard" in groups:
-        subtotal = sum(amount for *_rest, amount in items) or deal.amount_ngn
+        subtotal = sum(amount * _safe_qty(qty) for *_rest, qty, amount in items) or fallback_amount
         data = [
             [
                 Paragraph("Component", styles["table_head"]),
@@ -209,7 +216,7 @@ def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle
                     Paragraph(deal.project_title, styles["table_cell"]),
                     Paragraph(deal.summary or "-", styles["table_cell"]),
                     Paragraph("1", styles["table_cell"]),
-                    Paragraph(_money(deal.amount_ngn), styles["table_cell"]),
+                    Paragraph(_money(fallback_amount), styles["table_cell"]),
                 ]
             )
         data.append(
@@ -244,7 +251,7 @@ def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle
     highest_package_total = 0
 
     for pkg_name, pkg_items in groups.items():
-        subtotal = sum(amount * int(qty or "1") for *_rest, qty, amount in pkg_items)
+        subtotal = sum(amount * _safe_qty(qty) for *_rest, qty, amount in pkg_items)
         if subtotal > highest_package_total:
             highest_package_total = subtotal
 
@@ -307,6 +314,13 @@ def _build_line_item_flowables(deal: AdminDeal, styles: dict[str, ParagraphStyle
         flowables.append(Spacer(1, 8))
 
     return flowables, highest_package_total, True
+
+
+def _safe_qty(value: str) -> int:
+    try:
+        return max(1, int(value or "1"))
+    except ValueError:
+        return 1
 
 
 def _payment_account_table(account, styles: dict[str, ParagraphStyle]) -> Table:
@@ -530,18 +544,13 @@ def parse_markdown_to_flowables(text: str, styles: dict[str, ParagraphStyle]) ->
     return flowables
 
 
-def _build_dynamic_sections(deal: AdminDeal, styles: dict[str, ParagraphStyle]) -> list:
+def _build_dynamic_sections(sections_json: str, styles: dict[str, ParagraphStyle]) -> list:
     """Build PDF elements from sections_json — each section rendered as banner + body."""
-    try:
-        sections = json.loads(deal.sections_json) if deal.sections_json else []
-    except (json.JSONDecodeError, TypeError):
-        return []
+    sections = parse_document_sections(sections_json)
     if not sections:
         return []
     elements = []
-    for section in sorted(sections, key=lambda s: s.get("order", 0) if isinstance(s, dict) else 0):
-        if not isinstance(section, dict):
-            continue
+    for section in sections:
         title = section.get("title", "")
         content = section.get("content", "")
         if not title:
@@ -698,10 +707,18 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
     )
 
     option_table = _build_option_table(deal, styles)
-    line_item_flowables, subtotal, has_multiple_packages = _build_line_item_flowables(deal, styles)
+    document_total = document.total_amount if document else deal.amount_ngn
+    document_line_items = (document.line_items_text if document else "") or deal.line_items_text
+    line_item_flowables, subtotal, has_multiple_packages = _build_line_item_flowables(
+        deal,
+        styles,
+        raw_items_text=document_line_items,
+        fallback_total=document_total,
+    )
     deposit_amount = round(subtotal * (deal.deposit_percent / 100))
     next_steps = _next_steps_copy(document_kind, deal, subtotal, deposit_amount)
-    has_sections = deal.sections_json and deal.sections_json.strip() not in ("", "[]")
+    effective_sections = (document.sections_json if document else "") or deal.sections_json
+    has_sections = bool(parse_document_sections(effective_sections))
     story = [
         header,
         _cyan_rule(),
@@ -715,8 +732,94 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
         cover_meta,
         Spacer(1, 14),
     ]
+
+    if document_kind == "quote":
+        summary_text = (document.summary if document else "") or deal.summary
+        if summary_text:
+            story.extend([
+                _section_banner("Agreement Summary", styles),
+                Spacer(1, 6),
+                _body_card([Paragraph(summary_text, styles["body"])]),
+                Spacer(1, 12),
+            ])
+        story.extend([
+            _section_banner("Quotation Line Items", styles),
+            Spacer(1, 6),
+        ])
+        story.extend(line_item_flowables)
+        payment_text = (document.payment_terms if document else "") or deal.payment_terms
+        if payment_text:
+            story.extend([
+                Spacer(1, 8),
+                _section_banner("Payment Terms", styles),
+                Spacer(1, 6),
+                _body_card([Paragraph(line, styles["body"]) for line in _lines(payment_text)]),
+                Spacer(1, 12),
+            ])
+        story.extend([
+            _section_banner("Next Steps", styles),
+            Spacer(1, 6),
+            _bullet_card(_next_steps_copy("quote", deal, subtotal, deposit_amount), styles),
+            Spacer(1, 14),
+            Paragraph(f"{profile.full_name}  -  {profile.email}  -  {profile.phone}", styles["footer"]),
+            Spacer(1, 4),
+            Paragraph("View online: use the client link to approve, decline, or comment on this quotation.", styles["footer"]),
+        ])
+        doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+        return output_path
+
+    if document_kind == "invoice":
+        due_label = document.due_date if document and document.due_date else "On receipt"
+        story.extend([
+            _section_banner("Amount Due", styles),
+            Spacer(1, 6),
+            _body_card([
+                Paragraph(f"<b>{_money(document_total)}</b>", ParagraphStyle("InvoiceAmount", parent=styles["body"], fontName="Helvetica-Bold", fontSize=18, leading=22, textColor=NAVY)),
+                Spacer(1, 5),
+                Paragraph(f"Due: {due_label}", styles["body"]),
+            ]),
+            Spacer(1, 12),
+            _section_banner("Project Reference", styles),
+            Spacer(1, 6),
+            _body_card([
+                Paragraph(f"<b>{deal.project_title}</b>", styles["body"]),
+                Paragraph((document.summary if document else "") or deal.summary or "-", styles["body"]),
+            ]),
+            Spacer(1, 12),
+            _section_banner("Invoice Line Items", styles),
+            Spacer(1, 6),
+        ])
+        story.extend(line_item_flowables)
+        payment_text = (document.payment_terms if document else "") or deal.payment_terms
+        if payment_text:
+            story.extend([
+                Spacer(1, 8),
+                _section_banner("Payment Schedule", styles),
+                Spacer(1, 6),
+                _body_card([Paragraph(line, styles["body"]) for line in _lines(payment_text)]),
+                Spacer(1, 12),
+            ])
+        if payment_account:
+            story.extend([
+                _section_banner("Payment Details", styles),
+                Spacer(1, 6),
+                _payment_account_table(payment_account, styles),
+                Spacer(1, 12),
+            ])
+        story.extend([
+            _section_banner("Next Steps", styles),
+            Spacer(1, 6),
+            _bullet_card(_next_steps_copy("invoice", deal, subtotal, deposit_amount), styles),
+            Spacer(1, 14),
+            Paragraph(f"{profile.full_name}  -  {profile.email}  -  {profile.phone}", styles["footer"]),
+            Spacer(1, 4),
+            Paragraph("View online: use the client link to mark payment as submitted or send a note.", styles["footer"]),
+        ])
+        doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+        return output_path
+
     if has_sections:
-        story.extend(_build_dynamic_sections(deal, styles))
+        story.extend(_build_dynamic_sections(effective_sections, styles))
     else:
         story.extend([
             _section_banner("Background & Objective", styles),

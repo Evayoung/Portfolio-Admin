@@ -18,10 +18,12 @@ try:
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
+        delete_deal_document,
         save_deal_document,
         save_quick_document,
         update_document_status,
     )
+    from ..infrastructure.submission_repository import get_submission
     from ..presentation.page_helpers import toast_fragment
     from ..presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
     from ..presentation.pages.deal_detail import deal_detail_page, deal_generate_result_fragment
@@ -37,10 +39,12 @@ except ImportError:
         regenerate_document_link,
         resend_document_link,
         revoke_document_link,
+        delete_deal_document,
         save_deal_document,
         save_quick_document,
         update_document_status,
     )
+    from infrastructure.submission_repository import get_submission
     from presentation.page_helpers import toast_fragment
     from presentation.pages.deals import deal_save_status_fragment, deals_workspace_page
     from presentation.pages.deal_detail import deal_detail_page, deal_generate_result_fragment
@@ -48,15 +52,34 @@ except ImportError:
 
 def setup_deal_routes(app: Any) -> None:
     @app.get("/deals")
-    def deals(stage: str = "all", document_kind: str = "all", search: str = "") -> Any:
+    def deals(stage: str = "all", document_kind: str = "all", search: str = "", from_submission: str = "", from_kind: str = "all") -> Any:
+        prefill = {}
+        if from_submission.strip():
+            submission = get_submission(from_submission, kind=from_kind)
+            if submission:
+                title = submission.subject or submission.service or "Client request"
+                summary = submission.message
+                if submission.budget or submission.timeline:
+                    summary = "\n".join(part for part in (summary, f"Budget: {submission.budget}", f"Timeline: {submission.timeline}") if part)
+                prefill = {
+                    "client_name": submission.name,
+                    "client_email": submission.email,
+                    "client_phone": submission.phone,
+                    "company": "",
+                    "project_title": title,
+                    "document_title": f"{title} Proposal",
+                    "summary": summary,
+                }
         return deals_workspace_page(
             stage=stage,
             document_kind=document_kind,
             search=search,
+            prefill=prefill,
+            open_quick=bool(prefill),
         )
 
     @app.get("/deals/{deal_id}")
-    def deal_detail(deal_id: str, view: str = "overview") -> Any:
+    def deal_detail(deal_id: str, view: str = "documents") -> Any:
         return deal_detail_page(deal_id=deal_id, view=view)
 
     @app.get("/deals/{deal_id}/documents")
@@ -196,7 +219,7 @@ def setup_deal_routes(app: Any) -> None:
             due_date=due_date,
         )
         if result.success and result.deal_id:
-            return Response("", status_code=200, headers={"HX-Redirect": f"/deals?deal_id={result.deal_id}"})
+            return Response("", status_code=200, headers={"HX-Redirect": f"/deals/{result.deal_id}?view=documents"})
         title_text = "Quick document not created"
         return Div(deal_save_status_fragment(title_text, result.message, tone=result.tone))
 
@@ -297,6 +320,19 @@ def setup_deal_routes(app: Any) -> None:
                 toast_fragment("Document updated", message),
             )
         return deal_save_status_fragment("Update not completed", message, tone=tone)
+
+    @app.post("/deals/documents/delete")
+    def deal_document_delete(
+        deal_id: str = "",
+        document_id: str = "",
+    ) -> Any:
+        success, tone, message = delete_deal_document(deal_id=deal_id, document_id=document_id)
+        if success:
+            return (
+                Response("", status_code=200, headers={"HX-Refresh": "true"}),
+                toast_fragment("Document deleted", message),
+            )
+        return deal_save_status_fragment("Delete not completed", message, tone=tone)
 
     @app.post("/deals/documents/link")
     def deal_document_link_action(

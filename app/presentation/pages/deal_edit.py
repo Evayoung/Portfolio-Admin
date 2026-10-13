@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from fasthtml.common import A, Button, Div, Form, H2, Input, Label, P, Script, Span, Textarea
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO, Spinner
 
 from app.config import settings
+from app.domain.deal_content import parse_document_sections
 from app.domain.models import AdminDeal
 from app.infrastructure.deal_repository import get_deal_with_documents
 from app.infrastructure.payment_account_repository import list_payment_accounts
@@ -57,12 +57,7 @@ def _section_items_list(sections: list) -> list:
 
 def _section_manager(selected: AdminDeal) -> Div:
     """Section Manager — add, edit, remove, reorder document sections."""
-    try:
-        sections = json.loads(selected.sections_json) if selected.sections_json else []
-    except (json.JSONDecodeError, TypeError):
-        sections = []
-    if not isinstance(sections, list):
-        sections = []
+    sections = parse_document_sections(selected.sections_json)
 
     section_modal = Modal(
         Div(

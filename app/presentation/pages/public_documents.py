@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from datetime import date, datetime
 
@@ -14,6 +13,7 @@ from faststrap import Col, Icon, Markdown, Modal, Row, SEO
 from faststrap.components.feedback.modern_toast import ModernToastStack
 
 from app.config import settings
+from app.domain.deal_content import parse_document_sections
 from app.infrastructure.deal_repository import get_document_by_token, list_document_responses
 from app.infrastructure.payment_account_repository import get_default_payment_account, get_payment_account
 from app.infrastructure.settings_repository import get_site_profile
@@ -163,16 +163,11 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
     # Section titles that belong in PDF/print only — not on the interactive web portal
     _PDF_ONLY_TITLES = {"acceptance", "your response", "signature", "sign off", "sign-off"}
 
-    try:
-        sections = json.loads(sections_json) if sections_json else []
-    except (json.JSONDecodeError, TypeError):
-        sections = []
+    sections = parse_document_sections(sections_json)
     if not sections:
         return []
     cards = []
-    for section in sorted(sections, key=lambda s: s.get("order", 0) if isinstance(s, dict) else 0):
-        if not isinstance(section, dict):
-            continue
+    for section in sections:
         title = section.get("title", "")
         content = section.get("content", "")
         if not title and not content:
@@ -201,7 +196,7 @@ def _dynamic_sections(sections_json: str) -> list[Div]:
 
 def _line_items_table(deal, document) -> Div:
     import re
-    raw_items = _line_items(deal.line_items_text)
+    raw_items = _line_items(document.line_items_text or deal.line_items_text)
 
     # Group line items by package prefix
     groups = {}
@@ -226,7 +221,7 @@ def _line_items_table(deal, document) -> Div:
 
     # If there are no items, show default deal info
     if not raw_items:
-        groups["Standard"] = [(deal.project_title, deal.summary, "1", str(total))]
+        groups["Standard"] = [(deal.project_title, deal.summary, "1", str(document.total_amount or deal.amount_ngn or 0))]
 
     # If multiple packages/options exist, render them as separate options tables
     if len(groups) > 1 or "Standard" not in groups:
@@ -1006,7 +1001,7 @@ def _payment_account_modal(account) -> Modal:
         title="Payment Account Details",
         centered=True,
         size="sm",
-        cls="doc-modal",
+        cls="doc-modal doc-account-modal",
     )
 
 

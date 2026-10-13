@@ -1129,6 +1129,32 @@
   border-radius: 0 0 var(--doc-radius) var(--doc-radius);
 }
 
+.doc-account-modal .modal-dialog {
+  max-width: min(92vw, 36rem);
+}
+
+.doc-account-modal .doc-account-grid {
+  gap: 0.85rem;
+}
+
+.doc-account-modal .doc-account-field {
+  background: #ffffff;
+  border-color: rgba(7, 17, 31, 0.12);
+}
+
+.doc-account-modal .doc-account-label {
+  color: #405166;
+}
+
+.doc-account-modal .doc-account-value {
+  color: #07111f;
+  font-weight: 800;
+}
+
+.doc-account-modal .doc-account-note {
+  color: #26384d;
+}
+
 /* ── Modal button overrides (light background context) ────── */
 
 .doc-modal .doc-btn-ghost,
@@ -1387,4 +1413,3 @@
     font-size: 2rem;
   }
 }
-

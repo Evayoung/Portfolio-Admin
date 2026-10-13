@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from app.config import settings
+from app.domain.deal_content import serialize_document_sections
 from app.domain.models import AdminDeal, ClientDocumentResponse, DealDocument, DealSaveResult, DealWorkspaceSummary
 from app.infrastructure.audit_repository import record_audit_event
 from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
@@ -281,7 +282,7 @@ def _load_supabase_deals() -> tuple[AdminDeal, ...]:
                 "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
                 "sections_json,"
                 "amount_ngn,deposit_percent,updated_at,"
-                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms)"
+                "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
             ),
             "order": "updated_at.desc",
         },
@@ -410,24 +411,8 @@ def _parse_tech_stack(raw: str) -> list[str]:
 
 
 def _validate_sections_json(raw: str) -> str:
-    """Return the raw JSON string if it is valid, else empty string.
-
-    Prevents malformed JSON from being persisted and breaking the portal
-    render later when it tries json.loads().
-    """
-    if not raw or not raw.strip():
-        return ""
-    try:
-        parsed = json.loads(raw)
-        if not isinstance(parsed, list):
-            import logging
-            logging.getLogger(__name__).warning("sections_json is not a JSON array; ignoring. Got: %s", type(parsed).__name__)
-            return ""
-        return raw
-    except json.JSONDecodeError as exc:
-        import logging
-        logging.getLogger(__name__).warning("sections_json contains invalid JSON and will not be persisted: %s", exc)
-        return ""
+    """Normalize sections JSON before persistence."""
+    return serialize_document_sections(raw)
 
 
 def _parse_line_items(raw: str) -> list[dict[str, object]]:
@@ -847,6 +832,7 @@ def save_deal_document(
         )
 
     parsed_line_items = _parse_line_items(line_items)
+    normalized_sections = _validate_sections_json(sections_json)
     subtotal = sum(int(item["line_total"]) for item in parsed_line_items) or amount_value
     total_amount = subtotal
     deal_payload = {
@@ -866,7 +852,7 @@ def save_deal_document(
         "payment_terms": payment_terms.strip(),
         "exclusions_text": exclusions_text.strip(),
         "closing_note": closing_note.strip(),
-        "sections_json": _validate_sections_json(sections_json),
+        "sections_json": normalized_sections,
         "amount_ngn": amount_value,
         "deposit_percent": deposit_value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -915,6 +901,7 @@ def save_deal_document(
             "public_token": public_token,
             "title": document_title.strip(),
             "summary": summary.strip(),
+            "sections_json": normalized_sections,
             "timeline_text": timeline_text.strip(),
             "payment_terms": payment_terms.strip(),
             "line_items": parsed_line_items,
@@ -975,6 +962,30 @@ def delete_deal(deal_id: str) -> tuple[bool, str, str]:
         return False, "danger", f"Could not reach Supabase to delete the deal. {exc}"
 
 
+def delete_deal_document(*, deal_id: str, document_id: str) -> tuple[bool, str, str]:
+    """Permanently delete one client document without deleting its project workspace."""
+    if not deal_id.strip() or not document_id.strip():
+        return False, "warning", "Choose a valid document before deleting."
+    if not service_role_is_configured():
+        return False, "info", "Supabase write path is not configured yet, so documents cannot be deleted."
+    try:
+        rows = _rest_request(
+            "DELETE",
+            "client_documents",
+            params={"id": f"eq.{document_id}", "deal_id": f"eq.{deal_id}", "select": "id"},
+            prefer="return=representation",
+        )
+        if isinstance(rows, list) and not rows:
+            return False, "warning", "The document was not found or may already have been deleted."
+        record_audit_event(action="client_document_deleted", target_type="client_document", target_id=document_id, detail=deal_id)
+        return True, "success", "The document has been permanently deleted."
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore")
+        return False, "danger", f"Supabase rejected the document delete request. {details or exc.reason}"
+    except (URLError, TimeoutError, ValueError) as exc:
+        return False, "danger", f"Could not reach Supabase to delete the document. {exc}"
+
+
 def get_deal_with_documents(deal_id: str) -> AdminDeal | None:
     """Fetch a deal with full document content for the detail page.
 
@@ -996,7 +1007,7 @@ def get_deal_with_documents(deal_id: str) -> AdminDeal | None:
                     "background_text,scope_notes,option_notes_text,tech_stack,timeline_text,payment_terms,exclusions_text,closing_note,"
                     "sections_json,"
                     "amount_ngn,deposit_percent,updated_at,"
-                    "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms)"
+                    "client_documents(id,kind,status,title,document_number,public_token,total_amount,valid_until,due_date,updated_at,line_items,payment_account_id,summary,payment_terms,sections_json)"
                 ),
                 "id": f"eq.{deal_id}",
                 "limit": "1",

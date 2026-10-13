@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, H4, Input, P, Span, Strong
+from fasthtml.common import A, Button, Div, Form, H2, H4, Input, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
 
 from app.config import settings
@@ -119,6 +119,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
     if document.public_token:
         actions.append(
             A(
+                Icon("clipboard", cls="me-1"),
                 "Copy Link",
                 href="#",
                 cls="btn admin-icon-btn admin-install-btn",
@@ -127,18 +128,103 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
         )
         actions.append(
             A(
+                Icon("box-arrow-up-right", cls="me-1"),
                 "Open Client Link",
                 href=f"/documents/{document.public_token}",
                 cls="btn admin-icon-btn admin-module-btn",
                 target="_blank",
             )
         )
+        actions.append(
+            Form(
+                Input(type="hidden", name="deal_id", value=selected.deal_id),
+                Input(type="hidden", name="document_id", value=document.document_id),
+                Input(type="hidden", name="document_kind", value=document.kind),
+                Input(type="hidden", name="action", value="resend"),
+                Button(Icon("send", cls="me-1"), "Resend", type="submit", cls="btn admin-icon-btn admin-install-btn"),
+                action="/deals/documents/link",
+                method="post",
+                hx_post="/deals/documents/link",
+                hx_target=f"#doc-status-{document.document_id}",
+                hx_swap="innerHTML",
+                cls="d-inline-flex",
+            )
+        )
+        actions.append(
+            Form(
+                Input(type="hidden", name="deal_id", value=selected.deal_id),
+                Input(type="hidden", name="document_id", value=document.document_id),
+                Input(type="hidden", name="document_kind", value=document.kind),
+                Input(type="hidden", name="action", value="regenerate"),
+                Button(Icon("arrow-repeat", cls="me-1"), "Regenerate", type="submit", cls="btn admin-icon-btn admin-install-btn"),
+                action="/deals/documents/link",
+                method="post",
+                hx_post="/deals/documents/link",
+                hx_target=f"#doc-status-{document.document_id}",
+                hx_swap="innerHTML",
+                hx_confirm="Generate a new public link for this document?",
+                cls="d-inline-flex",
+            )
+        )
+        actions.append(
+            Form(
+                Input(type="hidden", name="deal_id", value=selected.deal_id),
+                Input(type="hidden", name="document_id", value=document.document_id),
+                Input(type="hidden", name="document_kind", value=document.kind),
+                Input(type="hidden", name="action", value="revoke"),
+                Button(Icon("slash-circle", cls="me-1"), "Revoke", type="submit", cls="btn admin-icon-btn btn-outline-warning"),
+                action="/deals/documents/link",
+                method="post",
+                hx_post="/deals/documents/link",
+                hx_target=f"#doc-status-{document.document_id}",
+                hx_swap="innerHTML",
+                hx_confirm="Revoke this public client link?",
+                cls="d-inline-flex",
+            )
+        )
+    else:
+        actions.append(
+            Form(
+                Input(type="hidden", name="deal_id", value=selected.deal_id),
+                Input(type="hidden", name="document_id", value=document.document_id),
+                Input(type="hidden", name="document_kind", value=document.kind),
+                Input(type="hidden", name="action", value="regenerate"),
+                Button(Icon("arrow-repeat", cls="me-1"), "Generate Link", type="submit", cls="btn admin-icon-btn admin-module-btn"),
+                action="/deals/documents/link",
+                method="post",
+                hx_post="/deals/documents/link",
+                hx_target=f"#doc-status-{document.document_id}",
+                hx_swap="innerHTML",
+                cls="d-inline-flex",
+            )
+        )
 
     actions.append(
         A(
+            Icon("download", cls="me-1"),
             "Download PDF",
             href=f"/deals/{selected.deal_id}/documents/{document.kind}/pdf",
             cls="btn admin-icon-btn admin-install-btn",
+        )
+    )
+
+    actions.append(
+        Form(
+            Input(type="hidden", name="deal_id", value=selected.deal_id),
+            Input(type="hidden", name="document_id", value=document.document_id),
+            Button(
+                Icon("trash"),
+                type="submit",
+                cls="btn admin-danger-btn",
+                aria_label=f"Delete {document.kind} {document.document_number}",
+            ),
+            action="/deals/documents/delete",
+            method="post",
+            hx_post="/deals/documents/delete",
+            hx_target=f"#doc-status-{document.document_id}",
+            hx_swap="innerHTML",
+            hx_confirm="Permanently delete this document? This will not delete the project workspace.",
+            cls="d-inline-flex ms-auto",
         )
     )
 

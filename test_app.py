@@ -407,6 +407,41 @@ def test_quick_document_route_reports_read_only_without_supabase_service_role() 
     assert "Supabase write path is not configured yet" in html or "Could not reach Supabase" in html or "Supabase rejected the deal save request" in html
 
 
+def test_quick_document_success_redirects_to_document_workspace(monkeypatch) -> None:
+    from app.domain.models import DealSaveResult
+    from app.routes import deals as deal_routes
+
+    sign_in()
+
+    def fake_save_quick_document(**kwargs):
+        return DealSaveResult(True, "success", "Created.", "Supabase", deal_id="deal-new")
+
+    monkeypatch.setattr(deal_routes, "save_quick_document", fake_save_quick_document)
+    response = client.post(
+        "/deals/quick",
+        data={
+            "client_name": "Friendly Client",
+            "client_email": "friend@example.com",
+            "project_title": "Quick Invoice Task",
+            "document_kind": "invoice",
+            "document_status": "draft",
+            "document_title": "Quick Invoice",
+            "amount_ngn": "50000",
+            "deposit_percent": "100",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["HX-Redirect"] == "/deals/deal-new?view=documents"
+
+
+def test_document_sections_parser_ignores_malformed_items() -> None:
+    from app.domain.deal_content import parse_document_sections
+
+    sections = parse_document_sections('[{"title":"Scope","content":"Build","order":2},"bad",{"title":"Intro","content":"Start","order":1}]')
+    assert [item["title"] for item in sections] == ["Intro", "Scope"]
+    assert parse_document_sections("{bad json") == []
+
+
 def test_deal_document_update_route_reports_read_only_without_supabase_service_role() -> None:
     sign_in()
     response = client.post(
@@ -431,6 +466,44 @@ def test_deal_document_pdf_route_serves_pdf() -> None:
     assert response.headers["content-type"].startswith("application/pdf")
 
 
+def _pdf_text(path: Path) -> str:
+    from PyPDF2 import PdfReader
+
+    reader = PdfReader(str(path))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def test_quote_pdf_uses_quote_specific_content() -> None:
+    from app.infrastructure.deal_pdf import build_deal_document_pdf
+    from app.infrastructure.deal_repository import get_deal
+
+    deal = get_deal("deal-olivette")
+    assert deal is not None
+    text = _pdf_text(build_deal_document_pdf(deal, "quote"))
+    assert "PROJECT QUOTATION" in text
+    assert "Quotation Line Items" in text
+    assert "Agreement Summary" in text
+    assert "Background & Objective" not in text
+    assert "Scope of Work" not in text
+    assert "What Is Not Included" not in text
+
+
+def test_invoice_pdf_uses_invoice_specific_content() -> None:
+    from app.infrastructure.deal_pdf import build_deal_document_pdf
+    from app.infrastructure.deal_repository import get_deal
+
+    deal = get_deal("deal-olivette")
+    assert deal is not None
+    text = _pdf_text(build_deal_document_pdf(deal, "invoice"))
+    assert "PAYMENT INVOICE" in text
+    assert "Amount Due" in text
+    assert "Invoice Line Items" in text
+    assert "Payment Details" in text
+    assert "Background & Objective" not in text
+    assert "Scope of Work" not in text
+    assert "Closing Note" not in text
+
+
 def test_public_document_route_is_accessible_without_login() -> None:
     response = client.get("/documents/farmtech-proposal-demo", follow_redirects=False)
     html = response.text
@@ -448,6 +521,7 @@ def test_public_invoice_route_shows_payment_account_actions() -> None:
     assert "Payment Account" in html
     assert "Copy Account Number" in html
     assert "I Have Paid" in html
+    assert "doc-account-modal" in html
 
 
 def test_public_document_response_route_reports_read_only_without_supabase_service_role() -> None:

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from fasthtml.common import A, Div, H2, H3, H4, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
 
 from app.config import settings
+from app.domain.deal_content import parse_document_sections
 from app.domain.models import AdminDeal
 from app.infrastructure.deal_repository import get_deal_with_documents
 from app.presentation.pages.deal_helpers import (
@@ -54,6 +54,8 @@ def _overview_tab(selected: AdminDeal) -> Div:
     else:
         amount_display = Div(Span("Amount", cls="admin-field-label"), Strong(_money(selected.amount_ngn)))
 
+    document_sections = parse_document_sections(selected.sections_json)
+
     return Div(
         Row(
             Col(
@@ -93,27 +95,17 @@ def _overview_tab(selected: AdminDeal) -> Div:
             cls="g-4",
         ),
         # Sections content from sections_json (proposal/quote body)
-        *(
-            [
-                Card(
-                    H3("Document Sections", cls="admin-subsection-title"),
-                    *[
-                        Div(
-                            H4(s.get("title", ""), cls="admin-project-title mb-1"),
-                            P(s.get("content", ""), cls="admin-module-copy mb-3"),
-                        )
-                        for s in sorted(
-                            json.loads(selected.sections_json),
-                            key=lambda x: x.get("order", 0),
-                        )
-                        if s.get("title") or s.get("content")
-                    ],
-                    cls="admin-detail-block mt-4",
-                ),
-            ]
-            if selected.sections_json and selected.sections_json.strip() not in ("", "[]")
-            else []
-        ),
+        Card(
+            H3("Document Sections", cls="admin-subsection-title"),
+            *[
+                Div(
+                    H4(section.get("title", ""), cls="admin-project-title mb-1"),
+                    P(section.get("content", ""), cls="admin-module-copy mb-3"),
+                )
+                for section in document_sections
+            ],
+            cls="admin-detail-block mt-4",
+        ) if document_sections else "",
         Row(
             Col(
                 Card(
