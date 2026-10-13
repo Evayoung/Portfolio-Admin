@@ -16,6 +16,7 @@ from app.infrastructure.blog_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field
+from app.presentation.media_picker import media_picker_field
 from app.presentation.shell import page_frame
 
 
@@ -235,7 +236,7 @@ def _editor_form(selected, *, category: str = "all", search: str = "") -> Form:
             ),
             cls="admin-form-group mt-3",
         ),
-        floating_field("Hero Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/hero-bg.jpg"),
+        media_picker_field("Article hero image", "image_url", selected.image if selected else ""),
         Row(
             Col(floating_field("Read Minutes", "read_minutes", str(selected.read_minutes) if selected else "5", input_type="number", placeholder="5"), span=12, md=4),
             Col(floating_field("Tags", "tags", ", ".join(selected.tags) if selected else "", placeholder="FastAPI, Python, AI"), span=12, md=8, cls="mt-3 mt-md-0"),

@@ -6,6 +6,10 @@ Make common admin work faster and easier to scan while preserving the existing N
 
 This is an implementation plan, not a proposal to replace the application architecture. `domain / infrastructure / presentation / routes` and the CSS import hub already provide the right separation. Keep styling in `_brand.css`, `_typography.css`, `_layout.css`, `_surfaces.css`, and `_interactions.css`; use Bootstrap/Faststrap for responsive structure and HTMX for navigation and partial updates.
 
+## Public site production readiness
+
+For public data ownership, submission security, safe content seeding, SEO and route behavior, resilience, and staging sign-off, see [PUBLIC_SITE_PRODUCTION_READINESS_PLAN.md](PUBLIC_SITE_PRODUCTION_READINESS_PLAN.md). It complements this Neo Admin UI plan and covers both `neo-admin` and the sibling `neoportfolio` application.
+
 ## Target experience
 
 - Operational records open in a two-panel workspace: searchable/filterable list on the left, selected record and its primary actions on the right.

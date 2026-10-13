@@ -349,25 +349,26 @@ def sync_testimonials(content_module) -> int:
     return len(content_module.TESTIMONIALS)
 
 
-def sync_all_content() -> dict[str, object]:
-    _ensure_service_role()
+def preview_content_sync() -> dict[str, object]:
+    """Describe the bundled seed payload without connecting to Supabase."""
     content_module = _load_module("content.py", "neoportfolio_content_sync")
     blog_module = _load_module("blog_content.py", "neoportfolio_blog_sync")
     cv_module = _load_module("cv_content.py", "neoportfolio_cv_sync")
 
-    _upsert_site_settings(content_module)
-    project_count = sync_projects(content_module)
-    blog_count = sync_blog(blog_module)
-    cv_counts = sync_cv(cv_module)
-    service_counts = sync_services_and_pricing(content_module)
-    testimonial_count = sync_testimonials(content_module)
-
     return {
-        "projects": project_count,
-        "blog_posts": blog_count,
-        "cv": cv_counts,
-        "services": service_counts["services"],
-        "pricing_tiers": service_counts["pricing_tiers"],
-        "testimonials": testimonial_count,
+        "projects": len(content_module.PROJECTS),
+        "blog_posts": len(blog_module.BLOG_POSTS),
+        "cv": {
+            "work_history": len(cv_module.WORK_HISTORY),
+            "education": len(cv_module.EDUCATION),
+            "certifications": len(cv_module.CERTIFICATIONS),
+            "tool_groups": len(cv_module.TOOLS_GRID),
+        },
+        "services": len(content_module.SERVICES),
+        "pricing_tiers": len(content_module.PRICING_TIERS),
+        "testimonials": len(content_module.TESTIMONIALS),
         "site_settings": 1,
+        "mode": "preview",
+        "write_status": "No database connection or writes performed.",
+        "apply_status": "Disabled until replacement sync is non-destructive and idempotent.",
     }

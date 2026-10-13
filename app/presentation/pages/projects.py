@@ -16,6 +16,7 @@ from app.infrastructure.project_repository import (
 )
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.presentation.page_helpers import SectionWrap, action_group, action_link, floating_field, loading_action_button, search_filter_bar, status_alert, summary_card, textarea_field
+from app.presentation.media_picker import media_picker_field
 from app.presentation.shell import page_frame
 
 
@@ -234,7 +235,7 @@ def _editor_form(selected, *, category: str, featured_only: bool, search: str) -
             ),
             cls="admin-form-group mt-3",
         ),
-        floating_field("Image URL", "image_url", selected.image if selected else "", placeholder="/assets/images/example.jpg"),
+        media_picker_field("Project image", "image_url", selected.image if selected else ""),
         textarea_field("Summary", "summary", selected.summary if selected else "", rows=3, required=True, placeholder="Short public-facing project summary"),
         textarea_field("Narrative", "narrative", selected.narrative if selected else "", rows=6, required=True, placeholder="Longer case-study narrative"),
         floating_field("Tech Stack", "tech_stack", ", ".join(selected.tech) if selected else "", placeholder="Python, FastAPI, PostgreSQL"),

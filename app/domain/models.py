@@ -94,6 +94,69 @@ class BlogSaveResult:
 
 
 @dataclass(frozen=True)
+class AdminService:
+    id: str
+    slug: str
+    title: str
+    summary: str
+    lead: str
+    deliverables: tuple[str, ...]
+    timeline: str
+    price: str
+    icon: str
+    visible: bool
+    sort_order: int
+
+
+@dataclass(frozen=True)
+class AdminPricingTier:
+    id: str
+    title: str
+    price: str
+    highlight: str
+    points: tuple[str, ...]
+    visible: bool
+    sort_order: int
+
+
+@dataclass(frozen=True)
+class AdminTestimonial:
+    id: str
+    author: str
+    role: str
+    company: str
+    quote: str
+    visible: bool
+    sort_order: int
+
+
+@dataclass(frozen=True)
+class ContentSaveResult:
+    success: bool
+    tone: str
+    message: str
+    record_id: str = ""
+
+
+@dataclass(frozen=True)
+class AdminHomeContent:
+    hero_roles: tuple[str, ...]
+    hero_summary: str
+    about_summary: str
+    journey_paragraphs: tuple[str, ...]
+    about_stats: tuple[tuple[str, str], ...]
+    experience_items: tuple[tuple[str, str, str, str], ...]
+    technical_skills: tuple[tuple[str, int, str], ...]
+    cv_highlights: tuple[tuple[str, str], ...]
+    seo_keywords: tuple[str, ...]
+    profile_image_url: str
+    hero_background_url: str
+    booking_background_url: str
+    cv_background_url: str
+    source: str = "supabase"
+
+
+@dataclass(frozen=True)
 class AdminCvMeta:
     name: str
     role: str

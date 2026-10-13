@@ -19,6 +19,7 @@ def setup_routes(app: Any) -> None:
     from .documents import setup_document_routes
     from .settings import setup_settings_routes
     from .ai_assistant import setup_ai_assistant_routes
+    from .website_content import setup_website_content_routes
 
     setup_auth_routes(app)
     setup_dashboard_routes(app)
@@ -31,3 +32,4 @@ def setup_routes(app: Any) -> None:
     setup_document_routes(app)
     setup_settings_routes(app)
     setup_ai_assistant_routes(app)
+    setup_website_content_routes(app)

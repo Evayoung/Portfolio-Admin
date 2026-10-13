@@ -849,6 +849,28 @@
   background: rgba(0, 0, 0, 0.035);
 }
 
+.website-content-back-link {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  color: var(--admin-secondary);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.website-content-back-link:hover,
+.website-content-back-link:focus-visible {
+  color: var(--admin-primary);
+  text-decoration: underline;
+}
+
+@media (max-width: 767.98px) {
+  .website-content-workspace.is-editing .website-content-list-column {
+    display: none;
+  }
+}
+
 @media (max-width: 991.98px) {
   .admin-pipeline-strip {
     overflow-x: auto;

@@ -16,7 +16,7 @@ from starlette.datastructures import UploadFile
 from app.config import settings
 from app.domain.models import AdminMediaAsset, MediaSaveResult, MediaWorkspaceSummary
 from app.infrastructure.audit_repository import record_audit_event
-from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
+from app.infrastructure.supabase_client import service_role_is_configured
 
 
 BUCKET_NAME = "portfolio-media"
@@ -95,7 +95,7 @@ def _asset_from_row(row: dict[str, object]) -> AdminMediaAsset:
 
 
 def list_media_assets(*, kind: str = "all", search: str = "") -> tuple[AdminMediaAsset, ...]:
-    if not supabase_is_configured():
+    if not service_role_is_configured():
         return ()
     try:
         rows = _rest_request(
@@ -123,7 +123,7 @@ def list_media_assets(*, kind: str = "all", search: str = "") -> tuple[AdminMedi
 
 
 def get_media_asset(asset_id: str) -> AdminMediaAsset | None:
-    if not asset_id.strip() or not supabase_is_configured():
+    if not asset_id.strip() or not service_role_is_configured():
         return None
     try:
         rows = _rest_request(
@@ -144,7 +144,7 @@ def get_media_workspace_summary() -> MediaWorkspaceSummary:
         total=len(items),
         images=sum(1 for item in items if item.kind == "image"),
         documents=sum(1 for item in items if item.kind == "document" or item.kind == "resume"),
-        source="Supabase" if items else "Supabase" if supabase_is_configured() else "Local",
+        source="Supabase" if service_role_is_configured() else "Local",
     )
 
 

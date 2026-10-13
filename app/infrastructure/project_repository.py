@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.domain.models import AdminProject, ProjectSaveResult, ProjectWorkspaceSummary
-from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
+from app.infrastructure.supabase_client import service_role_is_configured
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +132,7 @@ def _load_supabase_projects() -> tuple[AdminProject, ...]:
             "select": "slug,title,category,summary,narrative,image_url,complexity,satisfaction,featured,published,sort_order,project_tech_stack(label,sort_order)",
             "order": "sort_order.asc",
         },
+        use_service_role=True,
     )
     if not isinstance(rows, list):
         return ()
@@ -139,11 +140,9 @@ def _load_supabase_projects() -> tuple[AdminProject, ...]:
 
 
 def _load_projects() -> tuple[AdminProject, ...]:
-    if supabase_is_configured():
+    if service_role_is_configured():
         try:
-            items = _load_supabase_projects()
-            if items:
-                return items
+            return _load_supabase_projects()
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass
     return _load_local_projects()
@@ -179,7 +178,7 @@ def list_project_categories() -> tuple[tuple[str, str], ...]:
         if item.category not in seen:
             seen.append(item.category)
     categories = tuple((slug, slug.replace("-", " ").title()) for slug in seen)
-    if not categories:
+    if not categories and not service_role_is_configured():
         categories = DEFAULT_PROJECT_CATEGORIES
     return (("all", "All"),) + categories
 

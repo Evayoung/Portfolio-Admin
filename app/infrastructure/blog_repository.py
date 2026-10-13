@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.domain.models import AdminBlogPost, BlogSaveResult, BlogWorkspaceSummary
-from app.infrastructure.supabase_client import service_role_is_configured, supabase_is_configured
+from app.infrastructure.supabase_client import service_role_is_configured
 
 
 @lru_cache(maxsize=1)
@@ -114,6 +114,7 @@ def _load_supabase_posts() -> tuple[AdminBlogPost, ...]:
             "select": "id,slug,title,category,summary,content_html,image_url,read_minutes,published,published_at,blog_post_tags(blog_tags(label))",
             "order": "published_at.desc.nullslast",
         },
+        use_service_role=True,
     )
     if not isinstance(rows, list):
         return ()
@@ -121,11 +122,9 @@ def _load_supabase_posts() -> tuple[AdminBlogPost, ...]:
 
 
 def _load_posts() -> tuple[AdminBlogPost, ...]:
-    if supabase_is_configured():
+    if service_role_is_configured():
         try:
-            items = _load_supabase_posts()
-            if items:
-                return items
+            return _load_supabase_posts()
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass
     return _load_local_posts()
@@ -156,14 +155,15 @@ def get_blog_post(slug: str) -> AdminBlogPost | None:
 
 
 def list_blog_categories() -> tuple[tuple[str, str], ...]:
-    module = _neoportfolio_blog_module()
-    categories = getattr(module, "BLOG_CATEGORIES", ())
-    if categories:
-        return categories
     seen: list[str] = []
     for item in _load_posts():
         if item.category not in seen:
             seen.append(item.category)
+    if not seen and not service_role_is_configured():
+        module = _neoportfolio_blog_module()
+        categories = getattr(module, "BLOG_CATEGORIES", ())
+        if categories:
+            return categories
     return (("all", "All"),) + tuple((slug, slug.replace("-", " ").title()) for slug in seen)
 
 
