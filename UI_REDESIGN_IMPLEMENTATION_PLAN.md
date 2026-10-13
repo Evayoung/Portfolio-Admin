@@ -23,7 +23,7 @@ This is an implementation plan, not a proposal to replace the application archit
 - AI Assistant: input and generated-draft panels side by side.
 - Settings: grouped profile form and removal of duplicated profile summary panels from other settings pages.
 - Submissions: selectable inbox and in-context review/update panel.
-- Media: compact asset rows with primary Open/Copy actions and grouped management actions.
+- Media: responsive preview-first asset gallery with icon-only Open/Copy/Manage actions and clear usage guidance.
 - Dashboard: removed the repeated deal metric strip.
 - CV: added section jump links to the existing section managers.
 
@@ -49,6 +49,21 @@ Python compilation, diff whitespace checks, and local markup rendering have pass
 - **Phase 0:** Architecture and routes inspected during implementation; route/query/write behavior is covered by focused smoke checks. A consolidated inventory remains useful for handoff but does not block the UI work.
 - **Phases 1-4:** Redesign slices implemented across Deals, Projects, Blog, AI Assistant, Settings, Submissions, Media, Dashboard, and CV.
 - **Phase 5:** Desktop/mobile visual pass, selection/history checks, public document checks, and PDF checks completed locally. Configured-service success flows and manual keyboard/contrast review remain outstanding.
+
+### Deals screen polish slice
+
+- Each document is now a Faststrap accordion, closed by default, with type, title, status, and amount in its summary. Multiple documents can stay open while comparing them.
+- Document action controls are icon-only with accessible names and hover titles. Touch targets stay 44 px at narrow widths; package choice and AI generation controls keep descriptive text.
+- At mobile widths up to 390 px, kind/status filters scroll horizontally and the search field shares a row with its action. This removes the excessive wrapping and blank search gap seen at 320 px.
+- Playwright review at 320, 360, 390, and 1440 px found no page-level horizontal overflow or JavaScript errors. Keyboard activation opens the accordions, and opening one does not close another. No live writes were made.
+
+### Media gallery and dependency slice
+
+- Replaced the squeezed three-column asset list with a Faststrap responsive grid: one full-width card on mobile and two cards from tablet widths onward.
+- Asset cards now lead with a larger image/file preview, readable metadata and 44 px icon-only open, copy, and manage controls with accessible names and titles.
+- Added practical gallery guidance for project covers, article artwork, logos, and client downloads. Empty library guidance remains explicit; no fake uploaded records were added.
+- Raised the declared Faststrap minimum from 0.8.0 to 0.9.0, matching the app's existing minimum-version policy.
+- A temporary in-memory card preview at 320, 360, 390, 768, 1024, 1199, 1200, and 1440 px stayed within the viewport; card action targets measured 44 px. The gallery remains one column until the XL breakpoint so it can breathe inside the existing 7/5 workspace split. The real route correctly showed its empty state with external data sources disabled.
 
 ## Scope and priority
 

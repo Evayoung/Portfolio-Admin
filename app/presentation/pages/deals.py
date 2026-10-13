@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, Option, P, Script, Select, Span, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
-from faststrap import Badge, Card, Col, EmptyState, Icon, Modal, Row, SEO
+from fasthtml.common import A, Div, Form, H2, H3, Input, Label, Option, P, Script, Select, Span, Table, Tbody, Td, Textarea, Tfoot, Th, Thead, Tr
+from faststrap import Badge, Button, Card, Col, EmptyState, Icon, Modal, Row, SEO
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -208,7 +208,7 @@ def deals_workspace_page(
             )
             for value, label in kind_options
         ],
-        cls="admin-filter-toggle-group flex-wrap",
+        cls="admin-filter-toggle-group",
     )
     status_options = [("all", "Any status"), ("draft", "Draft"), ("sent", "Sent"), ("accepted", "Accepted"), ("rejected", "Rejected"), ("paid", "Paid"), ("expired", "Expired")]
     status_filter = Div(
@@ -390,10 +390,20 @@ def deals_workspace_page(
                 Div(
                     Div(
                         H2("Client and project documents", cls="admin-section-title mb-1"),
-                        P(f"{summary.total} workspaces | {document_total} documents. Select a project to review its documents and take action.", cls="admin-module-copy mb-0"),
+                        P(f"{summary.total} workspaces | {document_total} documents. Search or select a project.", cls="admin-module-copy mb-0"),
+                        cls="flex-grow-1 min-w-0",
                     ),
-                    Button(Icon("plus-lg", cls="me-1"), "Quick Document", type="button", cls="btn admin-module-btn", data_bs_toggle="modal", data_bs_target="#quickDocModal"),
-                    cls="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3",
+                    Button(
+                        Icon("plus-lg"),
+                        Span("Quick Document", cls="d-none d-sm-inline ms-1"),
+                        type="button",
+                        cls="btn admin-module-btn admin-deals-quick-add",
+                        aria_label="Create quick document",
+                        title="Create quick document",
+                        data_bs_toggle="modal",
+                        data_bs_target="#quickDocModal",
+                    ),
+                    cls="d-flex flex-row justify-content-between align-items-start gap-2 mb-2",
                 ),
                 Div(stage_strip, kind_filter, status_filter, search_form, cls="admin-deals-controls"),
                 workspace,

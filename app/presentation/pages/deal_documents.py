@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Button, Div, Form, H2, H4, Input, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
+from fasthtml.common import A, Div, Form, H2, Input, P, Span, Strong
+from faststrap import Accordion, AccordionItem, Badge, Button, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -62,9 +62,8 @@ def _response_timeline(document_id: str) -> Div:
     )
 
 
-def _document_card_detail(selected: AdminDeal, document) -> Div:
-    """Render a document card for the detail page with full actions and response timeline."""
-    status_color = _status_color(document.status)
+def _document_card_detail(selected: AdminDeal, document, *, next_step=None) -> AccordionItem:
+    """Render one collapsed-by-default document with details and actions inside."""
     doc_url = f"{settings.base_url.rstrip('/')}/documents/{document.public_token}" if document.public_token else ""
     view_time = get_document_view_time(document.document_id)
 
@@ -79,10 +78,12 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="status", value="sent"),
                 loading_action_button(
-                    "Mark Sent",
+                    Icon("send"),
                     endpoint="/deals/documents/update",
                     target=f"#doc-status-{document.document_id}",
-                    button_cls="btn admin-icon-btn admin-install-btn",
+                    button_cls="btn admin-icon-btn admin-icon-btn-only admin-install-btn",
+                    aria_label="Mark document as sent",
+                    title="Mark document as sent",
                 ),
                 action="/deals/documents/update",
                 method="post",
@@ -101,10 +102,12 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="status", value="accepted"),
                 loading_action_button(
-                    "Mark Accepted",
+                    Icon("check2-circle"),
                     endpoint="/deals/documents/update",
                     target=f"#doc-status-{document.document_id}",
-                    button_cls="btn admin-icon-btn btn-outline-success",
+                    button_cls="btn admin-icon-btn admin-icon-btn-only btn-outline-success",
+                    aria_label="Mark document as accepted",
+                    title="Mark document as accepted",
                 ),
                 action="/deals/documents/update",
                 method="post",
@@ -119,19 +122,21 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
     if document.public_token:
         actions.append(
             A(
-                Icon("clipboard", cls="me-1"),
-                "Copy Link",
+                Icon("clipboard"),
                 href="#",
-                cls="btn admin-icon-btn admin-install-btn",
-                **{"data_copy_target": doc_url, "data_copy_label": "Copy Link"},
+                cls="btn admin-icon-btn admin-icon-btn-only admin-install-btn",
+                aria_label="Copy public link",
+                title="Copy public link",
+                **{"data_copy_target": doc_url, "data_copy_label": "Copy public link"},
             )
         )
         actions.append(
             A(
-                Icon("box-arrow-up-right", cls="me-1"),
-                "Open Client Link",
+                Icon("box-arrow-up-right"),
                 href=f"/documents/{document.public_token}",
-                cls="btn admin-icon-btn admin-module-btn",
+                cls="btn admin-icon-btn admin-icon-btn-only admin-module-btn",
+                aria_label="Open client link",
+                title="Open client link",
                 target="_blank",
             )
         )
@@ -141,7 +146,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_id", value=document.document_id),
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="action", value="resend"),
-                Button(Icon("send", cls="me-1"), "Resend", type="submit", cls="btn admin-icon-btn admin-install-btn"),
+                Button(Icon("send"), type="submit", cls="btn admin-icon-btn admin-icon-btn-only admin-install-btn", aria_label="Resend document", title="Resend document"),
                 action="/deals/documents/link",
                 method="post",
                 hx_post="/deals/documents/link",
@@ -156,7 +161,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_id", value=document.document_id),
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="action", value="regenerate"),
-                Button(Icon("arrow-repeat", cls="me-1"), "Regenerate", type="submit", cls="btn admin-icon-btn admin-install-btn"),
+                Button(Icon("arrow-repeat"), type="submit", cls="btn admin-icon-btn admin-icon-btn-only admin-install-btn", aria_label="Regenerate public link", title="Regenerate public link"),
                 action="/deals/documents/link",
                 method="post",
                 hx_post="/deals/documents/link",
@@ -172,7 +177,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_id", value=document.document_id),
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="action", value="revoke"),
-                Button(Icon("slash-circle", cls="me-1"), "Revoke", type="submit", cls="btn admin-icon-btn btn-outline-warning"),
+                Button(Icon("slash-circle"), type="submit", cls="btn admin-icon-btn admin-icon-btn-only btn-outline-warning", aria_label="Revoke public link", title="Revoke public link"),
                 action="/deals/documents/link",
                 method="post",
                 hx_post="/deals/documents/link",
@@ -189,7 +194,7 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_id", value=document.document_id),
                 Input(type="hidden", name="document_kind", value=document.kind),
                 Input(type="hidden", name="action", value="regenerate"),
-                Button(Icon("arrow-repeat", cls="me-1"), "Generate Link", type="submit", cls="btn admin-icon-btn admin-module-btn"),
+                Button(Icon("link-45deg"), type="submit", cls="btn admin-icon-btn admin-icon-btn-only admin-module-btn", aria_label="Generate public link", title="Generate public link"),
                 action="/deals/documents/link",
                 method="post",
                 hx_post="/deals/documents/link",
@@ -201,10 +206,11 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
 
     actions.append(
         A(
-            Icon("download", cls="me-1"),
-            "Download PDF",
+            Icon("download"),
             href=f"/deals/{selected.deal_id}/documents/{document.kind}/pdf",
-            cls="btn admin-icon-btn admin-install-btn",
+            cls="btn admin-icon-btn admin-icon-btn-only admin-install-btn",
+            aria_label="Download PDF",
+            title="Download PDF",
         )
     )
 
@@ -215,8 +221,9 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
             Button(
                 Icon("trash"),
                 type="submit",
-                cls="btn admin-danger-btn",
+                cls="btn admin-danger-btn admin-icon-btn admin-icon-btn-only",
                 aria_label=f"Delete {document.kind} {document.document_number}",
+                title="Delete document",
             ),
             action="/deals/documents/delete",
             method="post",
@@ -235,10 +242,12 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 Input(type="hidden", name="document_id", value=document.document_id),
                 Input(type="hidden", name="document_kind", value=document.kind),
                 loading_action_button(
-                    "Reset to Sent",
+                    Icon("arrow-counterclockwise"),
                     endpoint="/admin/document/reset",
                     target=f"#doc-status-{document.document_id}",
-                    button_cls="btn admin-icon-btn btn-outline-warning",
+                    button_cls="btn admin-icon-btn admin-icon-btn-only btn-outline-warning",
+                    aria_label="Reset document to sent",
+                    title="Reset document to sent",
                 ),
                 action="/admin/document/reset",
                 method="post",
@@ -308,30 +317,36 @@ def _document_card_detail(selected: AdminDeal, document) -> Div:
                 cls="admin-pkg-breakdown",
             )
 
-    return Div(
+    details = Div(
         Div(
-            Div(
-                Span(document.kind.title(), cls="admin-project-category"),
-                Badge(document.status.replace("_", " ").title(), cls=f"bg-{status_color} bg-opacity-10 text-{status_color}"),
-                Span(document.document_number, cls="admin-project-meta ms-2"),
-                Span(f"Updated {document.updated_at}" if document.updated_at else "", cls="admin-project-meta ms-2"),
-                cls="d-flex align-items-center gap-2 flex-wrap",
-            ),
-            cls="d-flex justify-content-between align-items-start",
+            Span(document.document_number, cls="admin-project-meta"),
+            Span(f"Updated {document.updated_at}" if document.updated_at else "", cls="admin-project-meta"),
+            cls="d-flex flex-wrap align-items-center gap-2 mb-2",
         ),
-        H4(document.title, cls="admin-project-title mt-2"),
         Div(
             Div(Span("Total", cls="admin-field-label"), Strong(_money(document.total_amount))),
             Div(Span("Valid Until", cls="admin-field-label"), Strong(document.valid_until or "Not set")),
             Div(Span("Due Date", cls="admin-field-label"), Strong(document.due_date or "Not set")),
-            cls="admin-field-grid mt-3",
+            cls="admin-field-grid deal-document-meta-grid",
         ),
         line_items_section,
-        P(f"Last viewed: {view_time}" if view_time else "", cls="admin-project-meta mt-2 mb-0"),
-        Div(*actions, cls="d-flex flex-wrap gap-2 mt-3"),
+        Div(*actions, cls="admin-action-row deal-document-actions mt-3"),
         Div(id=f"doc-status-{document.document_id}", cls="mt-2"),
         _response_timeline(document.document_id),
-        cls="deal-document-card",
+        P(f"Last viewed: {view_time}" if view_time else "", cls="admin-project-meta mt-2 mb-0"),
+        next_step or "",
+    )
+    header_title = f"{document.kind.title()} | {document.title} | {document.status.replace('_', ' ').title()} | {_money(document.total_amount)}"
+    return AccordionItem(
+        details,
+        title=header_title,
+        expanded=False,
+        header_cls="deal-document-accordion-header",
+        button_cls="deal-document-accordion-toggle",
+        body_cls="deal-document-accordion-body",
+        cls="deal-document-accordion-item",
+        data_document_kind=document.kind,
+        data_document_status=document.status,
     )
 
 
@@ -444,12 +459,16 @@ def documents_tab(selected: AdminDeal, *, newest_first: bool = False) -> Div:
 
     cards = []
     for doc in sorted_docs:
-        cards.append(_document_card_detail(selected, doc))
         cta = _generate_next_cta(selected, doc)
-        if cta:
-            cards.append(cta)
+        cards.append(_document_card_detail(selected, doc, next_step=cta))
 
-    return Div(*cards, cls="deal-documents-list")
+    return Accordion(
+        *cards,
+        accordion_id=f"deal-documents-{selected.deal_id}",
+        always_open=True,
+        flush=True,
+        cls="deal-documents-accordion",
+    )
 
 
 def deal_documents_page(*, deal_id: str = "", view: str = "documents") -> tuple:

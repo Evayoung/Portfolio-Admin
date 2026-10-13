@@ -313,27 +313,103 @@ body {
    Deal Detail — Document Cards
    ============================================================ */
 
-.deal-document-card {
-  background: linear-gradient(180deg, rgba(14, 28, 45, 0.96), rgba(11, 22, 36, 0.96));
+.deal-documents-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  --bs-accordion-bg: rgba(14, 28, 45, 0.96);
+  --bs-accordion-color: var(--admin-text);
+  --bs-accordion-border-color: var(--admin-border);
+  --bs-accordion-btn-bg: rgba(14, 28, 45, 0.96);
+  --bs-accordion-btn-color: var(--admin-text);
+  --bs-accordion-active-bg: rgba(45, 184, 232, 0.08);
+  --bs-accordion-active-color: var(--admin-text);
+  --bs-accordion-btn-focus-box-shadow: 0 0 0 0.15rem rgba(45, 184, 232, 0.2);
+}
+
+.deal-documents-accordion .deal-document-accordion-item {
+  overflow: hidden;
   border: 1px solid var(--admin-border);
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  transition: border-color 0.2s ease;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(14, 28, 45, 0.96), rgba(11, 22, 36, 0.96));
 }
 
-.deal-document-card:hover {
-  border-color: rgba(45, 184, 232, 0.24);
+.deal-document-accordion-header {
+  margin: 0;
 }
 
-[data-bs-theme="light"] .deal-document-card {
+.deal-document-accordion-toggle {
+  min-height: 3.25rem;
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.deal-document-accordion-toggle::after {
+  flex: 0 0 auto;
+  margin-left: 0.75rem;
+}
+
+.deal-document-accordion-body {
+  padding: 0.85rem 0.9rem 1rem;
+}
+
+.deal-document-meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin-top: 0.25rem;
+}
+
+.deal-document-meta-grid .admin-field-label {
+  margin-bottom: 0.1rem;
+}
+
+.deal-document-actions {
+  gap: 0.45rem;
+}
+
+.deal-document-actions .admin-icon-btn-only {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+}
+
+.deal-document-actions form {
+  display: inline-flex;
+}
+
+.deal-document-accordion .deal-generate-next {
+  margin-top: 0.9rem;
+}
+
+[data-bs-theme="light"] .deal-documents-accordion {
+  --bs-accordion-bg: #ffffff;
+  --bs-accordion-btn-bg: #ffffff;
+  --bs-accordion-active-bg: rgba(2, 132, 199, 0.07);
+}
+
+[data-bs-theme="light"] .deal-documents-accordion .deal-document-accordion-item {
   background: #ffffff;
 }
 
-.deal-documents-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+@media (max-width: 359.98px) {
+  .deal-document-accordion-toggle {
+    padding: 0.7rem;
+    font-size: 0.84rem;
+  }
+
+  .deal-document-accordion-body {
+    padding: 0.7rem;
+  }
+
+  .deal-document-actions {
+    gap: 0.35rem;
+  }
 }
 
 /* ============================================================

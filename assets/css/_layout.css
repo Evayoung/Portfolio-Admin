@@ -774,31 +774,79 @@
   padding-top: 1rem;
 }
 
-.admin-workspace-documents .deal-document-card {
-  padding: 1rem;
-  border: 1px solid var(--admin-border);
-  border-radius: 8px;
+.admin-media-card-body {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
 }
 
-.admin-workspace-documents .deal-document-card + .deal-document-card,
-.admin-workspace-documents .deal-generate-next {
-  margin-top: 0.75rem;
+.admin-media-card-content {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.admin-media-preview {
+  overflow: hidden;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .admin-media-asset-card .admin-media-thumb {
-  width: 96px;
-  min-width: 96px;
-  height: 72px;
-  aspect-ratio: auto;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   margin: 0;
+  border: 0;
+  border-radius: 0;
 }
 
 .admin-media-file-thumb {
   display: grid;
+  min-height: 8rem;
   place-items: center;
-  color: var(--admin-muted);
-  font-size: 1.5rem;
+  align-content: center;
+  gap: 0.6rem;
+  color: var(--admin-secondary);
+}
+
+.admin-media-file-thumb .bi {
+  font-size: 2rem;
+}
+
+.admin-media-card-copy {
+  min-width: 0;
+}
+
+.admin-media-card-copy .admin-project-title,
+.admin-media-card-copy .admin-project-copy {
+  overflow-wrap: anywhere;
+}
+
+.admin-media-card-actions {
+  margin-top: auto !important;
+}
+
+.admin-workspace-documents .deal-generate-next {
+  margin-top: 0.75rem;
+}
+
+.admin-icon-btn {
+  display: inline-grid;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  padding: 0;
+}
+
+.admin-media-card-actions .dropdown-toggle::after {
+  display: none;
+}
+
+[data-bs-theme="light"] .admin-media-preview {
+  background: rgba(0, 0, 0, 0.035);
 }
 
 @media (max-width: 991.98px) {
@@ -985,12 +1033,37 @@
     flex-direction: column;
   }
 
+  .admin-search-form .admin-filter-fields {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-deals-controls .admin-search-form {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .admin-deals-controls .admin-search-form .admin-filter-fields {
+    flex: 1 1 0%;
+    width: auto;
+  }
+
   .admin-filter-actions {
     width: 100%;
   }
 
+  .admin-deals-controls .admin-filter-actions {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
   .admin-filter-actions .btn {
     width: 100%;
+  }
+
+  .admin-deals-controls .admin-filter-actions .btn {
+    width: auto;
   }
 
   .admin-metric-card-body,
@@ -1020,6 +1093,28 @@
 
   .admin-pipeline-stage:last-child {
     border-right: 0;
+  }
+
+  .admin-deals-controls .admin-filter-toggle-group,
+  .admin-deals-controls .admin-filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 0.15rem;
+  }
+
+  .admin-deals-controls .admin-filter-toggle-group > *,
+  .admin-deals-controls .admin-filter-row > * {
+    flex: 0 0 auto;
+  }
+
+  .admin-deals-quick-add {
+    flex: 0 0 auto;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
   }
 }
 

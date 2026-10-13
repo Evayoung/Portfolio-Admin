@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Button, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
-from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO
+from fasthtml.common import A, Div, Form, H2, H3, Img, Input, Label, P, Span, Strong
+from faststrap import Badge, Button, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO
 from faststrap.components.feedback.confirm import ConfirmDialog
 
 from app.config import settings
@@ -20,7 +20,7 @@ def media_save_status_fragment(title: str, message: str, tone: str = "info", pub
             Span("Uploaded URL", cls="admin-field-label"),
             A(public_url, href=public_url, target="_blank", rel="noreferrer", cls="admin-project-meta") if public_url else "",
             action_group(
-                Button("Copy URL", type="button", cls="btn admin-module-btn", data_copy_target=public_url, data_copy_label="Copy URL"),
+                Button(Icon("clipboard"), type="button", cls="btn admin-icon-btn", aria_label="Copy asset URL", title="Copy asset URL", data_copy_target=public_url, data_copy_label="Copy URL"),
                 action_link("Open Asset", public_url, variant="secondary", target="_blank"),
                 action_link("Back to Images", "/media?kind=image", variant="secondary"),
             )
@@ -131,21 +131,26 @@ def _asset_card(asset, modals: list) -> Card:
     return Card(
         Div(
             Div(
-                Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb") if is_image and asset.public_url else Div(Icon("file-earmark"), cls="admin-media-thumb admin-media-file-thumb"),
                 Div(
-                    Div(Span(asset.kind.title(), cls="admin-project-category"), Span(asset.created_at or "Recent", cls="admin-project-meta"), cls="d-flex justify-content-between gap-2"),
-                    H3(asset.title, cls="admin-project-title mb-1"),
-                    P(asset.alt_text or asset.storage_path, cls="admin-project-copy mb-1"),
-                    Span(f"{asset.content_type} · {size_kb} KB", cls="admin-project-meta"),
-                    cls="min-w-0 flex-grow-1",
+                    Img(src=asset.public_url, alt=asset.alt_text or asset.title, cls="admin-media-thumb")
+                    if is_image and asset.public_url
+                    else Div(Icon("file-earmark"), Span(asset.content_type or "File", cls="admin-project-meta"), cls="admin-media-thumb admin-media-file-thumb"),
+                    cls="admin-media-preview",
                 ),
-                cls="d-flex gap-3 align-items-start",
+                Div(
+                    Div(Span(asset.kind.title(), cls="admin-project-category"), Span(asset.created_at or "Recent", cls="admin-project-meta"), cls="d-flex justify-content-between align-items-center gap-2 mb-2"),
+                    H3(asset.title, cls="admin-project-title mb-1"),
+                    P(asset.alt_text or "Ready to reuse across your portfolio pages.", cls="admin-project-copy mb-2"),
+                    Span(f"{asset.content_type} · {size_kb} KB", cls="admin-project-meta"),
+                    cls="admin-media-card-copy",
+                ),
+                cls="admin-media-card-content",
             ),
             Div(
-                A(Icon("box-arrow-up-right", cls="me-1"), "Open", href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-muted-btn btn-sm") if asset.public_url else "",
-                Button(Icon("clipboard", cls="me-1"), "Copy URL", type="button", cls="btn admin-module-btn btn-sm", data_copy_target=asset.public_url, data_copy_label="Copy URL") if asset.public_url else "",
+                A(Icon("box-arrow-up-right"), href=asset.public_url, target="_blank", rel="noreferrer", cls="btn admin-muted-btn admin-icon-btn", aria_label=f"Open {asset.title}", title="Open asset") if asset.public_url else "",
+                Button(Icon("clipboard"), type="button", cls="btn admin-module-btn admin-icon-btn", aria_label=f"Copy URL for {asset.title}", title="Copy URL", data_copy_target=asset.public_url, data_copy_label="Copy URL") if asset.public_url else "",
                 Div(
-                    Button("Manage", type="button", cls="btn admin-muted-btn btn-sm dropdown-toggle", data_bs_toggle="dropdown", aria_expanded="false"),
+                    Button(Icon("three-dots"), type="button", cls="btn admin-muted-btn admin-icon-btn dropdown-toggle", data_bs_toggle="dropdown", aria_label=f"Manage {asset.title}", title="Manage asset", aria_expanded="false"),
                     Div(
                         Button("Edit details", type="button", cls="dropdown-item", data_bs_toggle="modal", data_bs_target=f"#edit-{asset.asset_id}"),
                         Button("Replace file", type="button", cls="dropdown-item", data_bs_toggle="modal", data_bs_target=f"#replace-{asset.asset_id}"),
@@ -155,9 +160,9 @@ def _asset_card(asset, modals: list) -> Card:
                     ),
                     cls="dropdown ms-auto",
                 ),
-                cls="d-flex align-items-center gap-2 mt-3 pt-3 border-top border-secondary border-opacity-10",
+                cls="admin-media-card-actions d-flex align-items-center gap-2 mt-3 pt-3 border-top border-secondary border-opacity-10",
             ),
-            cls="admin-project-card-body",
+            cls="admin-media-card-body",
         ),
         cls=[Fx.base, Fx.fade_in, "admin-surface-card admin-media-asset-card h-100"],
     )
@@ -232,17 +237,17 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
         Div(
             Div(
                 H2("Asset Library", cls="admin-section-title"),
-                P("Upload once, then reuse the public URL across projects, blog posts, CV downloads, and commercial documents.", cls="admin-module-copy mb-0"),
+                P("A visual shelf for project covers, article artwork, logos, and client downloads. Upload once, then copy an asset URL wherever you need it.", cls="admin-module-copy mb-0"),
                 cls="mb-3",
             ),
             kind_links,
             search_form,
             Row(
-                *[
-                    Col(_asset_card(asset, modals=modals), span=12, md=6, xl=4)
-                    for asset in assets
-                ],
-                cls="g-4 mt-1",
+                *[_asset_card(asset, modals=modals) for asset in assets],
+                cols=1,
+                cols_xl=2,
+                g=3,
+                cls="mt-1",
             )
             if assets
             else EmptyState(
