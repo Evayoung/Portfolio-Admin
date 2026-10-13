@@ -265,7 +265,7 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
     upload_panel = Card(
         Div(
             H3("Upload Workspace", cls="admin-subsection-title"),
-            P("This becomes the source of truth for visuals and downloadable assets. After upload, paste the generated URL into project, blog, or document records.", cls="admin-module-copy"),
+            P("Upload once, then select the image from the Home Page or Projects editor. The same public URL can also be used in blog and document records.", cls="admin-module-copy"),
             media_save_status_fragment("Upload status", message, tone, public_url) if message else "",
             _upload_form(kind=kind, search=search),
             cls="admin-panel-stack",
@@ -275,6 +275,21 @@ def _media_workspace_inner(*, kind: str, search: str, message: str, tone: str, p
     )
 
     return Div(
+        Card(
+            Div(
+                Div(
+                    H3("Use media across your site", cls="admin-subsection-title mb-1"),
+                    P("Manage files here, edit homepage copy and image assignments in Home Page, and choose a cover image for each project in Projects.", cls="admin-module-copy mb-0"),
+                ),
+                Div(
+                    A(Icon("window-stack"), " Home Page", href="/website-content", cls="btn admin-muted-btn"),
+                    A(Icon("kanban"), " Project Images", href="/projects", cls="btn admin-muted-btn"),
+                    cls="d-flex flex-wrap gap-2 mt-3 mt-lg-0",
+                ),
+                cls="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3",
+            ),
+            cls="admin-surface-card mb-4",
+        ),
         Row(
             summary_card("Total Assets", str(summary.total), "Reusable files tracked in Supabase Storage."),
             summary_card("Images", str(summary.images), "Visual assets for projects, blog posts, and page surfaces."),
