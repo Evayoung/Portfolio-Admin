@@ -145,8 +145,6 @@ class AdminHomeContent:
     about_summary: str
     journey_paragraphs: tuple[str, ...]
     about_stats: tuple[tuple[str, str], ...]
-    experience_items: tuple[tuple[str, str, str, str], ...]
-    technical_skills: tuple[tuple[str, int, str], ...]
     cv_highlights: tuple[tuple[str, str], ...]
     seo_keywords: tuple[str, ...]
     profile_image_url: str

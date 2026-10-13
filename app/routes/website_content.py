@@ -33,14 +33,13 @@ def setup_website_content_routes(app: Any) -> None:
     @app.post("/website-content/save")
     def website_home_content_save(
         hero_roles: str = "", hero_summary: str = "", about_summary: str = "",
-        journey_paragraphs: str = "", about_stats: str = "", experience_items: str = "",
-        technical_skills: str = "", cv_highlights: str = "", seo_keywords: str = "", profile_image_url: str = "",
+        journey_paragraphs: str = "", about_stats: str = "", cv_highlights: str = "", seo_keywords: str = "", profile_image_url: str = "",
         hero_background_url: str = "", booking_background_url: str = "", cv_background_url: str = "",
     ):
         result = save_site_home_content(
             hero_roles=hero_roles, hero_summary=hero_summary, about_summary=about_summary,
-            journey_paragraphs=journey_paragraphs, about_stats=about_stats, experience_items=experience_items,
-            technical_skills=technical_skills, cv_highlights=cv_highlights, seo_keywords=seo_keywords,
+            journey_paragraphs=journey_paragraphs, about_stats=about_stats,
+            cv_highlights=cv_highlights, seo_keywords=seo_keywords,
             profile_image_url=profile_image_url,
             hero_background_url=hero_background_url, booking_background_url=booking_background_url,
             cv_background_url=cv_background_url,

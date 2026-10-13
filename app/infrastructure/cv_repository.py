@@ -107,10 +107,10 @@ def get_cv_meta() -> AdminCvMeta:
 
 
 def list_work_history():
-    if supabase_is_configured():
+    if service_role_is_configured():
         try:
-            rows = _rest_request("GET", "cv_work_history", query="?select=title,organisation,period,location,bullets&order=sort_order.asc")
-            if isinstance(rows, list) and rows:
+            rows = _rest_request("GET", "cv_work_history", use_service_role=True, query="?select=title,organisation,period,location,bullets&order=sort_order.asc")
+            if isinstance(rows, list):
                 return tuple(
                     SimpleNamespace(
                         title=row.get("title", ""),
@@ -200,10 +200,10 @@ def list_languages():
 
 
 def list_core_skills() -> tuple[str, ...]:
-    if supabase_is_configured():
+    if service_role_is_configured():
         try:
-            rows = _rest_request("GET", "cv_core_skills", query="?select=label&order=sort_order.asc")
-            if isinstance(rows, list) and rows:
+            rows = _rest_request("GET", "cv_core_skills", use_service_role=True, query="?select=label&order=sort_order.asc")
+            if isinstance(rows, list):
                 return tuple(row.get("label", "").strip() for row in rows if row.get("label"))
         except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
             pass

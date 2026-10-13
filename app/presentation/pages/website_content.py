@@ -6,6 +6,7 @@ from fasthtml.common import A, Button, Div, Form, H2, H3, Input, Label, P, Span,
 from faststrap import Badge, Card, Col, EmptyState, Icon, Row
 
 from app.domain.models import AdminHomeContent, AdminPricingTier, AdminService, AdminTestimonial
+from app.infrastructure.cv_repository import list_core_skills, list_work_history
 from app.infrastructure.supabase_client import service_role_is_configured
 from app.infrastructure.media_repository import list_media_assets
 from app.infrastructure.website_content_repository import get_site_home_content, list_pricing_tiers, list_services, list_testimonials
@@ -226,8 +227,6 @@ def _home_form(item: AdminHomeContent, image_assets):
         _textarea("About summary", "about_summary", item.about_summary, required=True),
         _home_textarea("Journey paragraphs", "journey_paragraphs", "\n".join(item.journey_paragraphs), "One paragraph per line; keep each paragraph under 1,600 characters.", rows=7),
         _home_textarea("About stats", "about_stats", "\n".join(f"{value} | {label}" for value, label in item.about_stats), "One 'value | label' pair per line."),
-        _home_textarea("Experience timeline", "experience_items", "\n".join(" | ".join(row) for row in item.experience_items), "One 'period | role | company | summary' entry per line.", rows=7),
-        _home_textarea("Technical skills", "technical_skills", "\n".join(f"{name} | {score} | {badge}" for name, score, badge in item.technical_skills), "One 'skill | score (0-100) | group' entry per line."),
         _home_textarea("CV highlights", "cv_highlights", "\n".join(f"{title} | {copy}" for title, copy in item.cv_highlights), "One 'heading | supporting copy' pair per line."),
         _home_textarea("Search keywords", "seo_keywords", "\n".join(item.seo_keywords), "One public search keyword per line; up to 32."),
         Div(
@@ -252,9 +251,20 @@ def _home_form(item: AdminHomeContent, image_assets):
 def home_content_page():
     item = get_site_home_content()
     image_assets = list_media_assets(kind="image")
+    cv_work = list_work_history()
+    cv_skills = list_core_skills()
+    cv_source_panel = Card(
+        H3("Skills and experience come from the CV", cls="admin-subsection-title mb-1"),
+        P(
+            f"The public homepage reuses the first 3 of {len(cv_work)} CV work-history entries and the first 8 of {len(cv_skills)} CV core skills. Edit them in one place in the CV workspace; this page does not keep a second copy.",
+            cls="admin-module-copy mb-3",
+        ),
+        A(Icon("file-earmark-person"), " Edit CV content", href="/cv", cls="btn admin-muted-btn"),
+        cls="admin-surface-card mb-3",
+    )
     editor = Card(
         H3("Home page content", cls="admin-subsection-title"),
-        P("Edit the public hero, About copy, timeline, stats, skills, highlights, and the page imagery from one workspace.", cls="admin-module-copy"),
+        P("Edit homepage-specific hero and About copy, stats, highlights, search keywords, and image assignments here.", cls="admin-module-copy"),
         status_alert("Admin write access unavailable", "Configure the Supabase service role in the Admin runtime before saving.", "warning") if not service_role_is_configured() else "",
         status_alert("Home content not initialized", "Apply the home content database migration before editing this record.", "info") if item is None else "",
         Div(id="website-home-save-status"),
@@ -268,6 +278,7 @@ def home_content_page():
                 A("View public site", href=public_site_url(brand_profile()), target="_blank", rel="noreferrer", cls="btn admin-muted-btn"),
                 cls="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3",
             ),
+            cv_source_panel,
             editor,
         ),
         current="/website-content", title="Home Page",

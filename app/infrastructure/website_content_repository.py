@@ -217,8 +217,6 @@ def _home_content_from_row(row: dict) -> AdminHomeContent:
         about_summary=str(row.get("about_summary") or ""),
         journey_paragraphs=tuple(str(value) for value in row.get("journey_paragraphs", []) if str(value).strip()),
         about_stats=tuple((str(item.get("value") or ""), str(item.get("label") or "")) for item in _objects(row.get("about_stats"))),
-        experience_items=tuple((str(item.get("year") or ""), str(item.get("title") or ""), str(item.get("company") or ""), str(item.get("summary") or "")) for item in _objects(row.get("experience_items"))),
-        technical_skills=tuple((str(item.get("name") or ""), int(item.get("score") or 0), str(item.get("badge") or "")) for item in _objects(row.get("technical_skills"))),
         cv_highlights=tuple((str(item.get("title") or ""), str(item.get("copy") or "")) for item in _objects(row.get("cv_highlights"))),
         seo_keywords=tuple(str(value) for value in row.get("seo_keywords", []) if str(value).strip()),
         profile_image_url=str(row.get("profile_image_url") or ""),
@@ -233,7 +231,11 @@ def get_site_home_content() -> AdminHomeContent | None:
         return None
     rows = _request(
         "GET", "site_home_content",
-        params={"select": "*", "id": "eq.primary", "limit": "1"},
+        params={
+            "select": "id,hero_roles,hero_summary,about_summary,journey_paragraphs,about_stats,cv_highlights,seo_keywords,profile_image_url,hero_background_url,booking_background_url,cv_background_url,updated_at",
+            "id": "eq.primary",
+            "limit": "1",
+        },
     )
     return _home_content_from_row(rows[0]) if isinstance(rows, list) and rows else None
 
@@ -255,32 +257,6 @@ def _parse_pairs(raw: str, *, maximum: int, field: str) -> tuple[tuple[str, str]
     return tuple(result)
 
 
-def _parse_experience(raw: str) -> tuple[dict[str, str], ...]:
-    result = []
-    for line in _parse_lines(raw, maximum=8, field="experience records"):
-        parts = [part.strip() for part in line.split("|", 3)]
-        if len(parts) != 4 or not all(parts):
-            raise ValueError("Enter each experience record as 'period | role | company | summary'.")
-        result.append(dict(zip(("year", "title", "company", "summary"), parts)))
-    return tuple(result)
-
-
-def _parse_skills(raw: str) -> tuple[dict[str, object], ...]:
-    result = []
-    for line in _parse_lines(raw, maximum=16, field="technical skills"):
-        parts = [part.strip() for part in line.split("|", 2)]
-        if len(parts) != 3 or not parts[0] or not parts[2]:
-            raise ValueError("Enter each skill as 'name | score (0-100) | group'.")
-        try:
-            score = int(parts[1])
-        except ValueError as exc:
-            raise ValueError("Skill scores must be whole numbers from 0 to 100.") from exc
-        if not 0 <= score <= 100:
-            raise ValueError("Skill scores must be from 0 to 100.")
-        result.append({"name": parts[0], "score": score, "badge": parts[2]})
-    return tuple(result)
-
-
 def _valid_asset_url(value: str, label: str) -> str:
     value = value.strip()
     if not value or len(value) > 2048 or any(char.isspace() for char in value):
@@ -295,8 +271,7 @@ def _valid_asset_url(value: str, label: str) -> str:
 
 def save_site_home_content(
     *, hero_roles: str, hero_summary: str, about_summary: str,
-    journey_paragraphs: str, about_stats: str, experience_items: str,
-    technical_skills: str, cv_highlights: str, seo_keywords: str, profile_image_url: str,
+    journey_paragraphs: str, about_stats: str, cv_highlights: str, seo_keywords: str, profile_image_url: str,
     hero_background_url: str, booking_background_url: str, cv_background_url: str,
 ) -> ContentSaveResult:
     if not service_role_is_configured():
@@ -307,8 +282,6 @@ def save_site_home_content(
         stats = _parse_pairs(about_stats, maximum=8, field="stats")
         highlights = _parse_pairs(cv_highlights, maximum=8, field="highlights")
         keywords = _parse_lines(seo_keywords, maximum=32, field="SEO keywords")
-        experience = _parse_experience(experience_items)
-        skills = _parse_skills(technical_skills)
         hero_summary, about_summary = hero_summary.strip(), about_summary.strip()
         if not roles or not hero_summary or not about_summary or not journeys:
             raise ValueError("Add at least one role and journey paragraph, plus both home-page summaries.")
@@ -318,11 +291,6 @@ def save_site_home_content(
             raise ValueError("Keep each journey paragraph under 1,600 characters.")
         if any(len(value) > 80 or len(label) > 120 for value, label in stats):
             raise ValueError("Keep statistic values under 80 characters and labels under 120.")
-        if any(len(year) > 80 or len(title) > 140 or len(company) > 160 or len(summary) > 1200
-               for year, title, company, summary in ((row["year"], row["title"], row["company"], row["summary"]) for row in experience)):
-            raise ValueError("Keep experience periods under 80 characters, roles under 140, companies under 160, and summaries under 1,200.")
-        if any(len(row["name"]) > 120 or len(row["badge"]) > 80 for row in skills):
-            raise ValueError("Keep skill names under 120 characters and groups under 80.")
         if any(len(title) > 120 or len(copy) > 800 for title, copy in highlights):
             raise ValueError("Keep highlight titles under 120 characters and descriptions under 800.")
         if any(len(keyword) > 120 for keyword in keywords):
@@ -334,8 +302,6 @@ def save_site_home_content(
             "about_summary": about_summary,
             "journey_paragraphs": list(journeys),
             "about_stats": [{"value": left, "label": right} for left, right in stats],
-            "experience_items": list(experience),
-            "technical_skills": list(skills),
             "cv_highlights": [{"title": left, "copy": right} for left, right in highlights],
             "seo_keywords": list(keywords),
             "profile_image_url": _valid_asset_url(profile_image_url, "profile image"),
