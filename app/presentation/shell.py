@@ -66,6 +66,7 @@ NAV_GROUPS = (
         "items": [
             ("Submissions", "/submissions", "inbox"),
             ("Deals", "/deals", "briefcase"),
+            ("Project Feedback", "/feedback", "star-half"),
         ],
     },
     {

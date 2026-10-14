@@ -1413,3 +1413,156 @@
     font-size: 2rem;
   }
 }
+.project-feedback-shell {
+  min-height: 100vh;
+  padding: clamp(1.25rem, 5vw, 4rem) 1rem;
+  background: radial-gradient(ellipse at top right, rgba(45, 184, 232, 0.13), transparent 45%), #07111f;
+  color: #eef6ff;
+}
+
+.project-feedback-brandbar,
+.project-feedback-card {
+  width: min(100%, 43rem);
+  margin-inline: auto;
+}
+
+.project-feedback-brandbar {
+  margin-bottom: 1rem;
+  color: #2db8e8;
+  font-weight: 700;
+}
+
+.project-feedback-card {
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid rgba(130, 183, 214, 0.18);
+  border-radius: 1.1rem;
+  background: rgba(12, 27, 44, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.project-feedback-kicker {
+  color: #2db8e8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.project-feedback-title {
+  margin: 0.55rem 0 0.35rem;
+  color: #eef6ff;
+  font-size: clamp(1.65rem, 5vw, 2.2rem);
+}
+
+.project-feedback-project {
+  margin: 0 0 0.65rem;
+  color: #2db8e8;
+  font-weight: 700;
+}
+
+.project-feedback-copy {
+  color: #97abc0;
+  line-height: 1.65;
+}
+
+.project-feedback-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.project-feedback-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.project-feedback-label {
+  color: #dce8f3;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.project-feedback-input,
+.project-feedback-textarea {
+  width: 100%;
+  border: 1px solid rgba(130, 183, 214, 0.2);
+  border-radius: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  background: #091321;
+  color: #eef6ff;
+  font: inherit;
+}
+
+.project-feedback-textarea {
+  resize: vertical;
+}
+
+.project-feedback-rating-options {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.project-feedback-rating-option {
+  cursor: pointer;
+  color: #587086;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.project-feedback-rating-option:has(input:checked),
+.project-feedback-rating-option:has(input:checked) ~ .project-feedback-rating-option,
+.project-feedback-rating-option:hover,
+.project-feedback-rating-option:hover ~ .project-feedback-rating-option {
+  color: #f3a53d;
+}
+
+.project-feedback-rating-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.project-feedback-rating-input:focus-visible + span {
+  outline: 2px solid #2db8e8;
+  outline-offset: 3px;
+}
+
+.project-feedback-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #c5d2df;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.project-feedback-consent-input {
+  margin-top: 0.25rem;
+  accent-color: #2db8e8;
+  flex: 0 0 auto;
+}
+
+.project-feedback-submit {
+  width: fit-content;
+  min-height: 2.8rem;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0.7rem 1.1rem;
+  background: #2db8e8;
+  color: #06111e;
+  font-weight: 750;
+}
+
+.project-feedback-alert {
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.65rem;
+  background: rgba(242, 195, 91, 0.12);
+  color: #f2c35b;
+}
+
+.project-feedback-success-icon {
+  color: #6cd8a4;
+  font-size: 2.2rem;
+}

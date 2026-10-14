@@ -125,9 +125,9 @@ def _meta_cell(label: str, value: str) -> Div:
 
 
 def _meta_strip(deal, document, profile) -> Div:
-    issued = datetime.now().strftime("%d %b %Y")
+    issued = document.updated_at or datetime.now().strftime("%d %b %Y")
     return Div(
-        _meta_cell("Prepared For", deal.company or deal.client_name),
+        _meta_cell("Issued" if document.kind == "invoice" else "Prepared For", issued if document.kind == "invoice" else (deal.company or deal.client_name)),
         _meta_cell("Prepared By", getattr(profile, "full_name", "") or settings.owner_name),
         _meta_cell("Document No.", document.document_number),
         _meta_cell(
@@ -1144,7 +1144,7 @@ def _quotation_content(deal, document) -> list:
 
 
 def _invoice_content(deal, document, account) -> list:
-    """Invoice: amount due hero + project reference + line items + schedule + masked account."""
+    """Compact invoice content while retaining the client response and thread below."""
     sections = []
 
     # ── Amount Due Hero Card ──
@@ -1177,6 +1177,22 @@ def _invoice_content(deal, document, account) -> list:
         ),
     ))
 
+    billed_to = [
+        P(deal.company or deal.client_name, cls="doc-body-text fw-bold mb-1"),
+        P(deal.client_name, cls="doc-body-text mb-1") if deal.company else "",
+        P(deal.client_email, cls="doc-body-text mb-1") if deal.client_email else "",
+        P(deal.client_phone, cls="doc-body-text mb-0") if deal.client_phone else "",
+    ]
+    sections.append(Div(
+        Div(
+            Div(cls="doc-section-accent"),
+            H2("Billed To", cls="doc-section-title"),
+            cls="doc-section-head",
+        ),
+        Div(*billed_to, cls="doc-card-body"),
+        cls="doc-card",
+    ))
+
     # ── Project Reference ──
     sections.append(Div(
         Div(
@@ -1186,7 +1202,6 @@ def _invoice_content(deal, document, account) -> list:
         ),
         Div(
             P(deal.project_title, cls="doc-body-text fw-bold"),
-            P(deal.summary or "", cls="doc-body-text mt-1") if deal.summary else "",
             cls="doc-card-body",
         ),
         cls="doc-card",
@@ -1196,12 +1211,14 @@ def _invoice_content(deal, document, account) -> list:
     sections.append(_line_items_table(deal, document))
 
     # ── Payment Schedule ──
-    payment_text = document.payment_terms or deal.payment_terms or ""
+    invoice_terms = (document.payment_terms or "").strip()
+    inherited_deal_terms = (deal.payment_terms or "").strip()
+    payment_text = invoice_terms if invoice_terms and invoice_terms != inherited_deal_terms else ""
     if payment_text:
         sections.append(Div(
             Div(
                 Div(cls="doc-section-accent"),
-                H2("Payment Schedule", cls="doc-section-title"),
+                H2("Terms & Installment Notes", cls="doc-section-title"),
                 cls="doc-section-head",
             ),
             Div(

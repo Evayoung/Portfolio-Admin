@@ -281,6 +281,71 @@ body {
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 
+.deal-detail-header .deal-workflow-pipeline {
+  padding: 0.65rem 0 0;
+}
+
+.deal-documents-card,
+.deal-documents-workspace {
+  min-width: 0;
+}
+
+.deal-overview-workspace {
+  min-width: 0;
+}
+
+.deal-overview-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+
+.deal-overview-document-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.deal-overview-document {
+  min-width: 0;
+  padding: 0.8rem 0;
+}
+
+.deal-overview-document + .deal-overview-document {
+  border-top: 1px solid var(--admin-border);
+}
+
+.deal-overview-document .admin-project-title {
+  overflow-wrap: anywhere;
+}
+
+.deal-edit-card {
+  min-width: 0;
+}
+
+.settings-account-details,
+.settings-provider-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.settings-account-details > div,
+.settings-provider-details > div {
+  min-width: 0;
+}
+
+.settings-account-details strong,
+.settings-provider-details strong {
+  overflow-wrap: anywhere;
+}
+
+.settings-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .deal-pipeline-connector {
   width: 2rem;
   height: 2px;

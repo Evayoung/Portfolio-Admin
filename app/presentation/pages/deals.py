@@ -121,7 +121,7 @@ def _quick_document_form(prefill: dict[str, str] | None = None) -> Form:
                 Col(floating_field("Due Date", "due_date", "", input_type="date"), span=12, md=6, cls="mt-3 mt-md-0"),
                 cls="g-3 mt-1",
             ),
-            textarea_field("Payment Terms", "payment_terms", "", rows=3, placeholder="Bank transfer, due on receipt, or friendly payment note."),
+            textarea_field("Invoice terms & policies or optional installments", "invoice_payment_terms", "", rows=2, placeholder="Optional: concise terms, installment amounts, or due dates.", maxlength="600"),
             cls="admin-form-section",
         ),
         Div(

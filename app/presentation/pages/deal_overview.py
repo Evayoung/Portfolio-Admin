@@ -1,154 +1,102 @@
-"""Deal detail overview tab module — focused on overview metrics, client info, project details, and narrative sections."""
+"""Deal overview tab with a concise client, project, and document snapshot."""
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, H2, H3, H4, P, Span, Strong
+from fasthtml.common import A, Div, H3, P, Span, Strong
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
 
 from app.config import settings
-from app.domain.deal_content import parse_document_sections
 from app.domain.models import AdminDeal
 from app.infrastructure.deal_repository import get_deal_with_documents
-from app.presentation.pages.deal_helpers import (
-    _deal_snapshot_card,
-    _group_packages,
-    _money,
-    _package_totals,
-    _status_color,
-    _workflow_pipeline,
-)
+from app.presentation.pages.deal_helpers import _money, _status_color, _workflow_pipeline
 from app.presentation.shell import page_frame
 
 
 def _overview_tab(selected: AdminDeal) -> Div:
-    """Overview tab — client info, project summary, document summary."""
-    docs = selected.documents
-    doc_counts = {"proposal": 0, "quote": 0, "invoice": 0}
-    for doc in docs:
-        doc_counts[doc.kind] = doc_counts.get(doc.kind, 0) + 1
+    """Show the facts needed to orient work, without rendering the full proposal."""
+    docs = sorted(selected.documents, key=lambda doc: doc.updated_at, reverse=True)
+    recent_docs = docs[:4]
 
-    # Check for multi-package from proposal or quote
-    source_doc = next((d for d in docs if d.kind in ("proposal", "quote")), None)
-    groups = _group_packages(source_doc.line_items_text if source_doc else "") if source_doc else {}
-    multi_package = len(groups) > 1
-    pkg_totals = _package_totals(groups) if multi_package else {}
+    client_card = Card(
+        H3("Client", cls="admin-subsection-title"),
+        Div(
+            Div(Span("Name", cls="admin-field-label"), Strong(selected.client_name or "Not set")),
+            Div(Span("Email", cls="admin-field-label"), Strong(selected.client_email or "Not set")),
+            Div(Span("Phone", cls="admin-field-label"), Strong(selected.client_phone or "Not set")),
+            Div(Span("Company", cls="admin-field-label"), Strong(selected.company or "Independent")),
+            cls="admin-field-grid",
+        ),
+        cls="admin-detail-block h-100",
+    )
 
-    # Amount display — show per-package if multi-package
-    if multi_package:
-        amount_display = Div(
-            Span("Packages", cls="admin-field-label"),
-            *[
-                Div(
-                    Span(pkg_name, cls="admin-module-copy"),
-                    Span(_money(total), cls="fw-bold"),
-                    cls="d-flex justify-content-between",
-                )
-                for pkg_name, total in pkg_totals.items()
-            ],
-            Div(
-                Span("Total", cls="admin-field-label fw-bold mt-1 pt-1 border-top"),
-                Span(_money(selected.amount_ngn), cls="fw-bold mt-1 pt-1 border-top"),
-                cls="d-flex justify-content-between",
+    project_card = Card(
+        Div(
+            H3("Project brief", cls="admin-subsection-title mb-0"),
+            A(
+                Icon("pencil-square", cls="me-1"),
+                "Edit",
+                href=f"/deals/{selected.deal_id}?view=edit",
+                cls="admin-project-meta",
             ),
-        )
-    else:
-        amount_display = Div(Span("Amount", cls="admin-field-label"), Strong(_money(selected.amount_ngn)))
+            cls="d-flex align-items-center justify-content-between gap-2",
+        ),
+        P(selected.summary or "No project brief saved yet.", cls="admin-module-copy deal-overview-summary mt-3 mb-3"),
+        Div(
+            Div(Span("Service", cls="admin-field-label"), Strong(selected.service_type or "Not set")),
+            Div(Span("Deposit", cls="admin-field-label"), Strong(f"{selected.deposit_percent}%")),
+            cls="admin-field-grid",
+        ),
+        cls="admin-detail-block h-100",
+    )
 
-    document_sections = parse_document_sections(selected.sections_json)
+    document_rows = [
+        Div(
+            Div(
+                Span(doc.kind.title(), cls="admin-field-label"),
+                Badge(
+                    doc.status.replace("_", " ").title(),
+                    cls=f"bg-{_status_color(doc.status)} bg-opacity-10 text-{_status_color(doc.status)}",
+                ),
+                Span(_money(doc.total_amount), cls="fw-semibold ms-auto"),
+                cls="d-flex align-items-center flex-wrap gap-2",
+            ),
+            Div(doc.title, cls="admin-project-title mt-1"),
+            Span(doc.document_number, cls="admin-project-meta") if doc.document_number else "",
+            cls="deal-overview-document",
+        )
+        for doc in recent_docs
+    ]
+
+    documents_card = Card(
+        Div(
+            Div(
+                H3("Documents", cls="admin-subsection-title mb-0"),
+                Span(f"{len(docs)} total", cls="admin-project-meta"),
+                cls="d-flex align-items-center gap-2",
+            ),
+            A(
+                "Open documents",
+                Icon("arrow-right", cls="ms-1"),
+                href=f"/deals/{selected.deal_id}?view=documents",
+                cls="admin-project-meta",
+            ),
+            cls="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2",
+        ),
+        Div(*document_rows, cls="deal-overview-document-list") if document_rows else P(
+            "No documents have been created for this deal yet.",
+            cls="admin-module-copy mb-0",
+        ),
+        cls="admin-detail-block mt-3",
+    )
 
     return Div(
         Row(
-            Col(
-                Card(
-                    H3("Client Info", cls="admin-subsection-title"),
-                    Div(
-                        Div(Span("Client", cls="admin-field-label"), Strong(selected.client_name)),
-                        Div(Span("Email", cls="admin-field-label"), Strong(selected.client_email or "Not set")),
-                        Div(Span("Phone", cls="admin-field-label"), Strong(selected.client_phone or "Not set")),
-                        Div(Span("Company", cls="admin-field-label"), Strong(selected.company or "Independent")),
-                        cls="admin-field-grid",
-                    ),
-                    cls="admin-detail-block",
-                ),
-                span=12, md=6,
-            ),
-            Col(
-                Card(
-                    H3("Project Details", cls="admin-subsection-title"),
-                    Div(
-                        Div(
-                            Span("Stage", cls="admin-field-label"),
-                            Badge(
-                                selected.stage.replace("_", " ").title(),
-                                cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)}",
-                            ),
-                        ),
-                        Div(Span("Service", cls="admin-field-label"), Strong(selected.service_type or "Not set")),
-                        amount_display,
-                        Div(Span("Deposit", cls="admin-field-label"), Strong(f"{selected.deposit_percent}%")),
-                        cls="admin-field-grid",
-                    ),
-                    cls="admin-detail-block",
-                ),
-                span=12, md=6, cls="mt-4 mt-md-0",
-            ),
-            cls="g-4",
+            Col(client_card, span=12, lg=5),
+            Col(project_card, span=12, lg=7, cls="mt-3 mt-lg-0"),
+            cls="g-3",
         ),
-        # Sections content from sections_json (proposal/quote body)
-        Card(
-            H3("Document Sections", cls="admin-subsection-title"),
-            *[
-                Div(
-                    H4(section.get("title", ""), cls="admin-project-title mb-1"),
-                    P(section.get("content", ""), cls="admin-module-copy mb-3"),
-                )
-                for section in document_sections
-            ],
-            cls="admin-detail-block mt-4",
-        ) if document_sections else "",
-        Row(
-            Col(
-                Card(
-                    H3("Document Summary", cls="admin-subsection-title"),
-                    Div(
-                        Div(
-                            Span("Proposals", cls="admin-field-label"),
-                            Strong(str(doc_counts["proposal"])),
-                            cls="d-flex justify-content-between",
-                        ),
-                        Div(
-                            Span("Quotations", cls="admin-field-label"),
-                            Strong(str(doc_counts["quote"])),
-                            cls="d-flex justify-content-between",
-                        ),
-                        Div(
-                            Span("Invoices", cls="admin-field-label"),
-                            Strong(str(doc_counts["invoice"])),
-                            cls="d-flex justify-content-between",
-                        ),
-                        Div(
-                            Span("Total Documents", cls="admin-field-label"),
-                            Strong(str(len(docs))),
-                            cls="d-flex justify-content-between mt-2 pt-2 border-top",
-                        ),
-                        cls="admin-field-grid",
-                    ),
-                    cls="admin-detail-block",
-                ),
-                span=12, md=6,
-            ),
-            Col(
-                Card(
-                    H3("Project Brief", cls="admin-subsection-title"),
-                    P(selected.summary or "No summary available.", cls="admin-module-copy"),
-                    P(selected.background_text or "", cls="admin-module-copy mt-2") if selected.background_text else "",
-                    cls="admin-detail-block",
-                ),
-                span=12, md=6, cls="mt-4 mt-md-0",
-            ),
-            cls="g-4 mt-4",
-        ),
-        cls="mt-4",
+        documents_card,
+        cls="deal-overview-workspace",
     )
 
 
@@ -217,31 +165,21 @@ def deal_overview_page(*, deal_id: str = "", view: str = "overview") -> tuple:
             back_link,
             Div(
                 Div(
-                    H2(selected.project_title, cls="admin-section-title mb-1"),
-                    Div(
-                        Span(selected.client_name, cls="admin-project-meta"),
-                        Badge(
-                            selected.stage.replace("_", " ").title(),
-                            cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
-                        ),
-                        Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
-                        cls="d-flex align-items-center gap-2 flex-wrap",
+                    Span(selected.client_name, cls="admin-project-meta"),
+                    Badge(
+                        selected.stage.replace("_", " ").title(),
+                        cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
                     ),
+                    Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
+                    cls="d-flex align-items-center gap-2 flex-wrap",
                 ),
                 _workflow_pipeline(selected),
-                cls="mb-4",
+                cls="deal-detail-header mb-3",
             ),
             nav_pills,
-            Row(
-                Col(_deal_snapshot_card(selected), span=12, lg=4),
-                Col(
-                    Card(
-                        _overview_tab(selected),
-                        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
-                    ),
-                    span=12, lg=8, cls="mt-4 mt-lg-0",
-                ),
-                cls="g-4",
+            Div(
+                _overview_tab(selected),
+                cls=[Fx.base, Fx.fade_in, "deal-overview-page"],
             ),
             current="/deals",
             title=selected.project_title,

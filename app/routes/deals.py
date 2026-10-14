@@ -141,6 +141,7 @@ def setup_deal_routes(app: Any) -> None:
         deposit_percent: str = "50",
         valid_until: str = "",
         due_date: str = "",
+        invoice_payment_terms: str = "",
     ) -> Any:
         result = save_deal_document(
             deal_id=deal_id,
@@ -170,6 +171,7 @@ def setup_deal_routes(app: Any) -> None:
             deposit_percent=deposit_percent,
             valid_until=valid_until,
             due_date=due_date,
+            invoice_payment_terms=invoice_payment_terms,
         )
         if result.success:
             target_deal_id = result.deal_id or deal_id
@@ -209,6 +211,7 @@ def setup_deal_routes(app: Any) -> None:
         deposit_percent: str = "100",
         valid_until: str = "",
         due_date: str = "",
+        invoice_payment_terms: str = "",
     ) -> Any:
         result = save_quick_document(
             client_name=client_name,
@@ -227,6 +230,7 @@ def setup_deal_routes(app: Any) -> None:
             deposit_percent=deposit_percent,
             valid_until=valid_until,
             due_date=due_date,
+            invoice_payment_terms=invoice_payment_terms,
         )
         if result.success and result.deal_id:
             return Response("", status_code=200, headers={"HX-Redirect": f"/deals?deal_id={result.deal_id}"})

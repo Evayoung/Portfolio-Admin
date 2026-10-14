@@ -51,6 +51,7 @@ app.before.append(
             r"/sw\.js",
             r"/offline",
             r"/documents/.*",
+            r"/project-feedback/.*",
             r"/resource/.*",
         ],
     )
@@ -66,7 +67,7 @@ add_pwa(
     background_color="#091321",
     icon_path="/assets/icon-512.png",
     cache_name="neo-admin-shell",
-    cache_version="v3",
+    cache_version="v4",
     pre_cache_urls=[
         "/assets/css/custom.css",
         f"/assets/js/modules/utilities.js?v={JS_VERSION}",
@@ -95,7 +96,7 @@ app.hdrs = app.hdrs + [
         rel="stylesheet",
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
     ),
-    Link(rel="stylesheet", href="/assets/css/custom.css?v=1"),
+    Link(rel="stylesheet", href="/assets/css/custom.css?v=2"),
     # JS modules — loaded in dependency order before the orchestrator
     Script(src=f"/assets/js/modules/utilities.js?v={JS_VERSION}", defer=True),
     Script(src=f"/assets/js/modules/line_items.js?v={JS_VERSION}", defer=True),

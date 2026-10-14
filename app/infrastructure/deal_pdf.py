@@ -9,7 +9,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.domain.models import AdminDeal
 from app.domain.deal_content import parse_document_sections
@@ -323,15 +323,23 @@ def _safe_qty(value: str) -> int:
         return 1
 
 
-def _payment_account_table(account, styles: dict[str, ParagraphStyle]) -> Table:
-    table = Table(
-        [
+def _payment_account_table(account, styles: dict[str, ParagraphStyle], *, compact: bool = False) -> Table:
+    if compact:
+        rows = [
+            [Paragraph("<b>Bank</b>", styles["label"]), Paragraph(account.bank_name, styles["body"])],
+            [Paragraph("<b>Account Name</b>", styles["label"]), Paragraph(account.account_name, styles["body"])],
+            [Paragraph("<b>Account Number</b>", styles["label"]), Paragraph(account.account_number, styles["body"])],
+        ]
+    else:
+        rows = [
             [Paragraph("<b>Account Label</b>", styles["label"]), Paragraph(account.label, styles["body"])],
             [Paragraph("<b>Bank</b>", styles["label"]), Paragraph(account.bank_name, styles["body"])],
             [Paragraph("<b>Account Name</b>", styles["label"]), Paragraph(account.account_name, styles["body"])],
             [Paragraph("<b>Account Number</b>", styles["label"]), Paragraph(account.account_number, styles["body"])],
             [Paragraph("<b>Note</b>", styles["label"]), Paragraph(account.note or "-", styles["body"])],
-        ],
+        ]
+    table = Table(
+        rows,
         colWidths=[42 * mm, 128 * mm],
     )
     table.setStyle(
@@ -681,15 +689,27 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
         )
     )
 
-    cover_meta = Table(
-        [
+    if document_kind == "invoice":
+        billed_name = deal.company or deal.client_name
+        billed_contact = "  |  ".join(value for value in (deal.client_email, deal.client_phone) if value) or "-"
+        issue_date = document.updated_at if document and document.updated_at else datetime.now().strftime("%d %b %Y")
+        cover_rows = [
+            [Paragraph("<b>Billed to</b>", styles["label"]), Paragraph(billed_name, styles["body"])],
+            [Paragraph("<b>Client contact</b>", styles["label"]), Paragraph(billed_contact, styles["body"])],
+            [Paragraph("<b>Invoice No.</b>", styles["label"]), Paragraph(document.document_number if document else "-", styles["body"])],
+            [Paragraph("<b>Issued / Due</b>", styles["label"]), Paragraph(f"{issue_date}  /  {document.due_date if document and document.due_date else 'On receipt'}", styles["body"])],
+        ]
+    else:
+        cover_rows = [
             [Paragraph("<b>Prepared for</b>", styles["label"]), Paragraph(deal.company or deal.client_name, styles["body"])],
             [Paragraph("<b>Prepared by</b>", styles["label"]), Paragraph(profile.full_name, styles["body"])],
             [Paragraph("<b>Document No.</b>", styles["label"]), Paragraph(document.document_number if document else "-", styles["body"])],
             [Paragraph("<b>Stage</b>", styles["label"]), Paragraph(deal.stage.replace("_", " ").title(), styles["body"])],
             [Paragraph("<b>Valid Until</b>", styles["label"]), Paragraph(document.valid_until if document and document.valid_until else "-", styles["body"])],
             [Paragraph("<b>Due Date</b>", styles["label"]), Paragraph(document.due_date if document and document.due_date else "-", styles["body"])],
-        ],
+        ]
+    cover_meta = Table(
+        cover_rows,
         colWidths=[36 * mm, 134 * mm],
     )
     cover_meta.setStyle(
@@ -727,7 +747,7 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
         Spacer(1, 4),
         Paragraph(deal.project_title, ParagraphStyle("ProjectTitle", parent=styles["body"], fontName="Helvetica-Bold", fontSize=16, leading=19, textColor=NAVY)),
         Spacer(1, 6),
-        Paragraph(deal.summary, styles["subtitle"]),
+        Paragraph(deal.summary if document_kind != "invoice" else "", styles["subtitle"]),
         Spacer(1, 12),
         cover_meta,
         Spacer(1, 14),
@@ -778,42 +798,40 @@ def build_deal_document_pdf(deal: AdminDeal, document_kind: str) -> Path:
                 Spacer(1, 5),
                 Paragraph(f"Due: {due_label}", styles["body"]),
             ]),
-            Spacer(1, 12),
+            Spacer(1, 6),
             _section_banner("Project Reference", styles),
             Spacer(1, 6),
             _body_card([
                 Paragraph(f"<b>{deal.project_title}</b>", styles["body"]),
-                Paragraph((document.summary if document else "") or deal.summary or "-", styles["body"]),
             ]),
-            Spacer(1, 12),
+            Spacer(1, 3),
             _section_banner("Invoice Line Items", styles),
-            Spacer(1, 6),
+            Spacer(1, 3),
         ])
         story.extend(line_item_flowables)
-        payment_text = (document.payment_terms if document else "") or deal.payment_terms
+        invoice_terms = (document.payment_terms or "").strip() if document else ""
+        inherited_terms = (deal.payment_terms or "").strip()
+        payment_text = invoice_terms if invoice_terms and invoice_terms != inherited_terms else ""
         if payment_text:
             story.extend([
-                Spacer(1, 8),
-                _section_banner("Payment Schedule", styles),
+                Spacer(1, 5),
+                _section_banner("Terms & Installment Notes", styles),
+                Spacer(1, 3),
+                _body_card([Paragraph(line, styles["body"]) for line in _lines(payment_text[:600])]),
                 Spacer(1, 6),
-                _body_card([Paragraph(line, styles["body"]) for line in _lines(payment_text)]),
-                Spacer(1, 12),
             ])
         if payment_account:
-            story.extend([
+            story.append(KeepTogether([
                 _section_banner("Payment Details", styles),
                 Spacer(1, 6),
-                _payment_account_table(payment_account, styles),
-                Spacer(1, 12),
-            ])
+                _payment_account_table(payment_account, styles, compact=True),
+            ]))
+            story.append(Spacer(1, 10))
         story.extend([
             _section_banner("Next Steps", styles),
             Spacer(1, 6),
-            _bullet_card(_next_steps_copy("invoice", deal, subtotal, deposit_amount), styles),
-            Spacer(1, 14),
-            Paragraph(f"{profile.full_name}  -  {profile.email}  -  {profile.phone}", styles["footer"]),
-            Spacer(1, 4),
-            Paragraph("View online: use the client link to mark payment as submitted or send a note.", styles["footer"]),
+            _body_card([Paragraph("Use the client link to confirm payment or send a note.", styles["body"])]),
+            Spacer(1, 8),
         ])
         doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
         return output_path

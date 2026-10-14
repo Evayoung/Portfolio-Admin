@@ -118,7 +118,10 @@
   position: sticky;
   top: 0;
   align-self: flex-start;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   padding: 1.1rem;
   background: rgba(7, 17, 31, 0.82);
   border-right: 1px solid rgba(130, 183, 214, 0.1);
@@ -130,6 +133,31 @@
   flex-direction: column;
   gap: 1.35rem;
   width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 184, 232, 0.13) transparent;
+}
+
+.admin-sidebar-inner::-webkit-scrollbar {
+  width: 5px;
+}
+
+.admin-sidebar-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar-inner::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(45, 184, 232, 0.12);
+  transition: background-color 0.2s ease;
+}
+
+.admin-sidebar-inner:hover::-webkit-scrollbar-thumb,
+.admin-sidebar-inner:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(45, 184, 232, 0.42);
 }
 
 .admin-sidebar-group,
@@ -1001,6 +1029,150 @@
 .admin-step-title {
   font-size: 1rem;
   margin: 0.35rem 0;
+}
+
+/* Compact, branded scroll area inside the fixed desktop navigation rail. */
+@media (min-width: 992px) {
+  .admin-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    box-sizing: border-box;
+    height: 100dvh;
+    overflow: hidden;
+    z-index: 30;
+  }
+
+  .admin-sidebar-inner {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(45, 184, 232, 0.13) transparent;
+  }
+
+  .admin-app {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .admin-sidebar-inner::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .admin-sidebar-inner::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-sidebar-inner::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(45, 184, 232, 0.12);
+    transition: background-color 0.2s ease;
+  }
+
+  .admin-sidebar-inner:hover::-webkit-scrollbar-thumb,
+  .admin-sidebar-inner:focus-within::-webkit-scrollbar-thumb {
+    background: rgba(45, 184, 232, 0.42);
+  }
+}
+
+.admin-feedback-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-feedback-stat,
+.admin-feedback-card,
+.admin-feedback-ready-row {
+  padding: 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.85rem;
+  background: var(--admin-surface);
+}
+
+.admin-feedback-stat {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-feedback-stat .admin-metric-value {
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+
+.admin-feedback-stat .admin-metric-label {
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+}
+
+.admin-feedback-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-feedback-ready-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem 1rem;
+  align-items: center;
+}
+
+.admin-feedback-ready-row .feedback-link-result {
+  grid-column: 1 / -1;
+}
+
+.admin-feedback-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.feedback-stars {
+  color: var(--admin-secondary);
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+}
+
+.admin-feedback-comment,
+.admin-feedback-quote {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-feedback-consent {
+  padding: 0.9rem;
+  border: 1px solid rgba(45, 184, 232, 0.22);
+  border-radius: 0.75rem;
+  background: rgba(45, 184, 232, 0.05);
+}
+
+.admin-feedback-status-form {
+  max-width: 22rem;
+}
+
+.feedback-share-link {
+  color: var(--admin-primary);
+  overflow-wrap: anywhere;
+}
+
+.feedback-link-result-card {
+  padding: 0.75rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.7rem;
+  background: var(--admin-bg-soft);
+}
+
+@media (max-width: 575.98px) {
+  .admin-feedback-ready-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-feedback-ready-row form,
+  .admin-feedback-ready-row .btn {
+    width: 100%;
+  }
 }
 
 /* ── Media queries ─────────────────────────────────────── */

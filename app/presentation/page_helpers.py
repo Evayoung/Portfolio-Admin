@@ -253,6 +253,7 @@ def textarea_field(
     placeholder: str = "",
     help_text: str = "",
     required: bool = False,
+    maxlength: int | str | None = None,
 ) -> Div:
     """Shared textarea field wrapped with Faststrap FormGroup."""
 
@@ -263,6 +264,7 @@ def textarea_field(
         rows=rows,
         placeholder=placeholder,
         required=required,
+        maxlength=maxlength,
         cls="form-control admin-form-control admin-form-textarea",
     )
     return FormGroup(

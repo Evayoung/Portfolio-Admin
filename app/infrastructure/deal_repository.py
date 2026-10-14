@@ -821,6 +821,7 @@ def save_deal_document(
     deposit_percent: str,
     valid_until: str,
     due_date: str,
+    invoice_payment_terms: str = "",
 ) -> DealSaveResult:
     if not client_name.strip() or not client_email.strip() or not project_title.strip() or not document_title.strip():
         return DealSaveResult(
@@ -836,6 +837,8 @@ def save_deal_document(
         return DealSaveResult(False, "warning", "Choose a valid document type.", "Validation")
     if document_status not in {"draft", "sent", "accepted", "paid", "expired"}:
         return DealSaveResult(False, "warning", "Choose a valid document status.", "Validation")
+    if document_kind == "invoice" and len(invoice_payment_terms.strip()) > 600:
+        return DealSaveResult(False, "warning", "Keep invoice terms and installment notes within 600 characters so the invoice stays concise.", "Validation")
 
     try:
         amount_value = max(0, int(amount_ngn or "0"))
@@ -924,7 +927,9 @@ def save_deal_document(
             "summary": summary.strip(),
             "sections_json": normalized_sections,
             "timeline_text": timeline_text.strip(),
-            "payment_terms": payment_terms.strip(),
+            # Deal-level terms belong to proposals and quotes. Invoices carry
+            # only their own optional payment note/installment schedule.
+            "payment_terms": (invoice_payment_terms if document_kind == "invoice" else payment_terms).strip(),
             "line_items": parsed_line_items,
             "subtotal": subtotal,
             "tax_amount": 0,
@@ -1144,7 +1149,7 @@ def generate_next_document(
         "summary": source_doc.summary,
         "sections_json": "",  # Quotes/invoices don't carry narrative sections
         "timeline_text": deal.timeline_text,
-        "payment_terms": deal.payment_terms,
+        "payment_terms": "" if to_kind == "invoice" else deal.payment_terms,
         "line_items": line_items_for_payload,
         "subtotal": total,
         "tax_amount": 0,
@@ -1196,6 +1201,7 @@ def save_quick_document(
     deposit_percent: str,
     valid_until: str,
     due_date: str,
+    invoice_payment_terms: str = "",
 ) -> DealSaveResult:
     """Create a proposal, quote, or invoice without requiring a full pipeline workflow."""
 
@@ -1227,7 +1233,7 @@ def save_quick_document(
         option_notes_text="",
         tech_stack="",
         timeline_text="",
-        payment_terms=payment_terms,
+        payment_terms="" if document_kind == "invoice" else payment_terms,
         line_items=clean_line_items,
         exclusions_text="",
         closing_note="Thank you for reviewing this document. Please use the client link to respond or confirm next steps.",
@@ -1237,4 +1243,5 @@ def save_quick_document(
         deposit_percent=deposit_percent,
         valid_until=valid_until,
         due_date=due_date,
+        invoice_payment_terms=invoice_payment_terms,
     )

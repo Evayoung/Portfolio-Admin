@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Button, Div, Form, H2, Input, Label, P, Script, Span, Textarea
+from fasthtml.common import A, Button, Div, Form, Input, Label, P, Script, Span, Textarea
 from faststrap import Badge, Card, Col, EmptyState, Fx, Icon, Modal, Row, SEO, Spinner
 
 from app.config import settings
@@ -12,7 +12,6 @@ from app.infrastructure.deal_repository import get_deal_with_documents
 from app.infrastructure.payment_account_repository import list_payment_accounts
 from app.presentation.page_helpers import floating_field, loading_action_button, textarea_field, toggle_pill_group
 from app.presentation.pages.deal_helpers import (
-    _deal_snapshot_card,
     _document_options,
     _document_status_options,
     _money,
@@ -305,12 +304,27 @@ def _edit_tab(selected: AdminDeal) -> Div:
         Div(
             P("Financials", cls="admin-form-section-title"),
             textarea_field(
-                "Payment Terms",
+                "Proposal / quote payment terms",
                 "payment_terms",
                 selected.payment_terms,
                 rows=4,
-                placeholder="Deposit expectations, milestone payments...",
+                placeholder="Only used on proposals and quotations.",
             ),
+            textarea_field(
+                "Invoice terms & policies or optional installments",
+                "invoice_payment_terms",
+                (
+                    selected.latest_document.payment_terms
+                    if selected.latest_document
+                    and selected.latest_document.kind == "invoice"
+                    and selected.latest_document.payment_terms != selected.payment_terms
+                    else ""
+                ),
+                rows=2,
+                placeholder="Optional. Add concise terms or installment amounts and dates.",
+                maxlength="600",
+            ),
+            P("Leave blank for a simple one-time invoice. Add any project terms only when they apply to this invoice.", cls="admin-module-copy small mb-3"),
             Row(
                 Col(floating_field("Amount (\u20a6)", "amount_ngn", str(selected.amount_ngn), input_type="number", placeholder="850000"), span=12, md=6),
                 Col(floating_field("Deposit %", "deposit_percent", str(selected.deposit_percent), input_type="number", placeholder="50"), span=12, md=6, cls="mt-3 mt-md-0"),
@@ -420,31 +434,21 @@ def deal_edit_page(*, deal_id: str = "", view: str = "edit") -> tuple:
             back_link,
             Div(
                 Div(
-                    H2(selected.project_title, cls="admin-section-title mb-1"),
-                    Div(
-                        Span(selected.client_name, cls="admin-project-meta"),
-                        Badge(
-                            selected.stage.replace("_", " ").title(),
-                            cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
-                        ),
-                        Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
-                        cls="d-flex align-items-center gap-2 flex-wrap",
+                    Span(selected.client_name, cls="admin-project-meta"),
+                    Badge(
+                        selected.stage.replace("_", " ").title(),
+                        cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
                     ),
+                    Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
+                    cls="d-flex align-items-center gap-2 flex-wrap",
                 ),
                 _workflow_pipeline(selected),
-                cls="mb-4",
+                cls="deal-detail-header mb-3",
             ),
             nav_pills,
-            Row(
-                Col(_deal_snapshot_card(selected), span=12, lg=4),
-                Col(
-                    Card(
-                        _edit_tab(selected),
-                        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
-                    ),
-                    span=12, lg=8, cls="mt-4 mt-lg-0",
-                ),
-                cls="g-4",
+            Card(
+                _edit_tab(selected),
+                cls=[Fx.base, Fx.fade_in, "admin-surface-card deal-edit-card"],
             ),
             current="/deals",
             title=selected.project_title,

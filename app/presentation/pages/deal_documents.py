@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fasthtml.common import A, Div, Form, H2, Input, P, Span, Strong
-from faststrap import Accordion, AccordionItem, Badge, Button, Card, Col, EmptyState, Fx, Icon, Row, SEO, Spinner
+from fasthtml.common import A, Div, Form, Input, P, Span, Strong
+from faststrap import Accordion, AccordionItem, Badge, Button, Card, EmptyState, Fx, Icon, SEO, Spinner
 
 from app.config import settings
 from app.domain.models import AdminDeal
@@ -14,7 +14,6 @@ from app.infrastructure.deal_repository import (
 )
 from app.presentation.page_helpers import loading_action_button
 from app.presentation.pages.deal_helpers import (
-    _deal_snapshot_card,
     _group_packages,
     _money,
     _package_totals,
@@ -462,12 +461,20 @@ def documents_tab(selected: AdminDeal, *, newest_first: bool = False) -> Div:
         cta = _generate_next_cta(selected, doc)
         cards.append(_document_card_detail(selected, doc, next_step=cta))
 
-    return Accordion(
-        *cards,
-        accordion_id=f"deal-documents-{selected.deal_id}",
-        always_open=True,
-        flush=True,
-        cls="deal-documents-accordion",
+    return Div(
+        Div(
+            Span("Documents", cls="admin-subsection-title"),
+            Span(f"{len(docs)} total", cls="admin-project-meta ms-auto"),
+            cls="d-flex align-items-center gap-2 mb-3",
+        ),
+        Accordion(
+            *cards,
+            accordion_id=f"deal-documents-{selected.deal_id}",
+            always_open=True,
+            flush=True,
+            cls="deal-documents-accordion",
+        ),
+        cls="deal-documents-workspace",
     )
 
 
@@ -536,31 +543,21 @@ def deal_documents_page(*, deal_id: str = "", view: str = "documents") -> tuple:
             back_link,
             Div(
                 Div(
-                    H2(selected.project_title, cls="admin-section-title mb-1"),
-                    Div(
-                        Span(selected.client_name, cls="admin-project-meta"),
-                        Badge(
-                            selected.stage.replace("_", " ").title(),
-                            cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
-                        ),
-                        Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
-                        cls="d-flex align-items-center gap-2 flex-wrap",
+                    Span(selected.client_name, cls="admin-project-meta"),
+                    Badge(
+                        selected.stage.replace("_", " ").title(),
+                        cls=f"bg-{_status_color(selected.stage)} bg-opacity-10 text-{_status_color(selected.stage)} ms-2",
                     ),
+                    Span(_money(selected.amount_ngn), cls="admin-project-meta ms-2"),
+                    cls="d-flex align-items-center gap-2 flex-wrap",
                 ),
                 _workflow_pipeline(selected),
-                cls="mb-4",
+                cls="deal-detail-header mb-3",
             ),
             nav_pills,
-            Row(
-                Col(_deal_snapshot_card(selected), span=12, lg=4),
-                Col(
-                    Card(
-                        documents_tab(selected),
-                        cls=[Fx.base, Fx.fade_in, "admin-surface-card h-100"],
-                    ),
-                    span=12, lg=8, cls="mt-4 mt-lg-0",
-                ),
-                cls="g-4",
+            Card(
+                documents_tab(selected),
+                cls=[Fx.base, Fx.fade_in, "admin-surface-card deal-documents-card"],
             ),
             current="/deals",
             title=selected.project_title,

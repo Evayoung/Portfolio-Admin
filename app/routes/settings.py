@@ -98,6 +98,7 @@ def setup_settings_routes(app: Any) -> None:
 
     @app.post("/settings/accounts")
     def settings_account_save(
+        account_id: str = "",
         label: str = "",
         bank_name: str = "",
         account_name: str = "",
@@ -108,6 +109,7 @@ def setup_settings_routes(app: Any) -> None:
         from ..presentation.pages.settings_admin import _accounts_panel
 
         result = save_payment_account(
+            account_id=account_id,
             label=label,
             bank_name=bank_name,
             account_name=account_name,
@@ -116,7 +118,7 @@ def setup_settings_routes(app: Any) -> None:
             is_default=bool(is_default),
         )
         if result.success:
-            return (_accounts_panel(), toast_fragment("Account saved", result.message))
+            return (_accounts_panel(out_of_band=True), toast_fragment("Account saved", result.message))
         return (settings_save_status_fragment("Save not completed", result.message, tone=result.tone),)
 
     @app.post("/settings/accounts/edit")
@@ -126,14 +128,25 @@ def setup_settings_routes(app: Any) -> None:
         account = get_payment_account(id) if id else None
         return _accounts_panel(edit_account=account)
 
+    @app.post("/settings/accounts/cancel")
+    def settings_account_edit_cancel() -> Any:
+        from ..presentation.pages.settings_admin import _accounts_panel
+
+        return _accounts_panel()
+
     @app.post("/settings/accounts/delete")
     def settings_account_delete(id: str = "") -> Any:
         from ..presentation.pages.settings_admin import _accounts_panel
 
         result = delete_payment_account(id)
-        if result.success:
-            return (_accounts_panel(), toast_fragment("Account deleted", result.message))
-        return (settings_save_status_fragment("Delete not completed", result.message, tone=result.tone),)
+        return (
+            _accounts_panel(),
+            toast_fragment(
+                "Account deleted" if result.success else "Delete not completed",
+                result.message,
+                variant="success" if result.success else "danger",
+            ),
+        )
 
     @app.post("/settings/ai-save")
     def settings_ai_save(
@@ -159,8 +172,24 @@ def setup_settings_routes(app: Any) -> None:
             set_default=bool(set_default),
         )
         if result.success:
-            return (_ai_settings_card(), toast_fragment("AI provider saved", result.message))
-        return (_ai_settings_card(), settings_save_status_fragment("Save not completed", result.message, tone=result.tone))
+            return (
+                _ai_settings_card(out_of_band=True),
+                toast_fragment("AI provider saved", result.message),
+            )
+        return settings_save_status_fragment("Save not completed", result.message, tone=result.tone)
+
+    @app.post("/settings/ai-edit")
+    def settings_ai_edit(id: str = "") -> Any:
+        from ..presentation.pages.settings_admin import _ai_settings_card
+
+        provider = next((item for item in get_ai_providers() if item.config_id == id), None)
+        return _ai_settings_card(edit_provider=provider)
+
+    @app.post("/settings/ai-cancel")
+    def settings_ai_edit_cancel() -> Any:
+        from ..presentation.pages.settings_admin import _ai_settings_card
+
+        return _ai_settings_card()
 
     @app.post("/settings/ai-set-default")
     def settings_ai_set_default(id: str = "") -> Any:
@@ -178,6 +207,15 @@ def setup_settings_routes(app: Any) -> None:
     def settings_ai_delete(id: str = "") -> Any:
         from ..presentation.pages.settings_admin import _ai_settings_card
 
-        if id:
-            delete_ai_provider(id)
-        return _ai_settings_card()
+        if not id:
+            result_message = "Choose a provider to delete."
+            return (_ai_settings_card(), toast_fragment("Delete not completed", result_message, variant="warning"))
+        result = delete_ai_provider(id)
+        return (
+            _ai_settings_card(),
+            toast_fragment(
+                "AI provider deleted" if result.success else "Delete not completed",
+                result.message,
+                variant="success" if result.success else "danger",
+            ),
+        )
